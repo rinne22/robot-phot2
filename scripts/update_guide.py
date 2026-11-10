@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Synchronize both published pages, sketches, requirements and function exports."""
 from pathlib import Path
-import re, json, html, csv, io
+import re, json, html, csv, io, base64
+from function_excel import build_xlsx, form_html
 ROOT=Path(__file__).resolve().parents[1]
 esc=html.escape
 DESCRIPTIONS={
@@ -107,10 +108,12 @@ def main():
  design+='</section>'
  start=page.index('<section class="design" id="design">');end=page.index('<section class="design" id="functions"',start)
  page=page[:start]+design+'\n'+page[end:]
- cards=f'<section class="design" id="functions" aria-labelledby="functions-title"><h2 id="functions-title">関数設計書</h2><p>改訂1.6の全{count}関数。形式・呼び出し・行数は掲載コードから生成します。</p><p><a class="fn-download" download href="functions.csv">関数設計書をダウンロード（CSV・Excelで開けます）</a></p><div class="fn-controls" hidden><label for="function-search">関数を検索</label><input id="function-search" type="search" placeholder="例：go_Stop、障害物、PWM" autocomplete="off"><span id="function-count" role="status">{count}件</span></div><p id="function-empty" hidden>該当する関数がありません。</p><div class="function-group"><h3>全関数（ソース順）</h3>'
+ xlsx=build_xlsx(funcs)
+ (ROOT/'design-guide/関数設計書.xlsx').write_bytes(xlsx)
+ xlsx_b64=base64.b64encode(xlsx).decode()
+ cards=f'<section class="design" id="functions" aria-labelledby="functions-title"><h2 id="functions-title">関数設計書</h2><p>改訂1.6の全{count}関数。添付Excelと同じ項目・表の構成でまとめています。</p><p><a class="fn-download" download="関数設計書.xlsx" href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{xlsx_b64}">関数設計書をダウンロード（Excel）</a></p><div class="fn-controls" hidden><label for="function-search">関数を検索</label><input id="function-search" type="search" placeholder="例：go_Stop、障害物、PWM" autocomplete="off"><span id="function-count" role="status">{count}件</span></div><p id="function-empty" hidden>該当する関数がありません。</p><div class="function-group"><h3>全関数（ソース順）</h3>'
  for f in funcs:
-  cards+=f'<details class="function-card" id="fn-{f["name"]}"><summary><code>{f["name"]}()</code><span>{esc(f["desc"].split("。")[0])}</span></summary><div class="body dbody"><p><strong>処理内容</strong> {esc(f["desc"])}</p><p><strong>関数形式</strong> <code>{esc(f["sig"])};</code></p>'
-  cards+=table(['項目','内容'],[['引数',esc(f['args']) or 'なし'],['戻り値',f['ret']+'（'+('なし' if f['ret']=='void' else '処理内容を参照')+'）'],['共有状態（参照・更新）',esc(f['states'])],['呼び出し関数',esc(f['calls'])],['ソース',f'robot_final.ino：{f["line"]}行目／{f["lines"]}行']])+'</div></details>'
+  cards+=f'<details class="function-card" id="fn-{f["name"]}"><summary><code>{f["name"]}()</code><span>{esc(f["desc"].split("。")[0])}</span></summary><div class="body dbody">'+form_html(f)+'</div></details>'
  cards+='</div></section>'
  start=page.index('<section class="design" id="functions"');end=page.index('\n<script>',start)
  page=page[:start]+cards+page[end:]
@@ -185,6 +188,8 @@ def main():
  fig_html+='</section>\n'
  page=page[:start]+fig_html+page[end:]
  page=re.sub(r'(<code id="codeText">).*?(</code>)',lambda m:m[1]+esc(code)+m[2],page,count=1,flags=re.S)
+ page=re.sub(r'<style id="function-form-style">.*?</style>', '', page, flags=re.S)
+ page=page.replace('</head>', '<style id="function-form-style">.function-form{min-width:640px;table-layout:fixed}.function-form th{background:#ddd;color:#18262b;vertical-align:middle;text-align:center}.function-form td{white-space:pre-wrap;overflow-wrap:anywhere}.function-form td,.function-form th{border:1px solid #8a949a;padding:10px}.function-form tr:first-child td{font-weight:700}</style>'+'</head>')
  page=page.replace('使用言語：C言語（Arduino言語）','使用言語：C++（Arduinoスケッチ）')
  page=page.replace('IRremote</code>（4.x系）','IRremote</code>（検証版4.4.1／4.x系）')
  page=page.replace('<b>45</b> 関数の設計',f'<b>{count}</b> 関数の設計').replace('<b>24</b> 結合テスト項目','<b>38</b> PC模擬試験項目')
