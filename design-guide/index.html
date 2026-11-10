@@ -842,7 +842,7 @@ pre{max-width:100%;overflow:auto}
     Note over IN,MU: 0.3秒待つ
     MU-&gt;&gt;B: play_Music で曲3を再生</pre></div>
     <section class="overview" id="dance-mode"><h2>0ボタンでダンスモード</h2>
-<p>リモコンの <strong>0</strong> を押すと、左回転 → 右回転 → 前進左カーブ → 前進右カーブ → 一時停止 → 後退左カーブ → 後退右カーブ → 右回転 → 停止を順番に実行します。およそ3.9秒で終了します。もう一度0を押すと最初からやり直し、OKでいつでも停止できます。</p>
+<p>リモコンの <strong>0</strong> を押すと、左回転 → 右回転 → 前進左カーブ → 前進右カーブ → 一時停止 → 後退左カーブ → 後退右カーブ → 右回転 → 停止を順番に実行します。およそ3.45秒で終了します。もう一度0を押すと最初からやり直し、OKでいつでも停止できます。</p>
 <p>ダンス中は方向ボタンを受け付けず、前後の障害物を約100msごとに確認します。障害物を検知したら安全のためダンスを中止して停止します。ダンス中にすでに流れている音楽はそのまま再生できます。開始待ちの曲予約は解除します。</p>
 <p class="cap">0ボタンの受信コードは <code>25（0x19）</code> としています。リモコンの種類によって違う場合は <code>IR_DANCE</code> を実際の受信コードに変更してください。実機での動作確認は未実施です。</p>
 </section><section class="overview" id="drive-music"><h2>走行しながら音楽を再生</h2>
@@ -1570,7 +1570,7 @@ void start_Dance() {
   lastDriveCmd = GO_STOP;
   pendingSongNum = 0;         // 未開始の音楽予約だけ解除
   Drive_Num = dance_Action(danceStep);
-  do_Drive_Tick();
+  // 最初のモーター出力はloop内でセンサーを確認した後に行う
 }
 
 void do_Dance_Tick() {
