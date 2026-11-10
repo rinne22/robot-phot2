@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ロボットカー設計ガイド | OSOYOO V2.1</title>
+<style>
+:root{
+  --bg:#f3f6f4; --surface:#ffffff; --text:#18262b; --muted:#56666b;
+  --line:#cfdad6; --accent:#0b7a75; --accent-soft:#dff0ee; --code:#eaf0ee;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1a1c; --surface:#16262a; --text:#e4eeec; --muted:#9bb0ad;
+    --line:#2a4044; --accent:#4cc9c0; --accent-soft:#17353a; --code:#1d3236;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1a1c; --surface:#16262a; --text:#e4eeec; --muted:#9bb0ad;
+  --line:#2a4044; --accent:#4cc9c0; --accent-soft:#17353a; --code:#1d3236;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic",Meiryo,sans-serif;line-height:1.8}
+.wrap{max-width:760px;margin:0 auto;padding:32px 20px 64px}
+h1{font-size:1.7rem;margin:0 0 6px;line-height:1.4}
+.lead{color:var(--muted);margin:0 0 28px}
+.top{background:var(--accent-soft);border-left:5px solid var(--accent);padding:16px 18px;border-radius:0 8px 8px 0;margin-bottom:28px}
+.top h2{margin:0 0 4px;font-size:1.05rem}
+.top p{margin:2px 0}
+.tag{display:inline-block;font-size:.8rem;font-weight:700;color:var(--accent);margin-right:6px}
+details{background:var(--surface);border:1px solid var(--line);border-radius:8px;margin-bottom:10px}
+summary{cursor:pointer;padding:12px 16px;font-weight:700;list-style:none;display:flex;gap:10px;align-items:baseline}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"+";color:var(--accent);font-weight:700;width:1em;flex:none}
+details[open] summary::before{content:"−"}
+summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
+.id{color:var(--accent);flex:none}
+.body{padding:0 16px 14px 42px}
+.body p{margin:4px 0}
+.body ul{margin:8px 0 0;padding:0;list-style:none}
+.body li{padding:5px 0;border-top:1px dashed var(--line);display:flex;gap:10px}
+.body li .n{color:var(--muted);flex:none;font-variant-numeric:tabular-nums;min-width:4.2em}
+code{background:var(--code);padding:1px 6px;border-radius:4px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em}
+.note{color:var(--muted);font-size:.9rem;margin-top:8px}
+.env{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 18px;margin-top:22px}
+.env h2{margin:0 0 6px;font-size:1.05rem}
+.env p{margin:2px 0}
+.tools{display:flex;gap:8px;margin-bottom:16px}
+button{font:inherit;font-size:.9rem;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.code-sec{margin-top:22px}
+.code-sec .bar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 8px}
+.code-sec .fn{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9rem;color:var(--muted)}
+.code-sec pre{margin:0;background:var(--code);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow-x:auto;max-width:100%;font-size:.8rem;line-height:1.6;tab-size:2}
+.code-sec pre code{background:none;padding:0;font-size:inherit}
+.code-sec .body{padding:0 16px 16px}
+
+.figs{margin-top:34px}
+.figs h2{font-size:1.2rem;margin:0 0 6px}
+.figs h3{font-size:1rem;margin:22px 0 2px}
+.figs .cap{color:var(--muted);font-size:.9rem;margin:0 0 8px}
+.diagram{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px;overflow-x:auto;max-width:100%}
+.diagram pre.mermaid{margin:0;text-align:center}
+.figs h3{margin-top:30px;padding-bottom:4px;border-bottom:2px solid var(--accent)}
+.figs h4{font-size:.95rem;margin:18px 0 2px}
+
+.design{margin-top:34px}
+.design h2{font-size:1.2rem;margin:0 0 4px}
+.design .cap{color:var(--muted);font-size:.9rem;margin:0 0 10px}
+.design .dbody{padding-left:16px}
+.design h5{font-size:.95rem;margin:14px 0 4px}
+.design ul{padding-left:1.2em;margin:4px 0}
+.design li{display:list-item;border:0;padding:2px 0}
+.tw{overflow-x:auto;max-width:100%;margin:6px 0 10px}
+.tw table{border-collapse:collapse;min-width:100%;font-size:.86rem;line-height:1.6}
+.tw th,.tw td{border:1px solid var(--line);padding:5px 9px;text-align:left;vertical-align:top}
+.tw th{background:var(--accent-soft)}
+.tocnav{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 22px}
+.tocnav a{color:var(--accent);border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:5px 12px;text-decoration:none;font-size:.9rem}
+.tocnav a:hover{border-color:var(--accent)}
+.tocnav a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.design pre.cmd{background:var(--code);border:1px solid var(--line);border-radius:6px;padding:8px 12px;margin:6px 0;overflow-x:auto;font-size:.85rem}
+</style>
+<style>
+#functions [hidden]{display:none}
+#functions a,.cap a{color:var(--accent)}
+.fn-controls{display:flex;gap:.65rem;align-items:center;flex-wrap:wrap;margin:1.1rem 0}
+.fn-controls input{box-sizing:border-box;max-width:100%;width:24rem;padding:.65rem;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:6px;font:inherit}
+.fn-controls input:focus-visible,.fn-download:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.function-group{margin:1.3rem 0}
+.function-card summary span{margin-left:.5em}
+.function-card code{overflow-wrap:anywhere}
+.function-card caption{text-align:left;font-weight:bold;margin:.25rem 0}
+</style>
+<style>
+:root{--bg:#edf3f8;--surface:#fff;--text:#172c43;--muted:#475c70;--line:#cbd7e2;--accent:#005b82;--accent-soft:#e0f1f9;--code:#e9f0f7}
+.wrap{max-width:1100px}
+.hero{padding:clamp(1.45rem,5vw,4rem);border-radius:22px;background:linear-gradient(125deg,#101d35,#164f65);color:#fff;margin-bottom:1rem}
+.hero h1{font-size:clamp(1.95rem,5vw,3.7rem);line-height:1.15;color:inherit;margin:.4em 0}
+.eyebrow{font-size:.8rem;letter-spacing:.15em;color:#a1e5f1;font-weight:700}
+.intro{max-width:42rem;color:#e5f0f7}
+.metrics,.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.7rem}
+.metrics a,.tiles article{padding:1rem;border-radius:12px}
+.metrics a{color:white;border:1px solid #7db4c4;text-decoration:none}
+.metrics b{display:block;font-size:1.55rem;color:#a1e5f1}
+.tiles article{background:var(--surface);border:1px solid var(--line)}
+.tiles h3{margin-top:0}
+.overview{margin:2rem 0}
+.overview a{color:var(--accent)}
+.tocnav a{padding:.55rem .8rem}
+pre{max-width:100%;overflow:auto}
+@media(max-width:620px){.tiles{grid-template-columns:1fr}.metrics a{font-size:.78rem;padding:.6rem}.metrics b{font-size:1.1rem}}
+</style></head>
+<body>
+<div class="wrap">
+<header class="hero">
+<p class="eyebrow">ARDUINO UNO / OSOYOO V2.1</p>
+<h1>ロボットカー設計ガイド</h1>
+<p class="intro">赤外線リモコンで走行を指示し、センサーで障害物を検知するロボットカー。要件からArduinoコードまでをまとめた開発資料です。</p>
+<div class="metrics"><a href="#functions"><b>45</b> 関数の設計</a><a href="#design"><b>24</b> 結合テスト項目</a><a href="#figures"><b>図解</b> 動作と処理の流れ</a></div>
+</header>
+<nav class="tocnav" aria-label="ページ内の移動"><a href="#overview">概要</a><a href="#requirements">要件定義</a><a href="#design">開発設計</a><a href="#functions">関数設計</a><a href="#figures">設計図</a><a href="#code">Arduinoコード</a><a href="#memo">メモ</a></nav>
+<section class="overview" id="memo" aria-labelledby="memo-title">
+<h2 id="memo-title">作業メモ</h2>
+<p id="memo-hint">入力した内容はこのブラウザに自動保存されます。</p>
+<label for="memo-text">メモ内容</label>
+<textarea id="memo-text" rows="6" aria-describedby="memo-hint" style="display:block;width:100%;box-sizing:border-box;padding:.65rem;font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:6px" placeholder="実機で確認すること、配線の変更など"></textarea>
+<p id="memo-status" role="status"></p>
+</section>
+<script>
+(() => {
+  const field = document.getElementById('memo-text');
+  const status = document.getElementById('memo-status');
+  const key = 'osoyoo-robot-design-guide.memo.v1';
+  try {
+    field.value = localStorage.getItem(key) ?? '';
+  } catch {
+    status.textContent = 'このブラウザではメモを読み込めません。';
+  }
+  field.addEventListener('input', () => {
+    try {
+      localStorage.setItem(key, field.value);
+      status.textContent = '保存済み';
+    } catch {
+      status.textContent = 'メモを保存できませんでした。';
+    }
+  });
+})();
+</script>
+<section class="overview" id="revision"><h2>修正記録・版1.5</h2><p>音楽の途中でもOKで中断できるようにし、回避中はセンサー測定の直後にも500 msの経過を確認します。</p><p>回避中の更新は loop() が直接呼び出します。回避中と通常時の障害物判定は、1周につきどちらか一方だけを実行します。</p><p><a href="robot_final.ino" download>修正版Arduinoコードをダウンロード</a></p><p>要件・設計・図・コードの共通仕様を以下に補足しました。</p><ul><li>回避開始時に音楽の予約を取り消し、回避中は曲を開始しません。回避後に数字ボタンで再予約します。</li><li>回避の500 msは駆動開始直後から計測します。警告音の約200 msを回避時間に含めます。停止判定は周期処理で行うため、実測時間には処理遅延が加わります。</li><li>不正な走行状態は停止に倒します。</li><li>停止出力はPWM 0・方向LOW/LOWです。空転停止のため、車輪の静止までの時間は実機で確認します。</li><li>OKの応答時間は実機未測定です。警告音・センサー測定は処理完了後、音楽は発音中・休符中・音符間にも受信を確認します。0.3秒以内は検証対象の目標値です。</li></ul><p>掲載済みの「OK」は版1.2の疑似環境での実施記録です。版1.5のArduino全体ビルドと実機試験は未実施です。版1.3の変更箇所4項目は抽出したC++関数の疑似試験で確認しました。Arduino全体のビルド・全体再試験・実機試験は未実施です。</p></section><section class="overview" id="overview" aria-labelledby="overview-title">
+<h2 id="overview-title">ロボットの主な動作</h2>
+<div class="tiles">
+<article><h3>01　リモコン操作</h3><p>矢印ボタンで前進・後退・その場旋回。OKボタンで停止します。</p></article>
+<article><h3>02　障害物回避</h3><p>前方の超音波と後方の赤外線センサーを使い、障害物を検知すると走行指示より回避を優先します。</p></article>
+<article><h3>03　メロディー再生</h3><p>数字1〜9で曲を選択。再生時には車体が停止し、OKで演奏を中断できます。</p></article>
+</div>
+<p class="cap">結合テストはPC上の疑似環境で実施。実機確認項目は開発設計に記載しています。</p>
+<p><a href="https://osoyoo.com/2020/05/12/v2-1-robot-car-kit-for-arduino-tutorial-introduction/">OSOYOO公式組み立てガイド ↗</a></p>
+</section>
+  <section class="top" id="requirements">
+    <h2>要件定義</h2><h3>要求1　リモコンで走行を制御する</h3>
+    <p><span class="tag">内容</span>ユーザーがリモコンのボタン（↑、→、←、↓、OK）を押すと、ロボットが対応する方向に移動または停止する</p>
+    <p><span class="tag">理由</span>リモコンでモーター駆動を制御し、ラジコンのように操作するため</p>
+  </section>
+
+  <div class="tools">
+    <button type="button" id="openAll">すべて開く</button>
+    <button type="button" id="closeAll">すべて閉じる</button>
+  </div>
+
+  <div id="list"></div>
+
+    <section class="design" id="design">
+  <h2>開発設計書</h2>
+  <p class="cap">対象：リモコン操作ロボット（Arduino Uno）／ 版：1.5 ／ 更新日：2026年11月10日 ／ 対象ソース：robot_final.ino</p>
+  <details><summary><span class="id">1</span><span>目的と範囲</span></summary><div class="body dbody"><p>要件定義を満たすソフトの作り方（構成・関数・名前の付け方）を決める文書です。第1版（2026年11月4日）の方針に沿って <code>robot_final.ino</code> を直した結果と、数字ボタンの同時押しの追加を反映した改訂版です。</p><p>動きを変えない整理（リファクタリング）を先に行い、そのあとで機能を足す順にしています。</p></div></details>
+  <details><summary><span class="id">2</span><span>設計方針と実施結果</span></summary><div class="body dbody"><div class="tw"><table><thead><tr><th>#</th><th>方針</th><th>やり方</th><th>実施結果</th></tr></thead><tbody><tr><td>1</td><td>変更量は必要最小限</td><td>1回の変更は1つの目的。変更のたびにテストをやり直す</td><td>4ステップと1機能の追加。毎回、擬似テストすべてOK</td></tr><tr><td>2</td><td>1つの関数に1つの目的</td><td>名前を「動詞＋対象」で言い切れない関数は分ける</td><td>長かった4つの関数を分割。関数は全部で45個</td></tr><tr><td>3</td><td>関数は短く</td><td>20行以内、ネスト3段以内、引数3個以内を目安にする</td><td>最長は <code>set_Drive</code> の16行</td></tr><tr><td>4</td><td>変更しやすい構成</td><td>数値は先頭の定義に集める。入力・判断・出力の3層に分ける</td><td>設定値を先頭に集約。3層に整理</td></tr><tr><td>5</td><td>複雑にしない</td><td>同じ処理を2か所に書かない</td><td>PWM設定の重複4か所を <code>set_MotorSpeed</code> にまとめた</td></tr><tr><td>6</td><td>名前を使い回さない</td><td>1つの名前は1つの意味だけ。別の用途に流用しない</td><td>守っている</td></tr><tr><td>7</td><td>名前は役割にぴったり</td><td>3章の命名規則に従う</td><td>7章の対応表のとおり直した</td></tr></tbody></table></div></div></details>
+  <details><summary><span class="id">3</span><span>命名規則</span></summary><div class="body dbody"><div class="tw"><table><thead><tr><th>対象</th><th>ルール</th><th>例</th></tr></thead><tbody><tr><td>固定値（#define、const）</td><td>すべて大文字。単語は _ でつなぐ</td><td><code>DISTANCE_LIMIT</code>、<code>SONG_TABLE</code></td></tr><tr><td>時間・距離の固定値</td><td>単位を末尾に付ける</td><td><code>AVOID_MS</code></td></tr><tr><td>bool型の変数と関数</td><td>先頭に is を付ける。真のとき何が起きているか名前で分かるようにする</td><td><code>isAvoiding</code>、<code>is_FrontBlocked()</code></td></tr><tr><td>関数</td><td>動詞_対象。動詞は下の表に統一する</td><td><code>go_Advance()</code>、<code>set_Drive()</code></td></tr><tr><td>変数</td><td>小文字で始め、単語は大文字でつなぐ</td><td><code>lastDriveCmd</code>、<code>avoidStartMs</code></td></tr><tr><td>ループカウンタ</td><td>i から始め、2重なら j、3重なら k</td><td><code>for (int i = 0; ...)</code></td></tr><tr><td>長さ</td><td>目安は2〜3単語、20文字以内。1文字名や、役割が分からない短い名前は使わない</td><td><code>echoUs</code>（<code>t</code> は不可）</td></tr><tr><td>略語</td><td>IR、PWM、MS（ミリ秒）、US（マイクロ秒）、CMD（指示）、NUM（番号）だけ使う</td><td><code>lastDriveCmd</code></td></tr><tr><td>同じ意味は同じ単語</td><td>前後は Front / Back、左右は Left / Right、開始・終了は start_ / end_</td><td>Rear、Forward は混ぜない</td></tr><tr><td>慣例の優先</td><td>サンプルコード由来の名前は変えない</td><td><code>Drive_Num</code>、<code>IS_IR</code>、<code>front</code>、<code>back</code>、<code>watch()</code>、<code>warning()</code>、<code>go_Advance()</code></td></tr></tbody></table></div><p>関数の動詞：<code>go_</code>（モーターを動かす）、<code>do_</code>（毎回の処理）、<code>set_</code>（値や状態を決める）、<code>get_</code>（値を取り出す）、<code>is_</code>（真偽を返す）、<code>play_</code>（音を出す）、<code>init_</code>（初期化）、<code>handle_</code>（ボタンの処理）、<code>update_</code>（変数を更新する）、<code>decide_</code>（判断して値を返す）、<code>mark_</code>（記録する）。</p></div></details>
+  <details><summary><span class="id">4</span><span>ハードウェア構成</span></summary><div class="body dbody"><div class="tw"><table><thead><tr><th>部品</th><th>ピン</th><th>定義名</th><th>備考</th></tr></thead><tbody><tr><td>IR受信機</td><td>D4</td><td><code>IR_RECEIVE_PIN</code></td><td></td></tr><tr><td>右モーター</td><td>PWM D9、方向 D12・D11</td><td><code>SPEED_PIN_R</code>、<code>RIGHT_DIR_PIN1</code>・<code>RIGHT_DIR_PIN2</code></td><td></td></tr><tr><td>左モーター</td><td>PWM D6、方向 D7・D8</td><td><code>SPEED_PIN_L</code>、<code>LEFT_DIR_PIN1</code>・<code>LEFT_DIR_PIN2</code></td><td></td></tr><tr><td>ブザー</td><td>D13</td><td><code>BUZZ_PIN</code></td><td>LOWで鳴動、HIGHで停止</td></tr><tr><td>超音波センサー</td><td>Trig D10、Echo D3</td><td><code>TRIG_PIN</code>、<code>ECHO_PIN</code></td><td>前方用</td></tr><tr><td>後方赤外線センサー</td><td>左 D0、右 D2</td><td><code>BACK_IR_L_PIN</code>、<code>BACK_IR_R_PIN</code></td><td>障害物でLOW。D0は書き込み時に配線を外す</td></tr></tbody></table></div></div></details>
+  <details><summary><span class="id">5</span><span>ソフト構成</span></summary><div class="body dbody"><p>処理を入力・判断・出力の3層に分け、<code>loop()</code> だけが順に呼びます。層の間は、変数 <code>Drive_Num</code>（現在の動作）と <code>pendingSongNum</code>（曲の依頼）で受け渡します。</p><div class="tw"><table><thead><tr><th>層</th><th>役割</th><th>書く変数</th><th>読む変数</th></tr></thead><tbody><tr><td>入力</td><td>リモコンを読み、動作と曲の依頼を決める</td><td><code>Drive_Num</code>、<code>lastDriveCmd</code>、<code>pendingSongNum</code></td><td>―</td></tr><tr><td>判断</td><td>センサーを見て、危ないときは <code>Drive_Num</code> を書き換える</td><td><code>Drive_Num</code>、<code>front</code>、<code>back</code></td><td><code>Drive_Num</code></td></tr><tr><td>出力</td><td><code>Drive_Num</code> に従いモーターを動かし、依頼された曲を再生する</td><td><code>pendingSongNum</code>（再生時に0に戻す）</td><td><code>Drive_Num</code>、<code>pendingSongNum</code></td></tr></tbody></table></div><h5>loop() の順番</h5><ul><li>① <code>do_IR_Tick</code>（入力）</li><li>② <code>checkSensorsAndObstacles</code>（判断）</li><li>③ <code>do_Drive_Tick</code>（出力：走行）</li><li>④ <code>do_Music_Tick</code>（出力：音楽）</li><li>⑤ 遅延（<code>IS_IR</code> により100μsまたは20μs）</li></ul><h5>呼び出しの規則</h5><ul><li>入力層は、モーターもブザーも直接動かさない。状態を更新するだけにする。</li><li>OKの停止も <code>Drive_Num = GO_STOP</code> にするだけで、直後の出力層が止める。</li><li>数字ボタンは曲の依頼として記録し、0.3秒後に <code>do_Music_Tick</code> が再生する。</li></ul><h5>規則の例外（意図したもの）</h5><ul><li><code>start_Avoid</code> は、回避と同時に警告音を鳴らすため、<code>do_Drive_Tick</code> と <code>warning</code> を直接呼ぶ。</li><li><code>play_Music</code> は、再生前にモーターを止めるため、<code>go_Stop</code> を直接呼ぶ。</li></ul><p>ファイルは <code>robot_final.ino</code> の1つです（437行）。</p></div></details>
+  <details><summary><span class="id">6</span><span>関数設計（現在のコード）</span></summary><div class="body dbody"><h5>入力層</h5><div class="tw"><table><thead><tr><th>関数</th><th>1つの目的</th><th>行数</th></tr></thead><tbody><tr><td><code>do_IR_Tick</code></td><td>受信した1件を、ボタンの種類ごとの関数へ振り分ける</td><td>8</td></tr><tr><td><code>read_IR_Command</code></td><td>受信コードを返す（受信なし・リピート信号は NO_COMMAND）</td><td>7</td></tr><tr><td><code>handle_StopButton</code></td><td>OK：回避と音楽の依頼を取り消し、停止状態にする</td><td>6</td></tr><tr><td><code>handle_DriveButton</code></td><td>↑↓←→：走行の指示を set_Drive に渡す</td><td>6</td></tr><tr><td><code>get_SongNum</code></td><td>ボタンのコードから曲番号（1〜9）を返す</td><td>6</td></tr><tr><td><code>is_NumberConflict</code></td><td>依頼中の曲と別の数字か返す（同時押し）</td><td>3</td></tr><tr><td><code>handle_NumberButton</code></td><td>1〜9：曲を依頼として記録する</td><td>8</td></tr><tr><td><code>set_Drive</code></td><td>走行の指示で Drive_Num を更新する</td><td>16</td></tr><tr><td><code>is_OppositeDrive</code></td><td>2つの指示が逆向きか返す</td><td>4</td></tr></tbody></table></div><h5>判断層</h5><div class="tw"><table><thead><tr><th>関数</th><th>1つの目的</th><th>行数</th></tr></thead><tbody><tr><td><code>checkSensorsAndObstacles</code></td><td>判断の手順を順に呼ぶ</td><td>8</td></tr><tr><td><code>update_Avoid</code></td><td>回避中に、終了条件を調べる</td><td>6</td></tr><tr><td><code>is_CheckTime</code></td><td>いま障害物を調べる時刻か返す</td><td>4</td></tr><tr><td><code>mark_Checked</code></td><td>調べた時刻を記録する</td><td>4</td></tr><tr><td><code>update_ObstacleFlags</code></td><td>front と back を更新する</td><td>4</td></tr><tr><td><code>decide_AvoidAction</code></td><td>front・back・Drive_Num から回避動作を返す（なければ DEF）</td><td>6</td></tr><tr><td><code>start_Avoid</code></td><td>回避動作を始める（状態を上書き、モーター、警告音）</td><td>8</td></tr><tr><td><code>end_Avoid</code></td><td>回避動作を終えて停止する</td><td>5</td></tr></tbody></table></div><h5>センサー</h5><div class="tw"><table><thead><tr><th>関数</th><th>1つの目的</th><th>行数</th></tr></thead><tbody><tr><td><code>watch</code></td><td>超音波で前方の距離（cm）を返す</td><td>10</td></tr><tr><td><code>is_FrontBlocked</code></td><td>前方の障害物を2回続けて検知したか返す</td><td>7</td></tr><tr><td><code>is_BackBlocked</code></td><td>後方の障害物を2回続けて検知したか返す</td><td>7</td></tr><tr><td><code>is_BackIrOn</code></td><td>後方赤外線のどちらかが反応しているか返す</td><td>3</td></tr></tbody></table></div><h5>出力層（走行）</h5><div class="tw"><table><thead><tr><th>関数</th><th>1つの目的</th><th>行数</th></tr></thead><tbody><tr><td><code>do_Drive_Tick</code></td><td>Drive_Num に合う go_ 関数を呼ぶ</td><td>9</td></tr><tr><td><code>go_Advance</code></td><td>前進のモーター設定</td><td>4</td></tr><tr><td><code>go_Back</code></td><td>後退のモーター設定</td><td>4</td></tr><tr><td><code>go_Left</code></td><td>左折（その場旋回）のモーター設定</td><td>4</td></tr><tr><td><code>go_Right</code></td><td>右折（その場旋回）のモーター設定</td><td>4</td></tr><tr><td><code>go_Stop</code></td><td>完全停止（PWM0・方向LOW）</td><td>4</td></tr><tr><td><code>set_MotorSpeed</code></td><td>左右のPWMを設定する</td><td>4</td></tr><tr><td><code>set_RightMotor</code></td><td>右モーターの方向ピンを設定する</td><td>4</td></tr><tr><td><code>set_LeftMotor</code></td><td>左モーターの方向ピンを設定する</td><td>4</td></tr></tbody></table></div><h5>出力層（ブザー・音楽）</h5><div class="tw"><table><thead><tr><th>関数</th><th>1つの目的</th><th>行数</th></tr></thead><tbody><tr><td><code>do_Music_Tick</code></td><td>依頼から0.3秒たったら曲を再生する</td><td>6</td></tr><tr><td><code>is_MusicDue</code></td><td>依頼があり、0.3秒たったか返す</td><td>3</td></tr><tr><td><code>play_Music</code></td><td>曲を最後まで再生する（OKで中止）</td><td>14</td></tr><tr><td><code>play_Note</code></td><td>1音を鳴らし、短い無音を入れる</td><td>4</td></tr><tr><td><code>get_SongNote</code></td><td>曲データの次の1音の高さを返す</td><td>3</td></tr><tr><td><code>get_SongLength</code></td><td>曲データの次の1音の長さを返す</td><td>3</td></tr><tr><td><code>is_MusicStopPressed</code></td><td>再生中にOKが押されたか返す</td><td>6</td></tr><tr><td><code>play_Tone</code></td><td>指定した高さと長さで1音を鳴らす</td><td>12</td></tr><tr><td><code>warning</code></td><td>警告音を鳴らす（1秒に1回まで）</td><td>11</td></tr></tbody></table></div><h5>初期化とメイン</h5><div class="tw"><table><thead><tr><th>関数</th><th>1つの目的</th><th>行数</th></tr></thead><tbody><tr><td><code>setup</code></td><td>初期化の関数を順に呼ぶ</td><td>6</td></tr><tr><td><code>init_MotorPins</code></td><td>モーターのピンを設定し、停止させる</td><td>5</td></tr><tr><td><code>init_BuzzerPin</code></td><td>ブザーのピンを設定し、停止（HIGH）にする</td><td>4</td></tr><tr><td><code>init_SensorPins</code></td><td>超音波と後方赤外線のピンを設定する</td><td>6</td></tr><tr><td><code>init_IrReceiver</code></td><td>リモコン受信を始める（LED点滅は無効）</td><td>3</td></tr><tr><td><code>loop</code></td><td>入力→判断→出力→音楽→遅延 を繰り返す</td><td>9</td></tr></tbody></table></div><p>行数は、関数の先頭行から閉じ括弧までです。</p></div></details>
+  <details><summary><span class="id">7</span><span>データ設計と名前の見直し</span></summary><div class="body dbody"><h5>グローバル変数</h5><div class="tw"><table><thead><tr><th>名前</th><th>型</th><th>意味</th></tr></thead><tbody><tr><td><code>Drive_Num</code></td><td><code>DriveState</code></td><td>現在の動作（<code>GO_ADVANCE</code>、<code>GO_LEFT</code>、<code>GO_RIGHT</code>、<code>GO_BACK</code>、<code>GO_STOP</code>、<code>DEF</code>＝動作なし）</td></tr><tr><td><code>front</code>、<code>back</code></td><td><code>int</code></td><td>前方・後方に障害物があるか（1＝あり）</td></tr><tr><td><code>lastDriveCmd</code>、<code>lastDriveCmdMs</code></td><td><code>DriveState</code>、<code>unsigned long</code></td><td>直前の走行指示と、その時刻（矛盾判定用）</td></tr><tr><td><code>isAvoiding</code></td><td><code>bool</code></td><td>回避動作中か</td></tr><tr><td><code>avoidStartMs</code></td><td><code>unsigned long</code></td><td>回避を始めた時刻</td></tr><tr><td><code>isCheckRequested</code></td><td><code>bool</code></td><td>新しい指示の直後に、すぐ障害物を調べるか</td></tr><tr><td><code>lastCheckMs</code></td><td><code>unsigned long</code></td><td>最後に障害物を調べた時刻</td></tr><tr><td><code>pendingSongNum</code>、<code>pendingSongMs</code></td><td><code>int</code>、<code>unsigned long</code></td><td>再生を依頼された曲番号（0＝なし）と、その時刻</td></tr><tr><td><code>IS_IR</code></td><td><code>bool</code></td><td>ループ遅延の切り替え（サンプル由来。大文字だが慣例を優先して例外とした）</td></tr></tbody></table></div><h5>設定値（先頭の定義）</h5><div class="tw"><table><thead><tr><th>名前</th><th>値</th><th>意味</th></tr></thead><tbody><tr><td><code>DISTANCE_LIMIT</code></td><td><code>20</code></td><td>前方の障害物とみなす距離（cm）</td></tr><tr><td><code>SPEED</code></td><td><code>200</code></td><td>モーター速度（0〜255）</td></tr><tr><td><code>CHECK_INTERVAL_MS</code></td><td><code>100</code></td><td>センサー確認の間隔（ms）</td></tr><tr><td><code>CONFLICT_MS</code></td><td><code>300</code></td><td>逆向きのコードを矛盾とみなす時間（ms）</td></tr><tr><td><code>AVOID_MS</code></td><td><code>500</code></td><td>回避動作を続ける時間（ms）</td></tr><tr><td><code>WARN_INTERVAL_MS</code></td><td><code>1000</code></td><td>警告音の最短間隔（ms）</td></tr><tr><td><code>TEMPO_MS</code></td><td><code>150</code></td><td>8分音符1つの長さ（ms）</td></tr><tr><td><code>SONG_COUNT</code></td><td><code>9</code></td><td>曲の数（ボタン1〜9）</td></tr><tr><td><code>NO_COMMAND</code></td><td><code>-1</code></td><td>受信なし</td></tr></tbody></table></div><h5>名前の見直し（実施済み）</h5><div class="tw"><table><thead><tr><th>元の名前</th><th>新しい名前</th><th>理由</th></tr></thead><tbody><tr><td><code>DN</code></td><td><code>DriveState</code></td><td>短くて意味が分からない</td></tr><tr><td><code>avoiding</code>、<code>forceCheck</code></td><td><code>isAvoiding</code>、<code>isCheckRequested</code></td><td>bool型は is を付ける</td></tr><tr><td><code>lastCmd</code>、<code>lastCmdTime</code>、<code>avoidStart</code></td><td><code>lastDriveCmd</code>、<code>lastDriveCmdMs</code>、<code>avoidStartMs</code></td><td>何の指示か、単位は何かを明記する</td></tr><tr><td><code>speedPinR</code> など</td><td><code>SPEED_PIN_R</code> など</td><td>固定値は大文字</td></tr><tr><td><code>LFSensor_bl</code>、<code>LFSensor_br</code></td><td><code>BACK_IR_L_PIN</code>、<code>BACK_IR_R_PIN</code></td><td>役割が分かる名前にする</td></tr><tr><td><code>Trig_PIN</code>、<code>Echo_PIN</code>、<code>distancelimit</code></td><td><code>TRIG_PIN</code>、<code>ECHO_PIN</code>、<code>DISTANCE_LIMIT</code></td><td>固定値は大文字</td></tr><tr><td><code>CHECK_INTERVAL</code>、<code>WARN_INTERVAL</code></td><td><code>CHECK_INTERVAL_MS</code>、<code>WARN_INTERVAL_MS</code></td><td>単位の付け方を <code>AVOID_MS</code> に統一</td></tr><tr><td><code>song1</code>〜<code>song9</code>、<code>songs</code></td><td><code>SONG_1</code>〜<code>SONG_9</code>、<code>SONG_TABLE</code></td><td>固定データは大文字</td></tr><tr><td><code>front_Blocked</code>、<code>back_Blocked</code>、<code>rawBack</code></td><td><code>is_FrontBlocked</code>、<code>is_BackBlocked</code>、<code>is_BackIrOn</code></td><td>bool型を返す関数は is_ を付ける</td></tr><tr><td><code>isOpposite</code>、<code>rightMotor</code>、<code>leftMotor</code>、<code>playTone</code></td><td><code>is_OppositeDrive</code>、<code>set_RightMotor</code>、<code>set_LeftMotor</code>、<code>play_Tone</code></td><td>関数名を「動詞_対象」に統一</td></tr><tr><td><code>p</code>、<code>t</code>、<code>c</code>、<code>d1</code>、<code>d2</code></td><td><code>notePtr</code>、<code>echoUs</code>、<code>command</code>、<code>isDir1High</code>、<code>isDir2High</code></td><td>1文字名をやめる</td></tr></tbody></table></div></div></details>
+  <details><summary><span class="id">8</span><span>変更しやすさ：触る場所</span></summary><div class="body dbody"><div class="tw"><table><thead><tr><th>変えたいこと</th><th>触る場所</th></tr></thead><tbody><tr><td>モーターの速さ</td><td><code>SPEED</code></td></tr><tr><td>障害物とみなす距離</td><td><code>DISTANCE_LIMIT</code></td></tr><tr><td>回避動作の長さ</td><td><code>AVOID_MS</code></td></tr><tr><td>センサーを調べる間隔</td><td><code>CHECK_INTERVAL_MS</code></td></tr><tr><td>警告音の間隔</td><td><code>WARN_INTERVAL_MS</code></td></tr><tr><td>同時押しとみなす時間（矢印・数字の共通）</td><td><code>CONFLICT_MS</code></td></tr><tr><td>曲の速さ</td><td><code>TEMPO_MS</code></td></tr><tr><td>リモコンのボタン</td><td><code>IR_ADVANCE</code> など、<code>NUM_CODES</code></td></tr><tr><td>曲を変える・足す</td><td><code>SONG_n</code>、<code>SONG_TABLE</code>、<code>SONG_COUNT</code></td></tr><tr><td>ピンの変更</td><td>4章の定義名</td></tr><tr><td>タイヤの向きが逆</td><td><code>go_Advance()</code> と <code>go_Back()</code> の HIGH／LOW（<code>go_Left()</code> と <code>go_Right()</code> も同様）</td></tr></tbody></table></div></div></details>
+  <details><summary><span class="id">9</span><span>変更の実施結果</span></summary><div class="body dbody"><div class="tw"><table><thead><tr><th>ステップ</th><th>内容</th><th>結合テスト（パソコン上）</th></tr></thead><tbody><tr><td>修正前</td><td>動作の確認</td><td>18項目すべてOK</td></tr><tr><td>1 名前の統一</td><td>7章の対応表のとおり</td><td>18項目すべてOK</td></tr><tr><td>2 重複の整理</td><td><code>set_MotorSpeed</code> にまとめる</td><td>18項目すべてOK</td></tr><tr><td>3 関数の分割</td><td><code>checkSensorsAndObstacles</code>、<code>do_IR_Tick</code>、<code>play_Music</code>、<code>setup</code></td><td>18項目すべてOK</td></tr><tr><td>4 入力層の整理</td><td>OKの処理がモーターを直接止めない</td><td>18項目すべてOK</td></tr><tr><td>5 機能追加</td><td>数字ボタンの同時押し（要求2-7）</td><td>24項目すべてOK</td></tr></tbody></table></div><p>各ステップのあとに、結合テストをやり直しました。単体テストは、最終のコードに対して実施しました（10章）。</p></div></details>
+  <details><summary><span class="id">10</span><span>テスト（単体テストと結合テスト）</span></summary><div class="body dbody"><p>テストを、単体テストと結合テストに分けて行います。どちらも、コードを変えるたびにすべてやり直します。</p><div class="tw"><table><thead><tr><th>種類</th><th>対象</th><th>方法</th><th>件数</th><th>結果</th></tr></thead><tbody><tr><td>単体テスト</td><td>関数1つずつ</td><td>他の関数の結果や部品は、擬似品に置き換えて確認する</td><td>85</td><td>すべてOK</td></tr><tr><td>結合テスト</td><td>入力・判断・出力・音楽を組み合わせた動き</td><td><code>loop()</code> を繰り返し動かし、リモコンとセンサーの入力を擬似的に与えて確認する</td><td>24</td><td>すべてOK</td></tr><tr><td>実機での結合テスト</td><td>実際のロボット</td><td>組み立て後に、結合テストの内容を実機で確認する</td><td>―</td><td>未実施</td></tr></tbody></table></div><h5>10.1 単体テスト仕様（85件）</h5><div class="tw"><table><thead><tr><th>対象の関数</th><th>確認内容</th><th>件数</th><th>結果</th></tr></thead><tbody><tr><td><code>is_OppositeDrive</code></td><td>・↑↓・↓↑・←→・→← は、すべて逆向き<br>・↑と←、停止と↑は、逆向きではない</td><td>2</td><td>すべてOK</td></tr><tr><td><code>get_SongNum</code></td><td>・ボタン1〜9のコードが、曲1〜9になる<br>・矢印・OK・未定義のコードは 0</td><td>2</td><td>すべてOK</td></tr><tr><td><code>is_NumberConflict</code></td><td>・依頼がないときは false<br>・依頼中と別の数字は true、同じ数字は false</td><td>2</td><td>すべてOK</td></tr><tr><td><code>decide_AvoidAction</code></td><td>・前後とも反応・前進中 → 回転（GO_RIGHT）<br>・前後とも反応・後退中 → 回転（GO_RIGHT）<br>・前方だけ・前進中 → 後退（GO_BACK）<br>・前方だけ・後退中 → 回避なし（DEF）<br>・後方だけ・後退中 → 前進（GO_ADVANCE）<br>・後方だけ・前進中 → 回避なし（DEF）<br>・障害物なし → 回避なし（DEF）<br>・前方だけ・旋回中 → 回避なし（DEF）</td><td>8</td><td>すべてOK</td></tr><tr><td><code>is_CheckTime</code></td><td>・停止中は、依頼があっても false<br>・旋回中は false<br>・前進中で、すぐ調べる依頼があれば true<br>・前進中で、前回から100ms未満なら false<br>・前進中で、前回から100ms以上なら true</td><td>5</td><td>すべてOK</td></tr><tr><td><code>mark_Checked</code></td><td>・依頼を消し、調べた時刻を記録する</td><td>1</td><td>すべてOK</td></tr><tr><td><code>watch</code></td><td>・往復580μs → 10cm<br>・往復5800μs → 100cm<br>・反応なし → 999</td><td>3</td><td>すべてOK</td></tr><tr><td><code>is_FrontBlocked</code></td><td>・10cmで2回続けて検知 → true<br>・30cm（しきい値より遠い）→ false<br>・反応なし → false<br>・1回目だけ近く、2回目は遠い → false（ノイズ対策）</td><td>4</td><td>すべてOK</td></tr><tr><td><code>is_BackIrOn</code></td><td>・左右とも反応なし → false<br>・左だけ反応 → true<br>・右だけ反応 → true</td><td>3</td><td>すべてOK</td></tr><tr><td><code>is_BackBlocked</code></td><td>・2回続けて反応 → true<br>・反応なし → false<br>・1回目だけ反応、2回目は反応なし → false（ノイズ対策）</td><td>3</td><td>すべてOK</td></tr><tr><td><code>update_ObstacleFlags</code></td><td>・前方10cm・後方反応 → front=1、back=1<br>・障害物なし → front=0、back=0</td><td>2</td><td>すべてOK</td></tr><tr><td><code>read_IR_Command</code></td><td>・受信なし → NO_COMMAND<br>・コード24を受信 → 24<br>・リピート信号 → NO_COMMAND、受信は消費される</td><td>3</td><td>すべてOK</td></tr><tr><td><code>set_Drive</code></td><td>・↑を受け付ける → Drive_Num、lastDriveCmd が前進、すぐ調べる依頼が立つ<br>・↑の0.1秒後に↓ → 矛盾で停止<br>・停止のあとの↓ → 後退<br>・←の0.4秒後に→ → 矛盾にならず右折</td><td>4</td><td>すべてOK</td></tr><tr><td><code>handle_StopButton</code></td><td>・回避中・曲の依頼中・前進中 → すべて取り消して GO_STOP</td><td>1</td><td>すべてOK</td></tr><tr><td><code>handle_DriveButton</code></td><td>・←のコード → GO_LEFT<br>・未定義のコード → 変化なし</td><td>2</td><td>すべてOK</td></tr><tr><td><code>handle_NumberButton</code></td><td>・数字3 → 曲3を依頼し、時刻を記録<br>・同じ数字をもう一度 → 依頼はそのまま（時刻も変えない）<br>・別の数字 → 依頼を取り消す<br>・数字以外のコード → 依頼しない</td><td>4</td><td>すべてOK</td></tr><tr><td><code>set_MotorSpeed</code></td><td>・右PWM=100、左PWM=50 に設定</td><td>1</td><td>すべてOK</td></tr><tr><td><code>set_RightMotor</code>、<code>set_LeftMotor</code></td><td>・方向ピンが指定どおりになる</td><td>1</td><td>すべてOK</td></tr><tr><td><code>go_Advance</code></td><td>・両輪が前進、速度は SPEED</td><td>1</td><td>すべてOK</td></tr><tr><td><code>go_Back</code></td><td>・両輪が後退、速度は SPEED</td><td>1</td><td>すべてOK</td></tr><tr><td><code>go_Left</code></td><td>・右輪が前進、左輪が後退（その場で左旋回）</td><td>1</td><td>すべてOK</td></tr><tr><td><code>go_Right</code></td><td>・右輪が後退、左輪が前進（その場で右旋回）</td><td>1</td><td>すべてOK</td></tr><tr><td><code>go_Stop</code></td><td>・PWMが0、方向ピン4本がすべてLOW</td><td>1</td><td>すべてOK</td></tr><tr><td><code>do_Drive_Tick</code></td><td>・Drive_Num の5つの値に合った動きをする</td><td>1</td><td>すべてOK</td></tr><tr><td><code>warning</code></td><td>・1回目 → 2回鳴る<br>・1秒以内にもう一度 → 鳴らない<br>・1秒たてば → また2回鳴る</td><td>3</td><td>すべてOK</td></tr><tr><td><code>play_Tone</code></td><td>・1000Hzを100ms → 約100回振動し、約100msかかり、最後はHIGH<br>・周波数0（休符）→ 鳴らさず、50ms待つ</td><td>2</td><td>すべてOK</td></tr><tr><td><code>get_SongNote</code></td><td>・曲1の先頭の音は NC4（262）</td><td>1</td><td>すべてOK</td></tr><tr><td><code>get_SongLength</code></td><td>・曲1の先頭の長さは 2</td><td>1</td><td>すべてOK</td></tr><tr><td><code>get_SongNote</code></td><td>・曲1の8音目の次は、終わりの印 END_MARK</td><td>1</td><td>すべてOK</td></tr><tr><td><code>is_MusicStopPressed</code></td><td>・受信なし → false<br>・OKを受信 → true<br>・OK以外を受信 → false</td><td>3</td><td>すべてOK</td></tr><tr><td><code>play_Music</code></td><td>・曲番号が範囲外（0、10）→ 何もしない<br>・曲1 → モーターを止めて、最後まで鳴らし、最後はHIGH<br>・再生中にOK → 途中で止まる（全体2.7秒より大幅に短い）</td><td>3</td><td>すべてOK</td></tr><tr><td><code>is_MusicDue</code></td><td>・依頼なし → false<br>・依頼から0.3秒未満 → false<br>・依頼から0.3秒以上 → true</td><td>3</td><td>すべてOK</td></tr><tr><td><code>do_Music_Tick</code></td><td>・依頼から0.3秒未満 → 鳴らさず、依頼も残る<br>・0.3秒たったら → 依頼を消して曲を鳴らす</td><td>2</td><td>すべてOK</td></tr><tr><td><code>start_Avoid</code></td><td>・後退で回避開始 → 状態を上書き、モーターが後退、警告音、回避中フラグ</td><td>1</td><td>すべてOK</td></tr><tr><td><code>end_Avoid</code></td><td>・回避を終える → 回避中フラグを下げ、停止</td><td>1</td><td>すべてOK</td></tr><tr><td><code>update_Avoid</code></td><td>・0.5秒たったら → 回避を終える<br>・0.1秒・障害物なし → 回避を続ける<br>・後退中に後方が反応 → 前進せず停止（行き来の防止）<br>・前進中に前方が反応 → 停止</td><td>4</td><td>すべてOK</td></tr><tr><td><code>init_MotorPins</code></td><td>・モーターを停止状態にする</td><td>1</td><td>すべてOK</td></tr><tr><td><code>init_BuzzerPin</code></td><td>・ブザーのピンをHIGH（停止）にする</td><td>1</td><td>すべてOK</td></tr><tr><td><code>setup</code></td><td>・起動直後：停止し、ブザー停止、動作は GO_STOP</td><td>1</td><td>すべてOK</td></tr></tbody></table></div><h5>10.2 結合テスト仕様（24件）</h5><div class="tw"><table><thead><tr><th>ID</th><th>区分</th><th>操作と状況</th><th>期待する結果</th><th>結果</th></tr></thead><tbody><tr><td>IT-01</td><td>起動</td><td>電源を入れた直後</td><td>モーターは停止、ブザーは無音</td><td>OK</td></tr><tr><td>IT-02</td><td>走行</td><td>↑を押す（前方に障害物なし）</td><td>前進する</td><td>OK</td></tr><tr><td>IT-03</td><td>回避</td><td>前進中に、前方20cm以内に壁が現れる</td><td>後退し、警告音が鳴る</td><td>OK</td></tr><tr><td>IT-04</td><td>回避</td><td>IT-03の0.5秒後</td><td>停止する</td><td>OK</td></tr><tr><td>IT-05</td><td>回避</td><td>壁の前で↑を押す</td><td>前進せず、後退する</td><td>OK</td></tr><tr><td>IT-06</td><td>回避</td><td>前後の両方に障害物がある状態で↑を押す</td><td>その場で右回転する</td><td>OK</td></tr><tr><td>IT-07</td><td>回避</td><td>後方に障害物がある状態で↓を押す</td><td>前進する</td><td>OK</td></tr><tr><td>IT-08</td><td>回避</td><td>IT-07の0.5秒後</td><td>停止する</td><td>OK</td></tr><tr><td>IT-09</td><td>矢印の同時押し</td><td>↑と↓を0.3秒以内に続けて押す</td><td>停止する</td><td>OK</td></tr><tr><td>IT-10</td><td>矢印の同時押し</td><td>←と→を0.3秒以内に続けて押す</td><td>停止する</td><td>OK</td></tr><tr><td>IT-11</td><td>走行</td><td>←を押す</td><td>左旋回する</td><td>OK</td></tr><tr><td>IT-12</td><td>停止</td><td>旋回中にOKを押す</td><td>完全停止（PWM0・方向ピンLOW）</td><td>OK</td></tr><tr><td>IT-13</td><td>停止</td><td>回避動作中にOKを押す</td><td>すぐ停止する</td><td>OK</td></tr><tr><td>IT-14</td><td>未定義コード</td><td>停止中に、未定義のコードを受信</td><td>停止のまま</td><td>OK</td></tr><tr><td>IT-15</td><td>未定義コード</td><td>前進中に、未定義のコードを受信</td><td>前進を続ける</td><td>OK</td></tr><tr><td>IT-16</td><td>音楽</td><td>前進中に数字ボタンを押す（直後）</td><td>0.3秒間は前進を続け、まだ鳴らない</td><td>OK</td></tr><tr><td>IT-17</td><td>音楽</td><td>IT-16の0.3秒後</td><td>モーターを止め、曲を最後まで再生する</td><td>OK</td></tr><tr><td>IT-18</td><td>音楽</td><td>再生中にOKを押す</td><td>曲が途中で止まる</td><td>OK</td></tr><tr><td>IT-19</td><td>矢印の同時押し</td><td>←→で停止したあと、0.3秒より後に↑を押す</td><td>矛盾にならず、前進する</td><td>OK</td></tr><tr><td>IT-20</td><td>数字の同時押し</td><td>数字1と2を0.3秒以内に押す</td><td>どの曲も鳴らない</td><td>OK</td></tr><tr><td>IT-21</td><td>数字の同時押し</td><td>同じ数字を0.3秒以内に2回押す</td><td>1回だけ再生する</td><td>OK</td></tr><tr><td>IT-22</td><td>数字の同時押し</td><td>数字を押した直後にOKを押す</td><td>曲は鳴らない</td><td>OK</td></tr><tr><td>IT-23</td><td>数字の同時押し</td><td>同時押しで取り消したあと、別の数字を押す</td><td>その数字の曲が鳴る</td><td>OK</td></tr><tr><td>IT-24</td><td>数字の同時押し</td><td>前進中に数字1と2を同時に押す</td><td>前進を続け、曲は鳴らない</td><td>OK</td></tr></tbody></table></div><h5>10.3 実機で確認すること（未実施）</h5><ul><li>タイヤの向き（前進と後退、左折と右折）</li><li>センサーの感度（<code>DISTANCE_LIMIT</code>、後方赤外線のボリューム）</li><li>ブザーの種類（アクティブでは曲がメロディーにならない）</li><li>電源投入時にブザーが短く鳴らないか（D13はブートローダーが点滅させる）</li><li>D0のセンサー配線を外して書き込めるか</li></ul><h5>10.4 テストの実行方法</h5><p>テストは、パソコンの <code>g++</code> で動かします。Arduinoの部品は擬似品に置き換えているため、実機の動作確認の代わりにはなりません。</p><pre class="cmd">bash run_tests.sh</pre><p>同じフォルダに、<code>robot_final.ino</code>、<code>stub.h</code>、<code>unit_test.cpp</code>、<code>integration_test.cpp</code>、<code>run_tests.sh</code> を置きます。</p></div></details>
+  <details><summary><span class="id">11</span><span>変更履歴と未決事項</span></summary><div class="body dbody"><div class="tw"><table><thead><tr><th>版</th><th>日付</th><th>内容</th></tr></thead><tbody><tr><td>1.0</td><td>2026年11月4日</td><td>初版</td></tr><tr><td>1.1</td><td>2026年11月7日</td><td>実施結果を反映。関数一覧を現在のコードに合わせた。数字ボタンの同時押しを追加</td></tr><tr><td>1.2</td><td>2026年11月7日</td><td>テストを単体テストと結合テストに分け、テスト仕様を追加</td></tr></tbody></table></div><h5>未決事項</h5><ul><li>ファイルが437行になった。曲データ（<code>SONG_n</code>）を別タブに分けるかどうか（変更量を抑えるため、今は分けていない）</li><li>依頼文の「変数名や関数名を作らない。包信しない」は、「名前を別の用途に使い回さない」と解釈した（方針6）</li><li>関数の長さ（20行）、ネスト（3段）、引数（3個）の目安は、提案した値</li></ul></div></details>
+</section>
+<section class="design" id="functions" aria-labelledby="functions-title">
+<h2 id="functions-title">関数設計書</h2>
+<p>Arduinoスケッチ <code>robot_final.ino</code> の全45関数。処理内容・入出力・呼び出し関数を確認できます。</p>
+<p><a class="fn-download" download="ロボットカー_関数設計書.xlsx" href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,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">関数設計書をダウンロード（Excel）</a></p>
+<div class="fn-controls" hidden><label for="function-search">関数を検索</label><input id="function-search" type="search" placeholder="例：go_Stop、障害物、PWM" autocomplete="off"><span id="function-count" role="status">45件</span></div>
+<p id="function-empty" hidden>該当する関数がありません。</p>
+<div class="function-group"><h3>初期化・メイン <small>（6件）</small></h3><details class="function-card" id="fn-setup">
+<summary><code>setup()</code> <span>起動時の初期化</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> モーター、ブザー、センサー、IR受信機を順に初期化する。</p>
+<p><strong>関数形式</strong> <code>void setup();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>電源投入・リセット</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>停止・無音・受信待機</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> init_MotorPins()、init_BuzzerPin()、init_SensorPins()、init_IrReceiver()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-loop">
+<summary><code>loop()</code> <span>周期処理</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 入力受付後、回避中は update_Avoid()、通常時は checkSensorsAndObstacles() を呼ぶ。その後に走行・音楽を出力する。末尾で IS_IR に応じて100または20 μs待つ。</p>
+<p><strong>関数形式</strong> <code>void loop();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>IS_IR・各機器と共有状態</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>走行・音楽・障害物状態の更新</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> do_IR_Tick()、update_Avoid()、checkSensorsAndObstacles()、do_Drive_Tick()、do_Music_Tick()、delayMicroseconds()</p><p><strong>備考</strong> 対象機体は OSOYOO V2.1 Robot Car Kit for Arduino（2019012400）。ソースは添付HTML版1.2に掲載された実装。</p></div></details><details class="function-card" id="fn-init_MotorPins">
+<summary><code>init_MotorPins()</code> <span>モーター端子を初期化</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 左右のPWM端子と方向端子を出力に設定し、停止処理を呼ぶ。</p>
+<p><strong>関数形式</strong> <code>void init_MotorPins();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>—</td><td>—</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>D9・D6はPWM 0、D12・D11・D7・D8はLOW</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> pinMode()、go_Stop()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-init_BuzzerPin">
+<summary><code>init_BuzzerPin()</code> <span>ブザー端子を初期化</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> D13を出力に設定し、HIGHで消音する。</p>
+<p><strong>関数形式</strong> <code>void init_BuzzerPin();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>—</td><td>—</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>D13を出力・HIGHに設定</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> pinMode()、digitalWrite()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-init_SensorPins">
+<summary><code>init_SensorPins()</code> <span>センサー端子を初期化</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> Trigを出力、Echoと後方赤外線2系統を入力に設定する。</p>
+<p><strong>関数形式</strong> <code>void init_SensorPins();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>—</td><td>—</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>各センサーの端子モード</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> pinMode()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-init_IrReceiver">
+<summary><code>init_IrReceiver()</code> <span>赤外線受信を開始</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> D4で受信を開始し、D13をブザーに使うため受信時のLED点滅を無効にする。</p>
+<p><strong>関数形式</strong> <code>void init_IrReceiver();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>—</td><td>—</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>IR受信機が受信可能になる</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> IrReceiver.begin()</p><p><strong>備考</strong> —</p></div></details></div><div class="function-group"><h3>リモコン入力 <small>（9件）</small></h3><details class="function-card" id="fn-do_IR_Tick">
+<summary><code>do_IR_Tick()</code> <span>受信コードを振り分ける</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 受信なしは終了。OKを優先し、回避中はOK以外を破棄する。通常時は走行と数字の判定に渡す。</p>
+<p><strong>関数形式</strong> <code>void do_IR_Tick();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>IR受信コード・isAvoiding</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>走行指示・停止・曲予約の更新</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> read_IR_Command()、handle_StopButton()、handle_DriveButton()、handle_NumberButton()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-read_IR_Command">
+<summary><code>read_IR_Command()</code> <span>IR信号を1件読む</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 受信成功時にコードとフラグを取得し、resumeで次の受信を許可する。リピートと未受信はNO_COMMAND。</p>
+<p><strong>関数形式</strong> <code>int read_IR_Command();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>int</td><td>受信コードまたはNO_COMMAND</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>IrReceiverの受信データ</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>受信済みデータを消費</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> IrReceiver.decode()、IrReceiver.resume()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-handle_StopButton">
+<summary><code>handle_StopButton()</code> <span>OKによる停止要求</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 回避と曲予約を解除し、現在と直前の走行指示をGO_STOPにする。モーターは出力処理で停止する。</p>
+<p><strong>関数形式</strong> <code>void handle_StopButton();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>—</td><td>—</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>isAvoiding・pendingSongNum・Drive_Num・lastDriveCmdを更新</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> —</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-handle_DriveButton">
+<summary><code>handle_DriveButton()</code> <span>矢印コードを走行指示に変換</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 24→前進、82→後退、8→左旋回、90→右旋回。対応するコードのみset_Driveを呼ぶ。</p>
+<p><strong>関数形式</strong> <code>void handle_DriveButton(int command);</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>int</td><td>command：赤外線リモコンの受信コード</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>—</td><td>—</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>走行指示を反映</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> set_Drive()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-set_Drive">
+<summary><code>set_Drive()</code> <span>走行指示と入力時刻を記録</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 直前の指示と逆向きで差が300 ms以下なら停止。その他は指示と時刻を記録し、センサー確認を要求する。</p>
+<p><strong>関数形式</strong> <code>void set_Drive(DriveState cmd);</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>DriveState</td><td>cmd：受け付けた走行状態</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>lastDriveCmd・lastDriveCmdMs・millis()</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>Drive_Num・直前指示と時刻・確認要求を更新</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> millis()、is_OppositeDrive()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-is_OppositeDrive">
+<summary><code>is_OppositeDrive()</code> <span>逆向きの指示を判定</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 前進と後退、左旋回と右旋回の組み合わせを、順序を問わず判定する。</p>
+<p><strong>関数形式</strong> <code>bool is_OppositeDrive(DriveState a, DriveState b);</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>DriveState<br>DriveState</td><td>a：比較する1つ目の走行状態<br>b：比較する2つ目の走行状態</td></tr><tr><th scope="row">戻り値</th><td>bool</td><td>逆向きならtrue</td></tr><tr><th scope="row">入力</th><td>—</td><td>—</td></tr><tr><th scope="row">出力</th><td>—</td><td>—</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> —</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-handle_NumberButton">
+<summary><code>handle_NumberButton()</code> <span>数字ボタンから曲を予約</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 数字以外は無視。予約中に別の数字が来れば取消し、同じ数字なら予約時刻を維持。新規予約時だけ曲番号と時刻を保存する。</p>
+<p><strong>関数形式</strong> <code>void handle_NumberButton(int command);</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>int</td><td>command：赤外線リモコンの受信コード</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>pendingSongNum・millis()</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>pendingSongNum・pendingSongMsを更新</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> get_SongNum()、is_NumberConflict()、millis()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-get_SongNum">
+<summary><code>get_SongNum()</code> <span>受信コードを曲番号に変換</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> NUM_CODESを照合し、一致した添字に1を足す。</p>
+<p><strong>関数形式</strong> <code>int get_SongNum(int command);</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>int</td><td>command：赤外線リモコンの受信コード</td></tr><tr><th scope="row">戻り値</th><td>int</td><td>曲番号1〜9、該当なしは0</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>NUM_CODES</td></tr><tr><th scope="row">出力</th><td>—</td><td>—</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> —</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-is_NumberConflict">
+<summary><code>is_NumberConflict()</code> <span>予約中の曲との競合を判定</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 既存の予約があり、曲番号が異なるときに競合とする。</p>
+<p><strong>関数形式</strong> <code>bool is_NumberConflict(int songNum);</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>int</td><td>songNum：曲番号（1〜9）</td></tr><tr><th scope="row">戻り値</th><td>bool</td><td>競合時true</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>pendingSongNum</td></tr><tr><th scope="row">出力</th><td>—</td><td>—</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> —</p><p><strong>備考</strong> —</p></div></details></div><div class="function-group"><h3>センサー <small>（7件）</small></h3><details class="function-card" id="fn-watch">
+<summary><code>watch()</code> <span>前方距離を測定</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> Trigに10 μsのパルスを出し、EchoのHIGH幅を最大25 ms待つ。パルス幅を58で整数除算する。</p>
+<p><strong>関数形式</strong> <code>int watch();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>int</td><td>距離cm。応答なしは999</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>D3のEchoパルス</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>D10に測定トリガー</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> digitalWrite()、delayMicroseconds()、pulseIn()</p><p><strong>備考</strong> センサーが応答しない場合は、現行コードでは障害物なしとして扱う。</p></div></details><details class="function-card" id="fn-is_FrontBlocked">
+<summary><code>is_FrontBlocked()</code> <span>前方障害物を確定</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 初回が20 cm以下なら30 ms待ち再測定し、2回とも20 cm以下なら検知とする。</p>
+<p><strong>関数形式</strong> <code>bool is_FrontBlocked();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>bool</td><td>連続検知でtrue</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>watchの測定値</td></tr><tr><th scope="row">出力</th><td>—</td><td>—</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> watch()、delay()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-is_BackIrOn">
+<summary><code>is_BackIrOn()</code> <span>後方赤外線の反応を読む</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 左右のどちらかがLOWなら検知とする。</p>
+<p><strong>関数形式</strong> <code>bool is_BackIrOn();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>bool</td><td>片側以上がLOWならtrue</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>後方赤外線の左右入力</td></tr><tr><th scope="row">出力</th><td>—</td><td>—</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> digitalRead()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-is_BackBlocked">
+<summary><code>is_BackBlocked()</code> <span>後方障害物を確定</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 初回に反応があれば20 ms待ち、再度反応があれば検知とする。</p>
+<p><strong>関数形式</strong> <code>bool is_BackBlocked();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>bool</td><td>連続検知でtrue</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>is_BackIrOnの判定値</td></tr><tr><th scope="row">出力</th><td>—</td><td>—</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> is_BackIrOn()、delay()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-is_CheckTime">
+<summary><code>is_CheckTime()</code> <span>通常走行時の測定要否を判定</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 前進・後退時に限り、即時確認要求あり、または前回の記録から100 ms以上なら測定する。</p>
+<p><strong>関数形式</strong> <code>bool is_CheckTime();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>bool</td><td>測定する場合true</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>Drive_Num・isCheckRequested・lastCheckMs・millis()</td></tr><tr><th scope="row">出力</th><td>—</td><td>—</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> millis()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-mark_Checked">
+<summary><code>mark_Checked()</code> <span>測定時刻を記録</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 即時確認要求を解除し、現在時刻を保存する。</p>
+<p><strong>関数形式</strong> <code>void mark_Checked();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>millis()</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>isCheckRequested=false・lastCheckMs更新</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> millis()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-update_ObstacleFlags">
+<summary><code>update_ObstacleFlags()</code> <span>障害物フラグを更新</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 前方・後方を順に判定し、検知を1、未検知を0として記録する。</p>
+<p><strong>関数形式</strong> <code>void update_ObstacleFlags();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>前後センサーの判定結果</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>front・back</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> is_FrontBlocked()、is_BackBlocked()</p><p><strong>備考</strong> —</p></div></details></div><div class="function-group"><h3>回避判断 <small>（5件）</small></h3><details class="function-card" id="fn-decide_AvoidAction">
+<summary><code>decide_AvoidAction()</code> <span>回避方向を決定</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 前後両方なら右旋回。前進中に前方だけ検知なら後退、後退中に後方だけ検知なら前進する。</p>
+<p><strong>関数形式</strong> <code>DriveState decide_AvoidAction();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>DriveState</td><td>GO_RIGHT・GO_BACK・GO_ADVANCE・DEF（回避不要）</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>front・back・Drive_Num</td></tr><tr><th scope="row">出力</th><td>—</td><td>—</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> —</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-checkSensorsAndObstacles">
+<summary><code>checkSensorsAndObstacles()</code> <span>障害物判断を統括</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 測定時刻を確認し、障害物を測定して、必要なら回避を開始する。通常時に loop() から呼び出す。</p>
+<p><strong>関数形式</strong> <code>void checkSensorsAndObstacles();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>isAvoiding・走行状態・センサー</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>障害物フラグ・回避状態・走行出力</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> is_CheckTime()、mark_Checked()、update_ObstacleFlags()、decide_AvoidAction()、start_Avoid()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-start_Avoid">
+<summary><code>start_Avoid()</code> <span>回避を開始</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 走行状態を回避方向に切り替えて駆動する。回避フラグと開始時刻を記録し、曲予約を解除してから警告音を鳴らす。</p>
+<p><strong>関数形式</strong> <code>void start_Avoid(DriveState act);</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>DriveState</td><td>act：回避時に実行する走行状態</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>millis()</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>Drive_Num・lastDriveCmd・isAvoiding・avoidStartMs・pendingSongNum・駆動と警告音</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> do_Drive_Tick()、warning()、millis()</p><p><strong>備考</strong> 回避時間は駆動開始直後から測定する。終了は次の判断処理で確認するため、処理周期分の遅れがある。</p></div></details><details class="function-card" id="fn-update_Avoid">
+<summary><code>update_Avoid()</code> <span>回避終了の条件を判定</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 回避中に loop() から呼ぶ。進行方向の障害物を検知するか、測定の前後で500 msの経過を確認したら停止する。</p>
+<p><strong>関数形式</strong> <code>void update_Avoid();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>avoidStartMs・Drive_Num・前後センサー・millis()</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>条件成立時に停止</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> millis()、end_Avoid()、is_BackBlocked()、is_FrontBlocked()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-end_Avoid">
+<summary><code>end_Avoid()</code> <span>回避を終了して停止</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 回避フラグを解除し、状態をGO_STOPに更新してモーターを停止する。</p>
+<p><strong>関数形式</strong> <code>void end_Avoid();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>—</td><td>—</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>isAvoiding・Drive_Num・モーター出力</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> go_Stop()</p><p><strong>備考</strong> —</p></div></details></div><div class="function-group"><h3>モーター出力 <small>（9件）</small></h3><details class="function-card" id="fn-do_Drive_Tick">
+<summary><code>do_Drive_Tick()</code> <span>走行状態をモーター出力に変換</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> Drive_Numに対応する前進・後退・左旋回・右旋回・停止関数を呼ぶ。</p>
+<p><strong>関数形式</strong> <code>void do_Drive_Tick();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>Drive_Num</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>左右のモーター出力</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> go_Advance()、go_Back()、go_Left()、go_Right()、go_Stop()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-go_Advance">
+<summary><code>go_Advance()</code> <span>前進</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 左右の方向をHIGH/LOWに設定し、両側のPWMを200にする。</p>
+<p><strong>関数形式</strong> <code>void go_Advance();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>SPEED</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>左右とも前進</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> set_RightMotor()、set_LeftMotor()、set_MotorSpeed()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-go_Back">
+<summary><code>go_Back()</code> <span>後退</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 左右の方向をLOW/HIGHに設定し、両側のPWMを200にする。</p>
+<p><strong>関数形式</strong> <code>void go_Back();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>SPEED</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>左右とも後退</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> set_RightMotor()、set_LeftMotor()、set_MotorSpeed()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-go_Left">
+<summary><code>go_Left()</code> <span>左へその場旋回</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 右を前進、左を後退に設定し、両側のPWMを200にする。</p>
+<p><strong>関数形式</strong> <code>void go_Left();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>SPEED</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>左旋回</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> set_RightMotor()、set_LeftMotor()、set_MotorSpeed()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-go_Right">
+<summary><code>go_Right()</code> <span>右へその場旋回</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 右を後退、左を前進に設定し、両側のPWMを200にする。</p>
+<p><strong>関数形式</strong> <code>void go_Right();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>SPEED</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>右旋回</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> set_RightMotor()、set_LeftMotor()、set_MotorSpeed()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-go_Stop">
+<summary><code>go_Stop()</code> <span>左右のモーターを停止</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 左右PWMを0にした後、方向4端子をLOWに設定する。</p>
+<p><strong>関数形式</strong> <code>void go_Stop();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>—</td><td>—</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>PWM 0・方向LOW/LOW（空転停止）</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> set_MotorSpeed()、set_RightMotor()、set_LeftMotor()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-set_RightMotor">
+<summary><code>set_RightMotor()</code> <span>右モーターの方向出力</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 引数の論理値を右の方向端子に書き込む。</p>
+<p><strong>関数形式</strong> <code>void set_RightMotor(bool isDir1High, bool isDir2High);</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>bool<br>bool</td><td>isDir1High：方向端子1の論理値<br>isDir2High：方向端子2の論理値</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>—</td><td>—</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>D12・D11の論理出力</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> digitalWrite()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-set_LeftMotor">
+<summary><code>set_LeftMotor()</code> <span>左モーターの方向出力</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 引数の論理値を左の方向端子に書き込む。</p>
+<p><strong>関数形式</strong> <code>void set_LeftMotor(bool isDir1High, bool isDir2High);</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>bool<br>bool</td><td>isDir1High：方向端子1の論理値<br>isDir2High：方向端子2の論理値</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>—</td><td>—</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>D7・D8の論理出力</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> digitalWrite()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-set_MotorSpeed">
+<summary><code>set_MotorSpeed()</code> <span>左右のPWMを設定</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 右と左のPWM値をそれぞれanalogWriteで出力する。</p>
+<p><strong>関数形式</strong> <code>void set_MotorSpeed(int rightSpeed, int leftSpeed);</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>int<br>int</td><td>rightSpeed：右のPWM値（0〜255）<br>leftSpeed：左のPWM値（0〜255）</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>—</td><td>—</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>D9・D6のPWM</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> analogWrite()</p><p><strong>備考</strong> —</p></div></details></div><div class="function-group"><h3>ブザー・音楽 <small>（9件）</small></h3><details class="function-card" id="fn-warning">
+<summary><code>warning()</code> <span>回避時の警告音</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 前回の鳴動開始から1秒未満なら省略。LOW 50 msとHIGH 50 msを2回繰り返す。</p>
+<p><strong>関数形式</strong> <code>void warning();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>lastWarnMs・millis()</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>D13の警告音・lastWarnMs</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> millis()、digitalWrite()、delay()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-play_Tone">
+<summary><code>play_Tone()</code> <span>周波数と時間を指定して発音</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 発音中は周期ごと、休符中は約1 ms間隔でOKを確認する。</p>
+<p><strong>関数形式</strong> <code>bool play_Tone(int freq, int ms);</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>int<br>int</td><td>freq：周波数（Hz）。0以下は休符<br>ms：鳴動または休符の長さ（ms）</td></tr><tr><th scope="row">戻り値</th><td>bool</td><td>OKを受信した場合は true</td></tr><tr><th scope="row">入力</th><td>—</td><td>—</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>D13に波形出力、または休符の待機</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> is_MusicStopPressed()、millis()、delay()、digitalWrite()、delayMicroseconds()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-get_SongNote">
+<summary><code>get_SongNote()</code> <span>音符の周波数を読む</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> フラッシュ上の音符ペアの先頭をpgm_read_wordで読む。</p>
+<p><strong>関数形式</strong> <code>int get_SongNote(const int16_t* notePtr);</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>const int16_t*</td><td>notePtr：フラッシュにある音符ペアの先頭アドレス</td></tr><tr><th scope="row">戻り値</th><td>int</td><td>周波数HzまたはEND_MARK</td></tr><tr><th scope="row">入力</th><td>—</td><td>—</td></tr><tr><th scope="row">出力</th><td>—</td><td>—</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> pgm_read_word()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-get_SongLength">
+<summary><code>get_SongLength()</code> <span>音符の長さ係数を読む</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> フラッシュ上の音符ペアの2要素目をpgm_read_wordで読む。</p>
+<p><strong>関数形式</strong> <code>int get_SongLength(const int16_t* notePtr);</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>const int16_t*</td><td>notePtr：フラッシュにある音符ペアの先頭アドレス</td></tr><tr><th scope="row">戻り値</th><td>int</td><td>音の長さ係数</td></tr><tr><th scope="row">入力</th><td>—</td><td>—</td></tr><tr><th scope="row">出力</th><td>—</td><td>—</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> pgm_read_word()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-play_Note">
+<summary><code>play_Note()</code> <span>音符1個を再生</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 音符を再生し、20 msの無音を入れる。発音・休符・無音の途中でOKを確認する。</p>
+<p><strong>関数形式</strong> <code>bool play_Note(const int16_t* notePtr);</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>const int16_t*</td><td>notePtr：フラッシュにある音符ペアの先頭アドレス</td></tr><tr><th scope="row">戻り値</th><td>bool</td><td>OKを受信した場合は true</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>TEMPO_MS</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>音符1個の再生</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> play_Tone()、get_SongNote()、get_SongLength()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-is_MusicStopPressed">
+<summary><code>is_MusicStopPressed()</code> <span>再生中のOKを判定</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 受信があればコードを読み、resume後にOKコードと照合する。</p>
+<p><strong>関数形式</strong> <code>bool is_MusicStopPressed();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>bool</td><td>OK受信時true</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>IrReceiverの受信データ</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>受信済みデータを消費</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> IrReceiver.decode()、IrReceiver.resume()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-play_Music">
+<summary><code>play_Music()</code> <span>指定された曲を再生</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 走行を停止して曲を再生する。play_Note がOKを報告したら中断し、ブザーをHIGHにする。</p>
+<p><strong>関数形式</strong> <code>void play_Music(int songNum);</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>int</td><td>songNum：曲番号（1〜9）</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>SONG_TABLE・音符データ・IR受信</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>Drive_Num=GO_STOP・ブザー出力、再生後HIGH</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> go_Stop()、pgm_read_word()、get_SongNote()、play_Note()、digitalWrite()</p><p><strong>備考</strong> 発音中は周期の境目、休符や音符間は約1 ms間隔でOK受信を確認する。</p></div></details><details class="function-card" id="fn-is_MusicDue">
+<summary><code>is_MusicDue()</code> <span>曲の再生時刻を判定</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 曲予約が存在し、予約から300 ms以上経過している場合に再生可とする。</p>
+<p><strong>関数形式</strong> <code>bool is_MusicDue();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>bool</td><td>再生可ならtrue</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>pendingSongNum・pendingSongMs・millis()</td></tr><tr><th scope="row">出力</th><td>—</td><td>—</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> millis()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-do_Music_Tick">
+<summary><code>do_Music_Tick()</code> <span>予約した曲を再生</span></summary>
+<div class="body dbody"><p><strong>処理内容</strong> 回避中は再生しない。再生時刻に達したら曲番号を退避して予約を解除し、曲を再生する。</p>
+<p><strong>関数形式</strong> <code>void do_Music_Tick();</code></p>
+<div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>pendingSongNum・再生時刻判定</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>pendingSongNum=0・曲の再生</td></tr></tbody></table></div>
+<p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
+<p><strong>呼び出し関数</strong> is_MusicDue()、play_Music()</p><p><strong>備考</strong> —</p></div></details></div>
+</section>
+<script>
+(() => {
+  const section = document.getElementById('functions');
+  const input = section.querySelector('#function-search');
+  const cards = [...section.querySelectorAll('.function-card')];
+  const groups = [...section.querySelectorAll('.function-group')];
+  const normalize = text => text.normalize('NFKC').toLowerCase();
+  const searchable = cards.map(card => normalize(card.textContent));
+  section.querySelector('.fn-controls').hidden = false;
+  input.addEventListener('input', () => {
+    const terms = normalize(input.value).trim().split(/\s+/).filter(Boolean);
+    let count = 0;
+    cards.forEach((card, index) => {
+      card.hidden = !terms.every(term => searchable[index].includes(term));
+      if (!card.hidden) count++;
+    });
+    groups.forEach(group => { group.hidden = !group.querySelector('.function-card:not([hidden])'); });
+    section.querySelector('#function-count').textContent = count + '件 / 45件';
+    section.querySelector('#function-empty').hidden = count !== 0;
+  });
+})();
+</script>
+  <section class="figs" id="figures">
+    <h2>図</h2>
+    <h3>シーケンス図</h3>
+<h4>図1　起動（電源を入れたとき）</h4><p class="cap">setup が各部を初期化します。モーターは停止、ブザーは停止のまま、ボタンを待ちます。</p><div class="diagram"><pre class="mermaid">sequenceDiagram
+    autonumber
+    actor U as ユーザー
+    participant SU as setup
+    participant M as モーター
+    participant B as ブザー D13
+    participant IRR as IR受信機
+    U-&gt;&gt;SU: 電源を入れる
+    SU-&gt;&gt;M: init_MotorPins 出力設定して go_Stop
+    SU-&gt;&gt;B: init_BuzzerPin HIGH で停止
+    SU-&gt;&gt;SU: init_SensorPins 超音波と後方赤外線の入出力を設定
+    SU-&gt;&gt;IRR: init_IrReceiver 受信を開始
+    Note over SU,M: Drive_Num は GO_STOP のまま。最初のボタンを待つ</pre></div>
+<h4>図2　前進ボタンと前方の壁（OKで停止まで）</h4><p class="cap">入力→判断→出力の順に進み、壁があると判断が状態を後退に上書きします。最後にOKで停止します。</p><div class="diagram"><pre class="mermaid">sequenceDiagram
+    autonumber
+    actor U as ユーザー
+    participant R as リモコン
+    participant IR as IR受信機 D4
+    participant IN as 入力 do_IR_Tick
+    participant JD as 判断 checkSensorsAndObstacles
+    participant SN as センサー
+    participant OUT as 出力 do_Drive_Tick
+    participant M as モーター
+    participant B as ブザー D13
+    U-&gt;&gt;R: ↑ボタンを押す
+    R-&gt;&gt;IR: 赤外線信号 コード24
+    IR-&gt;&gt;IN: 受信
+    IN-&gt;&gt;IN: Drive_Num を GO_ADVANCE にする
+    IN-&gt;&gt;JD: 新しい指示の直後なのですぐ判断
+    JD-&gt;&gt;SN: 超音波で前方 赤外線で後方を測る
+    SN--&gt;&gt;JD: front と back の結果
+    alt 障害物なし
+        JD-&gt;&gt;OUT: 状態はそのまま
+        OUT-&gt;&gt;M: 前進
+    else 前方に壁 front=1
+        JD-&gt;&gt;JD: Drive_Num を GO_BACK に上書き
+        JD-&gt;&gt;OUT: 先にモーターを動かす
+        OUT-&gt;&gt;M: 後退
+        Note over JD,M: 回避開始時刻を記録し、曲予約を解除
+    JD-&gt;&gt;B: warning 警告音
+        Note over JD,M: 駆動開始から500ms経過を確認して GO_STOP
+    end
+    U-&gt;&gt;R: OKボタンを押す
+    R-&gt;&gt;IR: 赤外線信号 コード28
+    IR-&gt;&gt;IN: 受信
+    IN-&gt;&gt;M: go_Stop 完全停止 最優先</pre></div>
+<h4>図3　後退ボタンと後方の壁／前後の両方に壁</h4><p class="cap">後方だけなら前進、前後の両方なら回転に切り替え、どちらも警告音を鳴らします。</p><div class="diagram"><pre class="mermaid">sequenceDiagram
+    autonumber
+    actor U as ユーザー
+    participant IN as 入力 do_IR_Tick
+    participant JD as 判断 checkSensorsAndObstacles
+    participant SN as センサー
+    participant OUT as 出力 do_Drive_Tick
+    participant M as モーター
+    participant B as ブザー D13
+    U-&gt;&gt;IN: ↓ボタン 後退の指示
+    IN-&gt;&gt;JD: Drive_Num = GO_BACK
+    JD-&gt;&gt;SN: 前方と後方を測る
+    SN--&gt;&gt;JD: front と back の結果
+    alt 後方だけ反応 back=1
+        JD-&gt;&gt;JD: Drive_Num を GO_ADVANCE に上書き
+        JD-&gt;&gt;OUT: 先にモーターを動かす
+        OUT-&gt;&gt;M: 前進
+        Note over JD,M: 回避開始時刻を記録し、曲予約を解除
+    JD-&gt;&gt;B: warning 警告音
+    else 前後とも反応 front=1 かつ back=1
+        JD-&gt;&gt;JD: Drive_Num を GO_RIGHT に上書き
+        JD-&gt;&gt;OUT: 先にモーターを動かす
+        OUT-&gt;&gt;M: その場で回転
+        Note over JD,M: 回避開始時刻を記録し、曲予約を解除
+    JD-&gt;&gt;B: warning 警告音
+    else 反応なし
+        OUT-&gt;&gt;M: 後退
+    end
+    Note over JD,M: 回避は0.5秒だけ行い GO_STOP で停止</pre></div>
+<h4>図4　数字ボタンで音楽を再生（OKで中止）</h4><p class="cap">再生の前にモーターを止めます。発音中・休符中・音符間にOKを確認し、受信したら曲を中止します。</p><div class="diagram"><pre class="mermaid">sequenceDiagram
+    autonumber
+    actor U as ユーザー
+    participant IN as 入力 do_IR_Tick
+    participant MU as play_Music
+    participant M as モーター
+    participant B as ブザー D13
+    U-&gt;&gt;IN: 数字ボタン 1〜9 を押す
+    IN-&gt;&gt;IN: handle_NumberButton 曲番号を依頼に記録
+    Note over IN,MU: 0.3秒待つ 別の数字が来なければ再生
+    IN-&gt;&gt;MU: do_Music_Tick が play_Music を呼ぶ
+    MU-&gt;&gt;M: go_Stop 走行を止める
+    loop 曲の終わりまで 1音ずつ
+        MU-&gt;&gt;B: play_Note 1音を鳴らす
+        MU-&gt;&gt;MU: play_Note の再生中にOKを確認
+        break OKが押された
+            U-&gt;&gt;MU: OKボタン
+            MU-&gt;&gt;B: 曲を中止
+        end
+    end
+    MU-&gt;&gt;B: HIGH にして停止</pre></div>
+<h4>図5　逆向きのボタンを続けて押したとき</h4><p class="cap">↑と↓、または←と→を0.3秒以内に続けて押すと、矛盾とみなして停止します。</p><div class="diagram"><pre class="mermaid">sequenceDiagram
+    autonumber
+    actor U as ユーザー
+    participant IN as 入力 do_IR_Tick
+    participant SD as set_Drive
+    participant M as モーター
+    U-&gt;&gt;IN: ↑ボタン
+    IN-&gt;&gt;SD: set_Drive GO_ADVANCE
+    SD-&gt;&gt;M: Drive_Num = GO_ADVANCE で前進
+    U-&gt;&gt;IN: ↓ボタン 0.3秒以内
+    IN-&gt;&gt;SD: set_Drive GO_BACK
+    SD-&gt;&gt;SD: is_OppositeDrive 逆向きと判定
+    SD-&gt;&gt;M: 矛盾なので Drive_Num = GO_STOP
+    Note over U,M: 0.3秒より後に押したときは、通常どおり後退する</pre></div>
+    <h4>図6　数字ボタンを同時に押したとき</h4><p class="cap">別の数字が0.3秒以内に届くと、どの曲も鳴らしません。その後、改めて押した数字は再生されます。</p><div class="diagram"><pre class="mermaid">sequenceDiagram
+    autonumber
+    actor U as ユーザー
+    participant IN as 入力 do_IR_Tick
+    participant RQ as 音楽の依頼 pendingSongNum
+    participant MU as 出力 do_Music_Tick
+    participant B as ブザー D13
+    U-&gt;&gt;IN: 数字ボタン 1 を押す
+    IN-&gt;&gt;RQ: 曲1を依頼に記録
+    U-&gt;&gt;IN: 数字ボタン 2 を0.3秒以内に押す
+    IN-&gt;&gt;RQ: 別の数字なので矛盾 依頼を取り消す
+    MU-&gt;&gt;RQ: 依頼を確認
+    RQ--&gt;&gt;MU: 依頼なし
+    Note over U,B: どの曲も鳴らない
+    U-&gt;&gt;IN: もう一度 数字ボタン 3 を押す
+    IN-&gt;&gt;RQ: 曲3を依頼に記録
+    Note over IN,MU: 0.3秒待つ
+    MU-&gt;&gt;B: play_Music で曲3を再生</pre></div>
+    <h3>フローチャート：全体の流れ</h3>
+<h4>図7　全体の流れ</h4><p class="cap">電源ONから、入力・判断・出力を繰り返す流れです。各処理の中身は、次の関数別フローチャートで説明します。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    A([電源ON]) --&gt; B[&quot;setup 初期化&lt;br/&gt;モーター停止 / ブザー停止 / センサーと受信機の準備&quot;]
+    B --&gt; L[&quot;loop 開始&quot;]
+    L --&gt; I[&quot;① 入力 do_IR_Tick&quot;]
+    I --&gt; K{&quot;受信したボタンは?&quot;}
+    K --&gt;|OK| K1[&quot;停止状態にする&quot;]
+    K --&gt;|&quot;↑ ↓ ← →&quot;| K2[&quot;走行の指示を Drive_Num に入れる&quot;]
+    K --&gt;|&quot;1 〜 9&quot;| K3[&quot;曲の再生を依頼する（0.3秒待つ）&quot;]
+    K --&gt;|&quot;なし / その他&quot;| J
+    K1 --&gt; J
+    K2 --&gt; J
+    K3 --&gt; J
+    J{&quot;② 回避中？&quot;} --&gt;|はい| UA[&quot;update_Avoid&quot;]
+    UA --&gt; O
+    J --&gt;|いいえ| CS[&quot;checkSensorsAndObstacles&quot;]
+    CS --&gt; Q{&quot;前進中・後退中で&lt;br/&gt;障害物がある?&quot;}
+    Q --&gt;|はい| Q1[&quot;向きを逆にする または 回転&lt;br/&gt;警告音 / 0.5秒後に停止&quot;]
+    Q --&gt;|いいえ| O
+    Q1 --&gt; O[&quot;③ 出力 do_Drive_Tick&lt;br/&gt;Drive_Num に合わせてモーターを動かす&quot;]
+    O --&gt; M4[&quot;④ 音楽 do_Music_Tick&lt;br/&gt;依頼から0.3秒たったら再生&quot;]
+    M4 --&gt; D[&quot;⑤ 遅延&quot;]
+    D --&gt; L</pre></div>
+    <h3>フローチャート：関数別</h3>
+<h4>図8　関数 setup</h4><p class="cap">初期化の関数を順に呼びます。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    S([setup]) --&gt; A[&quot;init_MotorPins&lt;br/&gt;ピン出力設定 / go_Stop&quot;]
+    A --&gt; B[&quot;init_BuzzerPin&lt;br/&gt;出力設定 / HIGH で停止&quot;]
+    B --&gt; C[&quot;init_SensorPins&lt;br/&gt;Trig 出力 / Echo と後方赤外線 入力&quot;]
+    C --&gt; D[&quot;init_IrReceiver&lt;br/&gt;受信開始 / LED点滅は無効&quot;]
+    D --&gt; E([終了])</pre></div>
+<h4>図9　関数 do_IR_Tick</h4><p class="cap">受信した1件を、ボタンの種類ごとの関数へ振り分けます。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    S([do_IR_Tick]) --&gt; A[&quot;read_IR_Command で&lt;br/&gt;command を得る&quot;]
+    A --&gt; B{&quot;command は NO_COMMAND?&quot;}
+    B --&gt;|はい| Z([終了])
+    B --&gt;|いいえ| C{&quot;OKボタン?&quot;}
+    C --&gt;|はい| D[&quot;handle_StopButton&lt;br/&gt;回避を終えて Drive_Num = GO_STOP&lt;br/&gt;音楽の依頼も取り消す&quot;]
+    D --&gt; Z
+    C --&gt;|いいえ| E{&quot;isAvoiding ?&quot;}
+    E --&gt;|はい| Z
+    E --&gt;|いいえ| F[&quot;handle_DriveButton&lt;br/&gt;↑↓←→ のとき set_Drive&quot;]
+    F --&gt; G[&quot;handle_NumberButton&lt;br/&gt;1〜9 のとき曲を依頼&quot;]
+    G --&gt; Z</pre></div>
+<h4>図10　関数 read_IR_Command</h4><p class="cap">受信コードを返します。受信なしとリピート信号は NO_COMMAND です。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    S([read_IR_Command]) --&gt; A{&quot;受信した?&quot;}
+    A --&gt;|いいえ| N([&quot;NO_COMMAND を返す&quot;])
+    A --&gt;|はい| B[&quot;command と isRepeat を読む&lt;br/&gt;resume で次の受信へ&quot;]
+    B --&gt; C{&quot;isRepeat ?&quot;}
+    C --&gt;|はい| N
+    C --&gt;|いいえ| R([&quot;command を返す&quot;])</pre></div>
+<h4>図11　関数 set_Drive</h4><p class="cap">走行の指示を受け付けます。逆向きの指示が続いたら停止します。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    S([&quot;set_Drive cmd&quot;]) --&gt; A{&quot;is_OppositeDrive&lt;br/&gt;直前の指示と逆向き?&quot;}
+    A --&gt;|いいえ| D
+    A --&gt;|はい| B{&quot;前の指示から&lt;br/&gt;0.3秒以内?&quot;}
+    B --&gt;|はい| C[&quot;Drive_Num = GO_STOP&lt;br/&gt;lastDriveCmd = GO_STOP&quot;]
+    B --&gt;|いいえ| D[&quot;Drive_Num = cmd&lt;br/&gt;lastDriveCmd = cmd&lt;br/&gt;isCheckRequested = true&quot;]
+    C --&gt; Z([終了])
+    D --&gt; Z</pre></div>
+<h4>図12　関数 checkSensorsAndObstacles</h4><p class="cap">判断の手順を順に呼ぶだけの関数です。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    S([checkSensorsAndObstacles]) --&gt; C{&quot;is_CheckTime ?&quot;}
+    C --&gt;|いいえ| Z([終了])
+    C --&gt;|はい| D[&quot;mark_Checked&quot;]
+    D --&gt; E[&quot;update_ObstacleFlags&lt;br/&gt;front と back を更新&quot;]
+    E --&gt; F[&quot;decide_AvoidAction&quot;]
+    F --&gt; G{&quot;DEF 以外?&quot;}
+    G --&gt;|はい| H[&quot;start_Avoid&quot;]
+    G --&gt;|いいえ| Z
+    H --&gt; Z</pre></div>
+<h4>図13　関数 update_Avoid</h4><p class="cap">回避動作中に、終わらせるかどうかを調べます。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    S([update_Avoid]) --&gt; A{&quot;0.5秒たった?&quot;}
+    A --&gt;|はい| E[&quot;end_Avoid&quot;]
+    A --&gt;|いいえ| B{&quot;後退中で&lt;br/&gt;is_BackBlocked ?&quot;}
+    B --&gt;|はい| E
+    B --&gt;|いいえ| C{&quot;前進中で&lt;br/&gt;is_FrontBlocked ?&quot;}
+    C --&gt;|はい| E
+    C --&gt;|いいえ| Z([そのまま続ける])
+    E --&gt; Y([終了])</pre></div>
+<h4>図14　関数 is_CheckTime</h4><p class="cap">いま障害物を調べるかどうかを返します。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    S([is_CheckTime]) --&gt; A{&quot;前進中または後退中?&quot;}
+    A --&gt;|いいえ| F([&quot;false を返す&quot;])
+    A --&gt;|はい| B{&quot;isCheckRequested&lt;br/&gt;または 100ms たった?&quot;}
+    B --&gt;|はい| T([&quot;true を返す&quot;])
+    B --&gt;|いいえ| F</pre></div>
+<h4>図15　関数 decide_AvoidAction</h4><p class="cap">front・back・Drive_Num から、回避動作を返します。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    S([decide_AvoidAction]) --&gt; A{&quot;front=1 かつ back=1 ?&quot;}
+    A --&gt;|はい| R1([&quot;GO_RIGHT を返す&quot;])
+    A --&gt;|いいえ| B{&quot;front=1 かつ 前進中?&quot;}
+    B --&gt;|はい| R2([&quot;GO_BACK を返す&quot;])
+    B --&gt;|いいえ| C{&quot;back=1 かつ 後退中?&quot;}
+    C --&gt;|はい| R3([&quot;GO_ADVANCE を返す&quot;])
+    C --&gt;|いいえ| R4([&quot;DEF を返す&quot;])</pre></div>
+<h4>図16　関数 start_Avoid と end_Avoid</h4><p class="cap">回避を始める関数と、終える関数です。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    subgraph start_Avoid
+        A1[&quot;Drive_Num = 回避動作&quot;] --&gt; A2[&quot;do_Drive_Tick&lt;br/&gt;先にモーターを動かす&quot;]
+        A2 --&gt; A3[&quot;warning 警告音&quot;]
+        A3 --&gt; A4[&quot;isAvoiding = true&lt;br/&gt;avoidStartMs = 現在時刻&quot;]
+    end
+    subgraph end_Avoid
+        B1[&quot;isAvoiding = false&quot;] --&gt; B2[&quot;Drive_Num = GO_STOP&quot;]
+        B2 --&gt; B3[&quot;go_Stop&quot;]
+    end</pre></div>
+<h4>図17　関数 is_FrontBlocked と is_BackBlocked</h4><p class="cap">どちらも、2回続けて検知したときだけ true を返します。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    subgraph is_FrontBlocked
+        F1{&quot;watch が 20cm 以下?&quot;} --&gt;|はい| F2[&quot;30ms 待つ&quot;]
+        F2 --&gt; F3{&quot;もう一度 watch が 20cm 以下?&quot;}
+        F1 --&gt;|いいえ| FF([&quot;false&quot;])
+        F3 --&gt;|はい| FT([&quot;true&quot;])
+        F3 --&gt;|いいえ| FF
+    end
+    subgraph is_BackBlocked
+        B1{&quot;is_BackIrOn ?&quot;} --&gt;|はい| B2[&quot;20ms 待つ&quot;]
+        B2 --&gt; B3{&quot;もう一度 is_BackIrOn ?&quot;}
+        B1 --&gt;|いいえ| BF([&quot;false&quot;])
+        B3 --&gt;|はい| BT([&quot;true&quot;])
+        B3 --&gt;|いいえ| BF
+    end</pre></div>
+<h4>図18　関数 watch</h4><p class="cap">超音波センサーで前方の距離（cm）を返します。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    S([watch]) --&gt; A[&quot;Trig に 10μs のパルスを出す&quot;]
+    A --&gt; B[&quot;Echo のパルス幅を測る 最大25ms&quot;]
+    B --&gt; C{&quot;反応あり?&quot;}
+    C --&gt;|いいえ| D([&quot;999 を返す&quot;])
+    C --&gt;|はい| E([&quot;パルス幅 ÷ 58 の cm を返す&quot;])</pre></div>
+<h4>図19　関数 do_Drive_Tick</h4><p class="cap">Drive_Num に合う動作関数を呼びます。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    S([do_Drive_Tick]) --&gt; A{&quot;Drive_Num は?&quot;}
+    A --&gt;|GO_ADVANCE| B[&quot;go_Advance&quot;]
+    A --&gt;|GO_BACK| C[&quot;go_Back&quot;]
+    A --&gt;|GO_LEFT| D[&quot;go_Left&quot;]
+    A --&gt;|GO_RIGHT| E[&quot;go_Right&quot;]
+    A --&gt;|GO_STOP| F[&quot;go_Stop&quot;]
+    B --&gt; G[&quot;set_RightMotor と set_LeftMotor で方向&lt;br/&gt;set_MotorSpeed で速度&quot;]
+    C --&gt; G
+    D --&gt; G
+    E --&gt; G
+    F --&gt; G
+    G --&gt; Z([終了])</pre></div>
+<h4>図20　関数 handle_NumberButton</h4><p class="cap">数字ボタンを曲の依頼として記録します。同時押しのときは依頼を取り消します。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    S([&quot;handle_NumberButton command&quot;]) --&gt; A[&quot;get_SongNum で曲番号を求める&quot;]
+    A --&gt; B{&quot;数字ボタン?&lt;br/&gt;曲番号が 0 以外&quot;}
+    B --&gt;|いいえ| Z([終了])
+    B --&gt;|はい| C{&quot;依頼中の曲と別の数字?&lt;br/&gt;is_NumberConflict&quot;}
+    C --&gt;|はい| D[&quot;依頼を取り消す&lt;br/&gt;pendingSongNum = 0&quot;]
+    C --&gt;|いいえ| E{&quot;同じ数字を依頼中?&quot;}
+    E --&gt;|はい| Z
+    E --&gt;|いいえ| F[&quot;pendingSongNum = 曲番号&lt;br/&gt;pendingSongMs = 現在時刻&quot;]
+    D --&gt; Z
+    F --&gt; Z</pre></div>
+<h4>図21　関数 do_Music_Tick</h4><p class="cap">依頼から0.3秒たったら、曲を再生します。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    S([do_Music_Tick]) --&gt; A{&quot;is_MusicDue&lt;br/&gt;依頼があり 0.3秒たった?&quot;}
+    A --&gt;|いいえ| Z([終了])
+    A --&gt;|はい| B[&quot;依頼を取り消す&lt;br/&gt;pendingSongNum = 0&quot;]
+    B --&gt; C[&quot;play_Music 曲番号&quot;]
+    C --&gt; Z</pre></div>
+    <h4>図22　関数 play_Music</h4><p class="cap">曲番号の曲を、最後まで（またはOKが押されるまで）再生します。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    S([&quot;play_Music 曲番号&quot;]) --&gt; A{&quot;1 〜 9 の範囲?&quot;}
+    A --&gt;|いいえ| Z([終了])
+    A --&gt;|はい| B[&quot;go_Stop / Drive_Num = GO_STOP&quot;]
+    B --&gt; C[&quot;notePtr を曲データの先頭にする&quot;]
+    C --&gt; D{&quot;get_SongNote が END_MARK?&quot;}
+    D --&gt;|はい| G[&quot;ブザーを HIGH にして停止&quot;]
+    D --&gt;|いいえ| E[&quot;play_Note&lt;br/&gt;1音を鳴らし 20ms の無音&quot;]
+    E --&gt; F{&quot;play_Note が true を返した?&quot;}
+    F --&gt;|はい| G
+    F --&gt;|いいえ| H[&quot;notePtr を次の音へ進める&quot;]
+    H --&gt; D
+    G --&gt; Z</pre></div>
+<h4>図23　関数 warning</h4><p class="cap">警告音を鳴らします。1秒に1回までです。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    S([warning]) --&gt; A{&quot;前回の警告から&lt;br/&gt;1秒未満?&quot;}
+    A --&gt;|はい| Z([何もせず終了])
+    A --&gt;|いいえ| B[&quot;lastWarnMs = 現在時刻&quot;]
+    B --&gt; C[&quot;2回くり返す&lt;br/&gt;LOW 50ms で鳴動 / HIGH 50ms で停止&quot;]
+    C --&gt; Y([終了])</pre></div>
+<h4>図24　関数 play_Tone</h4><p class="cap">指定した周波数と長さで、1音を鳴らします。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    S([&quot;play_Tone 周波数 長さ&quot;]) --&gt; A{&quot;周波数が 0 以下?&quot;}
+    A --&gt;|はい| B[&quot;休符中は約1 msごとにOKを確認&quot;]
+    B --&gt; Z([終了])
+    A --&gt;|いいえ| C[&quot;半周期とくり返し回数を求める&quot;]
+    C --&gt; D[&quot;LOW と HIGH を切り替え、周期ごとにOKを確認&quot;]
+    D --&gt; E[&quot;最後に HIGH にして停止&quot;]
+    E --&gt; Z</pre></div>
+  </section>
+
+  <section class="env">
+    <h2>開発環境</h2>
+    <p>開発ツール：Arduino IDE</p>
+    <p>使用ボード：Arduino Uno</p>
+    <p>使用言語：C言語（Arduino言語）</p>
+  </section>
+
+  <section class="code-sec" id="code">
+    <details id="codeBox">
+      <summary><span class="id">コード</span><span>スケッチ全文（robot_final.ino）</span></summary>
+      <div class="body" style="padding-left:16px">
+        <p style="margin:4px 0 10px">Arduino IDEに貼り付けて使います。ライブラリマネージャで <code>IRremote</code>（4.x系）を入れてください。</p>
+        <div class="bar">
+          <span class="fn">robot_final.ino</span>
+          <button type="button" id="copyCode">コードをコピー</button>
+        </div>
+        <pre><code id="codeText">// リモコン操作ロボット（走行・音楽・超音波センサー・後方赤外線センサー・ブザー）
+// 処理の流れ： 入力(do_IR_Tick) → 判断(checkSensorsAndObstacles) → 出力(do_Drive_Tick)
+// Arduino Uno / IRremote 4.x
+//
+// 【配線の注意】
+//  ・D0（左後方センサー）をつないだままだとUSB書き込みに失敗することがあります。
+//    書き込み中だけ配線を外してください。（そのためSerialは使っていません）
+//  ・サーボ(D5)は使っていません。Servoをattachすると D9/D10 のPWMが使えなくなります。
+
+#include &lt;IRremote.hpp&gt;
+#include &lt;avr/pgmspace.h&gt;
+
+// ---------- ピン定義 ----------
+#define IR_RECEIVE_PIN   4    // リモコン受信機
+
+#define SPEED_PIN_R        9    // 右モーター PWM
+#define RIGHT_DIR_PIN1  12   // 右モーター 方向1
+#define RIGHT_DIR_PIN2  11   // 右モーター 方向2
+#define SPEED_PIN_L        6    // 左モーター PWM
+#define LEFT_DIR_PIN1   7    // 左モーター 方向1
+#define LEFT_DIR_PIN2   8    // 左モーター 方向2
+
+#define BUZZ_PIN         13   // ブザー（LOWで鳴動、HIGHで停止）
+#define BACK_IR_L_PIN      0    // 左後方 赤外線センサー（障害物でLOW）
+#define BACK_IR_R_PIN      2    // 右後方 赤外線センサー（障害物でLOW）
+#define ECHO_PIN         3    // 超音波 Echo
+#define TRIG_PIN         10   // 超音波 Trig
+
+// ---------- 設定値 ----------
+#define DISTANCE_LIMIT    20   // 前方の障害物とみなす距離（cm）
+#define SPEED            200  // モーター速度（0〜255）
+#define CHECK_INTERVAL_MS   100  // センサー確認の間隔（ms）
+#define CONFLICT_MS      300  // 逆向きのコードを矛盾とみなす時間（ms）
+#define AVOID_MS         500  // 回避動作を続ける時間（ms）
+#define WARN_INTERVAL_MS    1000 // 警告音の最短間隔（ms）
+#define TEMPO_MS         150  // 8分音符1つの長さ（ms）
+#define SONG_COUNT       9    // 曲の数（ボタン1〜9）
+#define NO_COMMAND      -1    // 受信なし
+
+// ---------- リモコンのボタンコード ----------
+#define IR_ADVANCE 24   // ↑
+#define IR_BACK    82   // ↓
+#define IR_RIGHT   90   // →
+#define IR_LEFT    8    // ←
+#define IR_STOP    28   // OK
+const uint8_t NUM_CODES[SONG_COUNT] = { 69, 70, 71, 68, 64, 67, 7, 21, 9 };  // ボタン1〜9
+
+// ---------- 状態 ----------
+int front = 0;                   // 前方に障害物 1=あり
+int back  = 0;                   // 後方に障害物 1=あり
+
+enum DriveState { GO_ADVANCE, GO_LEFT, GO_RIGHT, GO_BACK, GO_STOP, DEF };  // DEF は「動作なし」
+DriveState Drive_Num = GO_STOP;          // 現在の動作状態（初期値は停止）
+DriveState lastDriveCmd = GO_STOP;            // 直前に受け付けた走行コマンド
+unsigned long lastDriveCmdMs = 0;
+bool IS_IR = true;               // ループ遅延の切替
+
+bool isAvoiding = false;           // 回避動作中か
+unsigned long avoidStartMs = 0;
+unsigned long lastCheckMs = 0;       // 最後に障害物を調べた時刻
+int pendingSongNum = 0;             // 再生を依頼された曲番号（0=依頼なし）
+unsigned long pendingSongMs = 0;     // 曲を依頼された時刻
+bool isCheckRequested = false;         // 新しい指示の直後はすぐ判断する
+
+// ---------- 音階 ----------
+#define NC4 262
+#define ND4 294
+#define NE4 330
+#define NF4 349
+#define NG4 392
+#define NA4 440
+#define NB4 494
+#define NC5 523
+#define ND5 587
+#define NE5 659
+#define NF5 698
+#define NG5 784
+#define END_MARK -1
+
+const int16_t SONG_1[] PROGMEM = { NC4,2, ND4,2, NE4,2, NF4,2, NG4,2, NA4,2, NB4,2, NC5,4, END_MARK,0 };
+const int16_t SONG_2[] PROGMEM = { NC4,2, NC4,2, NG4,2, NG4,2, NA4,2, NA4,2, NG4,4,
+                                  NF4,2, NF4,2, NE4,2, NE4,2, ND4,2, ND4,2, NC4,4, END_MARK,0 };
+const int16_t SONG_3[] PROGMEM = { NC4,2, ND4,2, NE4,2, NF4,2, NE4,2, ND4,2, NC4,4,
+                                  NE4,2, NF4,2, NG4,2, NA4,2, NG4,2, NF4,2, NE4,4,
+                                  NC4,4, NC4,4, NC4,4, NC4,4,
+                                  NC4,1, NC4,1, ND4,1, ND4,1, NE4,1, NE4,1, NF4,1, NF4,1, NE4,2, ND4,2, NC4,4, END_MARK,0 };
+const int16_t SONG_4[] PROGMEM = { NG4,2, NE4,2, NE4,4, NF4,2, ND4,2, ND4,4,
+                                  NC4,2, ND4,2, NE4,2, NF4,2, NG4,2, NG4,2, NG4,4, END_MARK,0 };
+const int16_t SONG_5[] PROGMEM = { NG4,1, NG4,1, NA4,2, NG4,2, NC5,2, NB4,4,
+                                  NG4,1, NG4,1, NA4,2, NG4,2, ND5,2, NC5,4,
+                                  NG4,1, NG4,1, NG5,2, NE5,2, NC5,2, NB4,2, NA4,2,
+                                  NF5,1, NF5,1, NE5,2, NC5,2, ND5,2, NC5,4, END_MARK,0 };
+const int16_t SONG_6[] PROGMEM = { NE4,2, ND4,2, NC4,2, ND4,2, NE4,2, NE4,2, NE4,4,
+                                  ND4,2, ND4,2, ND4,4, NE4,2, NG4,2, NG4,4, END_MARK,0 };
+const int16_t SONG_7[] PROGMEM = { NE4,2, NE4,2, NE4,4, NE4,2, NE4,2, NE4,4,
+                                  NE4,2, NG4,2, NC4,3, ND4,1, NE4,4, END_MARK,0 };
+const int16_t SONG_8[] PROGMEM = { NE4,2, NE4,2, NF4,2, NG4,2, NG4,2, NF4,2, NE4,2, ND4,2,
+                                  NC4,2, NC4,2, ND4,2, NE4,2, NE4,3, ND4,1, ND4,4, END_MARK,0 };
+const int16_t SONG_9[] PROGMEM = { NC4,2, NE4,2, NG4,2, NC5,4, NG4,2, NC5,6, END_MARK,0 };
+
+const int16_t* const SONG_TABLE[SONG_COUNT] PROGMEM = { SONG_1, SONG_2, SONG_3, SONG_4, SONG_5, SONG_6, SONG_7, SONG_8, SONG_9 };
+
+// =====================================================
+// 出力：モーター制御
+// =====================================================
+void set_RightMotor(bool isDir1High, bool isDir2High) {
+  digitalWrite(RIGHT_DIR_PIN1, isDir1High);
+  digitalWrite(RIGHT_DIR_PIN2, isDir2High);
+}
+
+void set_LeftMotor(bool isDir1High, bool isDir2High) {
+  digitalWrite(LEFT_DIR_PIN1, isDir1High);
+  digitalWrite(LEFT_DIR_PIN2, isDir2High);
+}
+
+void set_MotorSpeed(int rightSpeed, int leftSpeed) {   // 左右のPWMを設定
+  analogWrite(SPEED_PIN_R, rightSpeed);
+  analogWrite(SPEED_PIN_L, leftSpeed);
+}
+
+void go_Advance() {            // 前進
+  set_RightMotor(HIGH, LOW);  set_LeftMotor(HIGH, LOW);
+  set_MotorSpeed(SPEED, SPEED);
+}
+
+void go_Back() {               // 後退
+  set_RightMotor(LOW, HIGH);  set_LeftMotor(LOW, HIGH);
+  set_MotorSpeed(SPEED, SPEED);
+}
+
+void go_Left() {               // 左折（その場旋回：右前進・左後退）
+  set_RightMotor(HIGH, LOW);  set_LeftMotor(LOW, HIGH);
+  set_MotorSpeed(SPEED, SPEED);
+}
+
+void go_Right() {              // 右折（その場旋回：右後退・左前進）
+  set_RightMotor(LOW, HIGH);  set_LeftMotor(HIGH, LOW);
+  set_MotorSpeed(SPEED, SPEED);
+}
+
+void go_Stop() {               // 完全停止（PWM0・方向LOW/LOW）
+  set_MotorSpeed(0, 0);
+  set_RightMotor(LOW, LOW);  set_LeftMotor(LOW, LOW);
+}
+
+void do_Drive_Tick() {         // Drive_Num に従ってモーターを動かす
+  switch (Drive_Num) {
+    case GO_ADVANCE: go_Advance(); break;
+    case GO_BACK:    go_Back();    break;
+    case GO_LEFT:    go_Left();    break;
+    case GO_RIGHT:   go_Right();   break;
+    case GO_STOP:    go_Stop();    break;
+    default: Drive_Num = GO_STOP; go_Stop(); break;
+  }
+}
+
+// =====================================================
+// ブザー
+// =====================================================
+void warning() {               // 警告音（50ms鳴動・50ms停止を2回、1秒に1回まで）
+  static unsigned long lastWarnMs = 0;
+  if (lastWarnMs != 0 &amp;&amp; millis() - lastWarnMs &lt; WARN_INTERVAL_MS) return;
+  lastWarnMs = millis();
+  for (int i = 0; i &lt; 2; i++) {
+    digitalWrite(BUZZ_PIN, LOW);    // 鳴動
+    delay(50);
+    digitalWrite(BUZZ_PIN, HIGH);   // 停止
+    delay(50);
+  }
+}
+
+// 音楽用：周波数に合わせてON/OFFを繰り返す（パッシブブザー用・タイマー不使用）
+bool is_MusicStopPressed();
+
+bool play_Tone(int freq, int ms) {
+  if (ms &lt;= 0) return is_MusicStopPressed();
+  if (freq &lt;= 0) {
+    unsigned long startedAt = millis();
+    while (millis() - startedAt &lt; (unsigned long)ms) {
+      if (is_MusicStopPressed()) return true;
+      delay(1);
+    }
+    return is_MusicStopPressed();
+  }
+  unsigned long halfPeriodUs = 500000UL / freq;
+  unsigned long cycleCount = (unsigned long)freq * ms / 1000UL;
+  for (unsigned long i = 0; i &lt; cycleCount; i++) {
+    if (is_MusicStopPressed()) return true;
+    digitalWrite(BUZZ_PIN, LOW);
+    delayMicroseconds(halfPeriodUs);
+    digitalWrite(BUZZ_PIN, HIGH);
+    delayMicroseconds(halfPeriodUs);
+  }
+  digitalWrite(BUZZ_PIN, HIGH);
+  return is_MusicStopPressed();
+}
+
+int get_SongNote(const int16_t* notePtr) {     // 次の1音の高さ
+  return (int16_t)pgm_read_word(notePtr);
+}
+
+int get_SongLength(const int16_t* notePtr) {   // 次の1音の長さ
+  return (int16_t)pgm_read_word(notePtr + 1);
+}
+
+bool play_Note(const int16_t* notePtr) {       // OKを受けたらtrue
+  if (play_Tone(get_SongNote(notePtr), get_SongLength(notePtr) * TEMPO_MS - 20)) return true;
+  return play_Tone(0, 20);
+}
+
+bool is_MusicStopPressed() {                   // 再生中にOKが押されたか
+  if (!IrReceiver.decode()) return false;
+  int command = IrReceiver.decodedIRData.command;
+  IrReceiver.resume();
+  return command == IR_STOP;
+}
+
+void play_Music(int songNum) {                 // 曲を最後まで再生。OKで中止
+  if (songNum &lt; 1 || songNum &gt; SONG_COUNT) return;
+
+  go_Stop();                                   // 再生前にモーターを止める
+  Drive_Num = GO_STOP;
+
+  const int16_t* notePtr = (const int16_t*)pgm_read_word(&amp;SONG_TABLE[songNum - 1]);
+  while (get_SongNote(notePtr) != END_MARK) {
+    if (play_Note(notePtr)) break;
+    notePtr += 2;
+  }
+  digitalWrite(BUZZ_PIN, HIGH);
+}
+
+bool is_MusicDue() {           // 依頼があり、0.3秒たったか
+  return pendingSongNum != 0 &amp;&amp; millis() - pendingSongMs &gt;= CONFLICT_MS;
+}
+
+void do_Music_Tick() {         // 依頼から0.3秒たったら曲を再生する
+  if (isAvoiding || !is_MusicDue()) return;
+  int songNum = pendingSongNum;
+  pendingSongNum = 0;
+  play_Music(songNum);
+}
+
+// =====================================================
+// センサー
+// =====================================================
+int watch() {                  // 超音波センサーで前方の距離(cm)を測る
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+  long echoUs = pulseIn(ECHO_PIN, HIGH, 25000);   // 最大25ms待つ
+  if (echoUs == 0) return 999;                    // 反応なし＝障害物なし
+  return (int)(echoUs / 58);
+}
+
+bool is_FrontBlocked() {         // 前方の障害物（2回続けて検知したら確定）
+  if (watch() &lt;= DISTANCE_LIMIT) {
+    delay(30);
+    return watch() &lt;= DISTANCE_LIMIT;
+  }
+  return false;
+}
+
+bool is_BackIrOn() {
+  return digitalRead(BACK_IR_L_PIN) == LOW || digitalRead(BACK_IR_R_PIN) == LOW;
+}
+
+bool is_BackBlocked() {          // 後方の障害物（2回続けて検知したら確定）
+  if (is_BackIrOn()) {
+    delay(20);
+    return is_BackIrOn();
+  }
+  return false;
+}
+
+// =====================================================
+// 判断：センサーの優先度判断（優先度2：ユーザー指示より優先）
+// =====================================================
+void start_Avoid(DriveState act) {     // 回避動作を始める
+  Drive_Num = act;             // 状態を自動的に上書き
+  lastDriveCmd = GO_STOP;
+  do_Drive_Tick();             // 先にモーターを動かし
+  isAvoiding = true;
+  avoidStartMs = millis();     // 駆動開始直後から回避時間を測る
+  pendingSongNum = 0;          // 回避を音楽予約が中断しないように解除
+  warning();                   // 動かしながら警告音を鳴らす
+}
+
+void end_Avoid() {             // 回避動作を終えて停止
+  isAvoiding = false;
+  Drive_Num = GO_STOP;
+  go_Stop();
+}
+
+void update_Avoid() {          // 回避動作中：終了条件を調べる
+  if (millis() - avoidStartMs &gt;= AVOID_MS) { end_Avoid(); return; }
+  // 行ったり来たりを防ぐため、逆側のセンサーが反応したら切り替えず停止
+  bool blocked = (Drive_Num == GO_BACK &amp;&amp; is_BackBlocked()) ||
+                 (Drive_Num == GO_ADVANCE &amp;&amp; is_FrontBlocked());
+  if (blocked || millis() - avoidStartMs &gt;= AVOID_MS) end_Avoid();
+}
+
+bool is_CheckTime() {          // 障害物を調べる時刻か（前進中・後退中だけ）
+  if (Drive_Num != GO_ADVANCE &amp;&amp; Drive_Num != GO_BACK) return false;
+  return isCheckRequested || millis() - lastCheckMs &gt;= CHECK_INTERVAL_MS;
+}
+
+void mark_Checked() {          // 調べた時刻を記録する
+  isCheckRequested = false;
+  lastCheckMs = millis();
+}
+
+void update_ObstacleFlags() {  // front と back を更新する
+  front = is_FrontBlocked() ? 1 : 0;
+  back  = is_BackBlocked()  ? 1 : 0;
+}
+
+DriveState decide_AvoidAction() {   // 回避動作を決める（なければ DEF）
+  if (front &amp;&amp; back)                    return GO_RIGHT;     // 前後両方：回転
+  if (front &amp;&amp; Drive_Num == GO_ADVANCE) return GO_BACK;      // 前方：後退
+  if (back  &amp;&amp; Drive_Num == GO_BACK)    return GO_ADVANCE;   // 後方：前進
+  return DEF;
+}
+
+void checkSensorsAndObstacles() {
+  if (!is_CheckTime()) return;
+  mark_Checked();
+  update_ObstacleFlags();
+  DriveState action = decide_AvoidAction();
+  if (action != DEF) start_Avoid(action);
+}
+
+// =====================================================
+// 入力：リモコン入力受付（優先度3：ユーザーの指示）
+// =====================================================
+bool is_OppositeDrive(DriveState a, DriveState b) {
+  return (a == GO_ADVANCE &amp;&amp; b == GO_BACK) || (a == GO_BACK &amp;&amp; b == GO_ADVANCE) ||
+         (a == GO_LEFT &amp;&amp; b == GO_RIGHT)   || (a == GO_RIGHT &amp;&amp; b == GO_LEFT);
+}
+
+void set_Drive(DriveState cmd) {       // 走行コマンドを受け付ける
+  unsigned long now = millis();
+
+  // 逆向きのコードが0.3秒以内に続いたら矛盾とみなして停止
+  if (is_OppositeDrive(lastDriveCmd, cmd) &amp;&amp; (now - lastDriveCmdMs) &lt;= CONFLICT_MS) {
+    Drive_Num = GO_STOP;
+    lastDriveCmd = GO_STOP;
+    lastDriveCmdMs = now;
+    return;
+  }
+
+  Drive_Num = cmd;
+  lastDriveCmd = cmd;
+  lastDriveCmdMs = now;
+  isCheckRequested = true;           // 発進の直後にセンサー判断をすぐ行う
+}
+
+int read_IR_Command() {        // 受信コードを返す。受信なし・リピート信号は NO_COMMAND
+  if (!IrReceiver.decode()) return NO_COMMAND;
+  int command = IrReceiver.decodedIRData.command;
+  bool isRepeat = IrReceiver.decodedIRData.flags &amp; IRDATA_FLAGS_IS_REPEAT;
+  IrReceiver.resume();
+  return isRepeat ? NO_COMMAND : command;
+}
+
+void handle_StopButton() {     // OK：停止状態にする
+  isAvoiding = false;
+  pendingSongNum = 0;          // 音楽の依頼も取り消す
+  Drive_Num = GO_STOP;
+  lastDriveCmd = GO_STOP;      // モーターは出力層 do_Drive_Tick が止める
+}
+
+void handle_DriveButton(int command) {    // ↑↓←→：走行の指示
+  if      (command == IR_ADVANCE) set_Drive(GO_ADVANCE);
+  else if (command == IR_BACK)    set_Drive(GO_BACK);
+  else if (command == IR_LEFT)    set_Drive(GO_LEFT);
+  else if (command == IR_RIGHT)   set_Drive(GO_RIGHT);
+}
+
+int get_SongNum(int command) {            // ボタンのコードから曲番号(1〜9)を返す。数字ボタンでなければ0
+  for (int i = 0; i &lt; SONG_COUNT; i++) {
+    if (command == NUM_CODES[i]) return i + 1;
+  }
+  return 0;
+}
+
+bool is_NumberConflict(int songNum) {     // 依頼中の曲と別の数字か（同時押し）
+  return pendingSongNum != 0 &amp;&amp; pendingSongNum != songNum;
+}
+
+void handle_NumberButton(int command) {   // 1〜9：曲を依頼する（0.3秒待ってから再生）
+  int songNum = get_SongNum(command);
+  if (songNum == 0) return;
+  if (is_NumberConflict(songNum)) { pendingSongNum = 0; return; }   // 同時押し：どの曲も鳴らさない
+  if (pendingSongNum == songNum) return;                            // 同じ数字は1回だけ
+  pendingSongNum = songNum;
+  pendingSongMs = millis();
+}
+
+void do_IR_Tick() {            // リモコン入力の受付
+  int command = read_IR_Command();
+  if (command == NO_COMMAND) return;
+  if (command == IR_STOP) { handle_StopButton(); return; }
+  if (isAvoiding) return;      // 回避動作中は、OK以外のボタンを受け付けない
+  handle_DriveButton(command);
+  handle_NumberButton(command);
+}
+
+// =====================================================
+// 初期設定とメインループ
+// =====================================================
+void init_MotorPins() {
+  pinMode(SPEED_PIN_R, OUTPUT);  pinMode(RIGHT_DIR_PIN1, OUTPUT);  pinMode(RIGHT_DIR_PIN2, OUTPUT);
+  pinMode(SPEED_PIN_L, OUTPUT);  pinMode(LEFT_DIR_PIN1, OUTPUT);   pinMode(LEFT_DIR_PIN2, OUTPUT);
+  go_Stop();                   // 電源投入直後は必ず停止から始める
+}
+
+void init_BuzzerPin() {
+  pinMode(BUZZ_PIN, OUTPUT);
+  digitalWrite(BUZZ_PIN, HIGH);   // ブザー停止（LOWで鳴るため）
+}
+
+void init_SensorPins() {
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+  pinMode(BACK_IR_L_PIN, INPUT);
+  pinMode(BACK_IR_R_PIN, INPUT);
+}
+
+void init_IrReceiver() {       // D13をブザーに使うため、受信時のLED点滅は無効にする
+  IrReceiver.begin(IR_RECEIVE_PIN, DISABLE_LED_FEEDBACK);
+}
+
+void setup() {
+  init_MotorPins();
+  init_BuzzerPin();
+  init_SensorPins();
+  init_IrReceiver();
+}
+
+void loop() {
+  do_IR_Tick();                 // ① 入力：リモコンの入力受付
+  // ② 判断：回避中の更新と、通常時の障害物判定を切り替える
+  if (isAvoiding) {
+    update_Avoid();
+  } else {
+    checkSensorsAndObstacles();
+  }
+  do_Drive_Tick();              // ③ 出力：状態に基づいてモーターを実行
+  do_Music_Tick();              // ④ 出力：音楽の依頼があれば再生
+
+  if (IS_IR) delayMicroseconds(100);
+  else       delayMicroseconds(20);
+}
+</code></pre>
+      </div>
+    </details>
+  </section>
+
+</div>
+
+<script>
+var reqs = [
+ {id:"1-1",c:"リモコンの信号をロボットが受信できるようにする",r:"リモコンのボタン入力をロボットに認識させるため",
+  items:["赤外線リモコン制御用ライブラリ（IRremote）を読み込む","IR受信機の信号ピンをD4に設定する","リモコンの各ボタンに対応するコードを取得する"]},
+ {id:"1-2",c:"リモコン入力の受付処理を作成する",r:"リモコンから受け取った入力を、ロボットの動作に対応させるため",
+  items:["リモコン入力受付関数 <code>do_IR_Tick()</code> を作成する"]},
+ {id:"1-3",c:"モーターのピン割り当てを設定する",r:"右・左のモーターを制御するため",
+  items:["右モーターのPWMピンを9に設定する","右モーターの方向ピン1を12に設定する","右モーターの方向ピン2を11に設定する","左モーターのPWMピンを6に設定する","左モーターの方向ピン1を7に設定する","左モーターの方向ピン2を8に設定する"]},
+ {id:"1-4",c:"モーターの移動動作を関数として定義する",r:"左右のモーターを組み合わせて、前進・後退・旋回・停止を行うため",
+  items:["前進関数 <code>go_Advance()</code> を作成し、モーターを前進させる","左折関数 <code>go_Left()</code> を作成し、左折させる","右折関数 <code>go_Right()</code> を作成し、右折させる","後退関数 <code>go_Back()</code> を作成し、後退させる","停止関数 <code>go_Stop()</code> を作成し、停止させる","右モーターの出力を5V（HIGH）に設定する","右モーターの出力を0V（LOW）に設定する","左モーターの出力を5V（HIGH）に設定する","左モーターの出力を0V（LOW）に設定する","右モーター制御関数 <code>rightMotor()</code> で、右モーターの方向ピン（12、11）の出力を設定する（PWMピン9は <code>analogWrite()</code> で速度を設定する）","左モーター制御関数 <code>leftMotor()</code> で、左モーターの方向ピン（7、8）の出力を設定する（PWMピン6は <code>analogWrite()</code> で速度を設定する）","<code>IS_IR</code> が真のとき、100μs遅延させる","<code>IS_IR</code> が偽のとき、20μs遅延させる"],
+  note:"1-4-12、1-4-13は、メインループの処理間隔を調整するための遅延です。"},
+ {id:"1-5",c:"リモコンの↑ボタンのコードを取得し、ロボットの前進に対応させる",r:"ロボットを前進させるため",
+  items:["↑ボタンのコード <code>IR_ADVANCE</code>（=24）を定義し、受信コードが一致したら前進と判定する","モーター制御関数 <code>go_Advance()</code> を呼び出す","動作コード <code>GO_ADVANCE</code> を設定し、ロボットを前進させる"]},
+ {id:"1-6",c:"リモコンの↓ボタンのコードを取得し、ロボットの後退に対応させる",r:"ロボットを後退させるため",
+  items:["↓ボタンのコード <code>IR_BACK</code>（=82）を定義し、受信コードが一致したら後退と判定する","モーター制御関数 <code>go_Back()</code> を呼び出す","動作コード <code>GO_BACK</code> を設定し、ロボットを後退させる"]},
+ {id:"1-7",c:"リモコンの→ボタンのコードを取得し、ロボットの右折に対応させる",r:"ロボットを右折させるため",
+  items:["→ボタンのコード <code>IR_RIGHT</code>（=90）を定義し、受信コードが一致したら右折と判定する","モーター制御関数 <code>go_Right()</code> を呼び出す","動作コード <code>GO_RIGHT</code> を設定し、ロボットを右折させる"]},
+ {id:"1-8",c:"リモコンの←ボタンのコードを取得し、ロボットの左折に対応させる",r:"ロボットを左折させるため",
+  items:["←ボタンのコード <code>IR_LEFT</code>（=8）を定義し、受信コードが一致したら左折と判定する","モーター制御関数 <code>go_Left()</code> を呼び出す","動作コード <code>GO_LEFT</code> を設定し、ロボットを左折させる"]},
+ {id:"1-9",c:"リモコンのOKボタンのコードを取得し、ロボットの停止に対応させる",r:"ロボットを停止させるため",
+  items:["OKボタンのコード <code>IR_STOP</code>（=28）を定義し、受信コードが一致したら停止と判定する","モーター制御関数 <code>go_Stop()</code> を呼び出す","動作コード <code>GO_STOP</code> を設定し、ロボットを停止させる"]},
+ {id:"1-10",c:"電源を入れた直後のロボットの状態（初期値）を決める",r:"電源投入直後にロボットが勝手に動き出すのを防ぐため",
+  items:["電源投入（リセット）後、<code>setup()</code> でモーター用ピンを出力に設定した直後に <code>go_Stop()</code> を実行する","動作コード <code>Drive_Num</code> の初期値を <code>GO_STOP</code> にする","PWM（9、6）の初期値を0、方向ピン（12、11、7、8）の初期値をLOWにする","<code>IS_IR</code> の初期値を true にする（遅延100μs）","最初のリモコン入力があるまで、停止状態で待機する","電源投入時、ブザーは鳴らさない（ブザーピンの初期値はHIGH＝停止）"],
+  note:"電源投入からsetup()が動くまでの短い間、ピンの状態は不定です。気になる場合は、モータードライバの入力ピンにプルダウン抵抗（10kΩ程度）をつけます。"},
+ {id:"1-11",c:"OKボタンが押されたら、ロボットを完全に停止させる",r:"暴走や衝突を防ぎ、確実に止められるようにするため",
+  items:["停止出力は左右のPWMが0、方向ピン4本がLOW（0V）。タイヤが静止するまでの時間は実機で確認する","OKボタンのコード（=28）を受信したら、<code>Drive_Num</code> を <code>GO_STOP</code> にし、<code>go_Stop()</code> を実行する","OKの判定は他のボタンより先に行い、最優先で処理する","停止方式は、PWM0・方向LOW/LOWの空転停止（フリー）とし、ブレーキ（HIGH/HIGH）は使わない","停止後は、他のボタンが押されるまで停止を続ける","音楽再生中にOKが押されたら、音楽を中止して停止状態にする","OK受信から停止までは0.3秒以内を目標とする（センサー測定や警告音の最中は、その処理が終わってから確認する）"],
+  note:"空転停止のため、走行直後は慣性で少し進むことがあります。"},
+ {id:"1-12",c:"右折・左折のときのタイヤの動きを決める",r:"曲がり方を決めておき、ロボットが思いどおりに旋回するようにするため",
+  items:["左折はその場旋回とし、左モーターを後退、右モーターを前進させる（<code>go_Left()</code>）","右折はその場旋回とし、右モーターを後退、左モーターを前進させる（<code>go_Right()</code>）","旋回の中心は車体の中央とし、前進しながら曲がるカーブ走行は行わない","左右のPWMは同じ値（200）にする（前進・後退も200）","ボタンを押すと動作を続け、止めるにはOKを押す（ボタンを離しても止まらない）","動きが逆になる場合は、モーターの配線またはHIGH/LOWの値を入れ替えて合わせる"]},
+ {id:"1-13",c:"ボタンの同時押しや、定義されていない信号を受けたときの動作を決める",r:"誤作動を防ぎ、迷ったときは安全側（停止）に動くようにするため",
+  items:["赤外線リモコンは1回に1つのコードしか送れないため、2つのボタンの同時押しは区別できない。受信できるのは、どちらか1つのコードか、壊れた信号のどちらかとする","定義されていないコードや壊れた信号は無視し、現在の動作を変えない","↑と↓、または←と→のように逆向きのコードが0.3秒以内に続けて届いたときは、矛盾とみなして停止する","↑と→のような斜め移動は仕様に含めない。最後に受信した方向のコードを優先する","押しっぱなしの連続信号（リピート）は無視する","if文は ①OK ②↑ ③↓ ④← ⑤→ ⑥数字1〜9 の順に判定し、どれにも当たらないときは何もしない","数字ボタンどうしの同時押しは、要求2-7のとおり扱う"]},
+ {head:{t:"要求2",c:"リモコンの数字ボタン（1〜9）を押すと、対応する曲がブザーから流れる",r:"走行だけでなく、音楽でも楽しめるようにするため"},
+  id:"2-1",c:"ブザーを接続する",r:"音を出すため",
+  items:["ブザーのピンをD13に設定する","ブザーのピンを出力に設定する"],
+  note:"パッシブブザーをD13とGNDにつなぎます。アクティブブザーでは曲になりません（LOWで鳴動）。"},
+ {id:"2-2",c:"数字ボタンのコードを取得する",r:"押されたボタンを判別するため",
+  items:["ボタン1〜9のコード <code>IR_1</code>〜<code>IR_9</code>（69、70、71、68、64、67、7、21、9）を定義する"]},
+ {id:"2-3",c:"音階と曲データを用意する",r:"曲を演奏するため",
+  items:["ドからソまでの周波数（Hz）を定義する","曲ごとに「音の高さ」と「長さ」の組を並べたデータを作る","曲データは、メモリ節約のためプログラム領域（PROGMEM）に置く"]},
+ {id:"2-4",c:"音を鳴らす関数 <code>play_Tone()</code> を作成する",r:"指定した高さと長さで音を出すため",
+  items:["ピンのHIGH/LOWを周波数に合わせて切り替え、音を出す","周波数が0のときは休符にする","IRremoteとタイマーが衝突しないよう、<code>tone()</code> は使わない"]},
+ {id:"2-5",c:"曲を再生する関数 <code>play_Music(番号)</code> を作成する",r:"ボタンに対応した曲を最後まで流すため",
+  items:["曲データを順に読み、終わりの印まで再生する","再生前に <code>go_Stop()</code> でモーターを止める（走ったまま鳴らさないため）","再生中にOKボタンが押されたら中止する"]},
+ {id:"2-6",c:"数字ボタンと曲を対応させる",r:"ボタンを押したときに曲を流すため",
+  items:["受信コードが <code>IR_1</code>〜<code>IR_9</code> のとき <code>play_Music()</code> を呼ぶ","押しっぱなしの連続信号は無視する"],
+  note:"曲の対応：1 ドレミファソラシド／2 きらきら星／3 かえるの合唱／4 ちょうちょう／5 ハッピーバースデー／6 メリーさんの羊／7 ジングルベル／8 歓喜の歌／9 ファンファーレ"},
+ {id:"2-7",c:"数字ボタンを同時に押したときの動作を決める",r:"2つの曲が混ざったり、間違った曲が鳴ったりしないようにするため",
+  items:["数字ボタンを受け付けたら、すぐには再生せず、0.3秒待つ（曲の依頼として記録する）","待つ間に、別の数字のコードが届いたら、矛盾とみなして依頼を取り消し、どの曲も再生しない","待つ間に、同じ数字のコードが届いたときは、1回だけ再生する","待つ間に、OKが押されたら、依頼を取り消す","0.3秒たっても何も届かなければ、その曲を再生する（再生中の動きは要求2-5）","再生中に別の数字を押しても、曲は切り替わらない（OKだけ受け付ける）","矢印ボタンと数字ボタンは別々に扱う。数字の同時押しの取り消しは、走行には影響しない"],
+  note:"赤外線リモコンは同時押しを区別できないため、要求1-13と同じ考え方で、安全な側（曲を鳴らさない）に動かします。"},
+ {head:{t:"要求3",c:"センサーで障害物を見分け、優先度に従ってロボットの動きを決める",r:"ぶつからないようにし、リモコンの指示よりも安全を優先するため"},
+  id:"3-1",c:"処理を「入力→判断→出力」の3段階に分ける",r:"役割を分けて、安全の判断をユーザー操作より先にできるようにするため",
+  items:["入力：リモコン入力受付 <code>do_IR_Tick()</code>（ボタンから動作状態 <code>Drive_Num</code> を決める）","判断：センサーの優先度判断 <code>checkSensorsAndObstacles()</code>（障害物があれば <code>Drive_Num</code> を書き換える）","出力：モーターの実行 <code>do_Drive_Tick()</code>（<code>Drive_Num</code> に従ってモーターを動かす）","<code>loop()</code> は ①入力 ②判断 ③出力 の順に毎回実行する"]},
+ {id:"3-2",c:"超音波センサーで前方の障害物を検知する",r:"前方の壁や物までの距離を知るため",
+  items:["Trigピンを D10、Echoピンを D3 に接続し、Trigを出力、Echoを入力に設定する","距離を測る関数 <code>watch()</code> を作成する（Trigに10μsのHIGHパルスを出し、Echoのパルス幅から距離(cm)＝パルス幅÷58で求める）","反応がない（25ms待っても返らない）ときは、障害物なしとして 999 を返す","距離が <code>DISTANCE_LIMIT</code>（=20cm）以下なら、前方に障害物あり（<code>front</code> = 1）とする","ノイズ対策として、2回続けて検知したときに確定する"],
+  note:"サンプルでは10cmでしたが、停止までの距離を見て20cmにしています。#defineで変更できます。"},
+ {id:"3-3",c:"赤外線センサーで後方の障害物を検知する",r:"後退するとき、後ろの壁や物にぶつからないようにするため",
+  items:["左後方センサーを D0、右後方センサーを D2 に接続し、入力に設定する","障害物を検知するとLOWになるものとする","どちらか一方でもLOWなら、後方に障害物あり（<code>back</code> = 1）とする","ノイズ対策として、20ms空けて2回続けて検知したときに確定する"],
+  note:"D0はUSB通信と共用のため、プログラムを書き込むときは配線を外してください。"},
+ {id:"3-4",c:"センサーの結果から、障害物の状態を判断する",r:"前方・後方・前後両方・なしの4つの状態を区別するため",
+  items:["判断のたびに <code>front</code> と <code>back</code> を調べ直す","前進中・後退中のときだけ調べる（停止中・旋回中は調べない）","100msごとに調べる。ただし、新しいボタン指示の直後は、間隔を待たずにすぐ調べる"]},
+ {head:{t:"要求4",c:"障害物の状態ごとに、ロボットの動きと優先度を決める",r:"障害物があるときは、ユーザーの指示より安全を優先して自動で避けるため"},
+  id:"4-1",c:"前方に障害物があるとき（超音波センサーが検知）",r:"前進して壁にぶつからないようにするため",
+  items:["ユーザーが前進（<code>GO_ADVANCE</code>）しようとしたとき、<code>Drive_Num</code> を <code>GO_BACK</code> に上書きし、後退する","後退と同時に、ブザーで警告する（<code>warning()</code>）","優先度：2"]},
+ {id:"4-2",c:"後方に障害物があるとき（赤外線センサーが検知）",r:"後退して壁にぶつからないようにするため",
+  items:["ユーザーが後退（<code>GO_BACK</code>）しようとしたとき、<code>Drive_Num</code> を <code>GO_ADVANCE</code> に上書きし、前進する","前進と同時に、ブザーで警告する（<code>warning()</code>）","優先度：2"]},
+ {id:"4-3",c:"前後の両方に障害物があるとき（両方のセンサーが検知）",r:"前にも後ろにも進めないとき、その場で向きを変えて抜け出すため",
+  items:["ユーザーが前進または後退しようとしたとき、その場で回転（<code>GO_RIGHT</code>）する","回転と同時に、ブザーで警告する（<code>warning()</code>）","優先度：2"]},
+ {id:"4-4",c:"障害物がないとき（リモコン入力）",r:"通常はユーザーの操作どおりに動かすため",
+  items:["ユーザーがリモコンで指示した動作を、そのまま実行する","優先度：3"],
+  note:"元の資料ではここも「優先度2」でしたが、センサー判断を上にするため3としています。OKボタンによる停止は、これらより上の優先度1です。"},
+ {id:"4-5",c:"優先度のイメージ（前進ボタンを押して前方に壁があるとき）",r:"判断の流れを具体的に確認するため",
+  items:["ユーザーが前進（<code>GO_ADVANCE</code>）のボタンを押すと、通常ならその場で発進する","その直後に、<code>checkSensorsAndObstacles()</code> が前方に壁がある（<code>front</code> = 1）と検知する","判断の書き換え処理が、自動的に状態を <code>Drive_Num = GO_BACK</code> に上書きする","後退と同時に、警告音 <code>warning()</code> を鳴らす"],
+  note:"実際のプログラムでは、判断が出力より先に動くため、モーターが前進を始める前に後退へ切り替わります。"},
+ {id:"4-6",c:"回避動作の終わり方を決める",r:"前後の壁の間を行ったり来たりし続けるのを防ぐため",
+  items:["回避動作は一定時間（<code>AVOID_MS</code>＝0.5秒）だけ行い、その後 <code>GO_STOP</code> で停止する","回避動作中は、OKボタン以外のボタン（走行・数字）を受け付けない","回避動作中に、後退して後方を検知したとき、または前進して前方を検知したときは、逆向きに切り替えず停止する","停止後は、ユーザーが次のボタンを押すまで待つ"],
+  note:"元の資料に書かれていなかったため、追加した決まりです。"},
+ {head:{t:"要求5",c:"ブザーで、警告音と音楽を鳴らす",r:"障害物を避けたことを音で知らせ、曲も楽しめるようにするため"},
+  id:"5-1",c:"ブザーの共通仕様を決める",r:"警告音と音楽で同じブザーを使うため",
+  items:["ブザーを D13 に接続し、出力に設定する","LOWで鳴動、HIGHで停止とする","初期値はHIGH（停止）にする","D13はLED点滅にも使われるため、リモコン受信時のLED点滅を無効にする（<code>DISABLE_LED_FEEDBACK</code>）","音楽の音は <code>play_Tone()</code> で鳴らし、<code>tone()</code> は使わない（IRremoteとタイマーが衝突するため）"],
+  note:"音楽（要求2）の曲を鳴らすには、パッシブブザーが必要です。アクティブブザーでも警告音は鳴ります。"},
+ {id:"5-2",c:"警告音 <code>warning()</code> を作成する",r:"障害物で動きが自動的に変わったことを知らせるため",
+  items:["50ms鳴動、50ms停止を2回繰り返す","回避動作の開始と同時に鳴らす（先にモーターを動かしてから鳴らす）","鳴りっぱなしを防ぐため、警告音は1秒に1回までとする"]},
+ {id:"5-3",c:"音の優先順位を決める",r:"音が重ならないようにするため",
+  items:["音楽再生中は、モーターを止めているため、警告音は鳴らさない","電源投入時は、何も鳴らさない"],
+  note:"Arduino Unoは電源投入直後に、ブートローダーがD13を数回点滅させるため、ブザーが短く鳴ることがあります。プログラムでは防げないので、気になる場合はブザーを別のピンにつなぎ替えます。"},
+ {head:{t:"要求6",c:"複数の条件が重なったときの優先順位と、処理の順番を決める",r:"状況が重なっても動作が1つに決まり、安全側に動くようにするため"},
+  id:"6-1",c:"動作の優先順位を決める",r:"矛盾する指示が同時に来ても迷わないため",
+  items:["優先度1：OKボタンによる停止","優先度2：センサー判断による回避（前方→後退、後方→前進、前後両方→回転）","優先度3：走行ボタン（↑↓←→）によるユーザーの指示","優先度4：音楽ボタン（1〜9）。再生前にモーターを止める"]},
+ {id:"6-2",c:"メインループの処理順を決める",r:"毎回同じ順で処理し、動作を安定させるため",
+  items:["①入力：リモコン入力受付 <code>do_IR_Tick()</code>","②判断：回避中は <code>update_Avoid()</code>、通常時は <code>checkSensorsAndObstacles()</code>","③出力：モーターの実行 <code>do_Drive_Tick()</code>","④遅延（<code>IS_IR</code> により100μsまたは20μs）"]},
+ {head:{t:"要求7",c:"要求どおりに動くかを確認する",r:"組み立て後に、安全に動くことを確かめるため"},
+  id:"7-1",c:"走行と停止を確認する",r:"基本の操作を確かめるため",
+  items:["電源を入れた直後は、モーターが回らず、ブザーも鳴らない","↑↓←→で、それぞれ前進・後退・左旋回・右旋回し、ボタンを離しても動き続ける","OKで、すぐに完全停止する","↑と↓、または←と→を0.3秒以内に続けて押すと、停止する","定義されていないボタンを押しても、動作は変わらない"]},
+ {id:"7-2",c:"センサーによる回避を確認する",r:"障害物があるときの優先度どおりに動くことを確かめるため",
+  items:["前進中に前方の壁を検知すると、後退して警告音が鳴り、0.5秒後に停止する","前方に壁がある状態で↑を押すと、前進せずに後退する","後方センサーが反応している状態で↓を押すと、前進して警告音が鳴り、0.5秒後に停止する","前後の両方が反応している状態で↑または↓を押すと、回転して警告音が鳴る","回避中にOKを押すと、すぐに停止する"]},
+ {id:"7-3",c:"音楽を確認する",r:"ブザーの種類に合った音が出るかを確かめるため",
+  items:["1〜9のボタンで、約0.3秒後に対応する曲が鳴る（パッシブブザーの場合）","数字ボタンを2つ同時に押すと、どちらの曲も鳴らない","曲の再生中は、モーターが止まっている","再生中にOKを押すと、曲が止まる"],
+  note:"7-1と7-2のうち、リモコン・センサー・停止の判断の動きは、パソコン上の模擬テストで確認済みです。実機のモーターの向きやセンサーの感度は、組み立て後に確認してください。"},
+ {id:"7-4",c:"テストを単体テストと結合テストに分けて行う",r:"関数ごとの間違いと、組み合わせたときの間違いを、それぞれ見つけるため",
+  items:["単体テスト：関数を1つずつ、他の部品を擬似品に置き換えて確認する","結合テスト：入力・判断・出力・音楽を組み合わせ、loop() から動かして確認する（7-1〜7-3の内容）","どちらも、コードを変えるたびにすべてやり直す","実機では、結合テストの続きとして、組み立て後に確認する"],
+  note:"テストの仕様と結果は、開発設計書の第10章にあります。"}
+];
+var list = document.getElementById("list");
+reqs.forEach(function(q){
+  if (q.head) {
+    var h = document.createElement("section");
+    h.className = "top";
+    h.style.marginTop = "28px";
+    h.innerHTML = '<h2>'+q.head.t+'</h2><p><span class="tag">内容</span>'+q.head.c+'</p><p><span class="tag">理由</span>'+q.head.r+'</p>';
+    list.appendChild(h);
+  }
+  var d = document.createElement("details");
+  var lis = q.items.map(function(t,i){
+    return '<li><span class="n">'+q.id+'-'+(i+1)+'</span><span>'+t+'</span></li>';
+  }).join("");
+  d.innerHTML = '<summary><span class="id">要求'+q.id+'</span><span>'+q.c+'</span></summary>'+
+    '<div class="body"><p><span class="tag">理由</span>'+q.r+'</p><ul>'+lis+'</ul>'+
+    (q.note?'<p class="note">※'+q.note+'</p>':'')+'</div>';
+  list.appendChild(d);
+});
+function setAll(v){document.querySelectorAll("details").forEach(function(d){d.open=v;});}
+document.getElementById("openAll").onclick=function(){setAll(true);};
+document.getElementById("closeAll").onclick=function(){setAll(false);};
+</script>
+
+<script>
+document.getElementById("copyCode").onclick = function () {
+  var btn = this;
+  var text = document.getElementById("codeText").textContent;
+  function done(msg) { btn.textContent = msg; setTimeout(function () { btn.textContent = "コードをコピー"; }, 2000); }
+  function fallback() {
+    try {
+      var r = document.createRange();
+      r.selectNodeContents(document.getElementById("codeText"));
+      var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      done(document.execCommand("copy") ? "コピーしました" : "選択しました（Ctrl+Cでコピー）");
+    } catch (e) { done("選択してコピーしてください"); }
+  }
+  try {
+    navigator.clipboard.writeText(text).then(function () { done("コピーしました"); }, fallback);
+  } catch (e) { fallback(); }
+};
+</script>
+
+<!--claude-mermaid-runtime-begin:3477-->
+<style>.mermaid-diagram{margin-block:4px}.mermaid-diagram svg{display:block;margin:0 auto;max-width:100%;height:auto}</style>
+<script defer src="https://cdn.jsdelivr.net/npm/mermaid@11.12.0/dist/mermaid.min.js"></script>
+<script>document.addEventListener('DOMContentLoaded',function(){
+var CFG={"palettes":{"light":{"surface":"#f4efe4","text":"#42392e","line":"#8a7f6d","border":"#7a6c52","bg":"#fffdf8"},"dark":{"surface":"#262b34","text":"#f2f3f5","line":"#a8adb8","border":"#9aa4b8","bg":"#1f232b"}}};
+if(typeof mermaid==='undefined')return;
+var pres=Array.prototype.slice.call(document.querySelectorAll('pre.mermaid')).filter(function(p){if(p.hasAttribute('data-claude-mermaid-claimed'))return false;p.setAttribute('data-claude-mermaid-claimed','1');return true;});
+if(!pres.length)return;
+var mq=window.matchMedia?window.matchMedia('(prefers-color-scheme: dark)'):null;
+var root=document.documentElement;
+var items=pres.map(function(pre){
+var mount=document.createElement('div');mount.className='mermaid-diagram';
+return {pre:pre,mount:mount,src:pre.textContent||''};
+});
+var seq=0;
+var renderGen=0;
+var lastKey='';
+function pageBg(fallback){
+var els=[document.body,document.documentElement];
+for(var i=0;i<els.length;i++){
+var c=els[i]&&getComputedStyle(els[i]).backgroundColor;
+if(c&&c!=='transparent'&&c!=='rgba(0, 0, 0, 0)')return c;
+}
+return fallback;
+}
+function render(){
+var theme=root.getAttribute('data-theme');
+var dark=theme==='dark'||(!!(mq&&mq.matches)&&theme!=='light');
+var pal=dark?CFG.palettes.dark:CFG.palettes.light;
+var bg=pageBg(pal.bg);
+var key=(dark?'d':'l')+'|'+bg;
+if(key===lastKey)return;
+lastKey=key;
+var gen=++renderGen;
+var font=getComputedStyle(document.body).fontFamily||'sans-serif';
+var nat={useMaxWidth:false};
+mermaid.initialize({
+startOnLoad:false,securityLevel:'strict',theme:'base',
+flowchart:nat,sequence:nat,er:nat,state:nat,class:nat,pie:nat,
+gantt:nat,journey:nat,timeline:nat,gitGraph:nat,mindmap:nat,xyChart:nat,
+quadrantChart:nat,sankey:nat,c4:nat,requirement:nat,block:nat,
+packet:nat,kanban:nat,architecture:nat,radar:nat,
+themeVariables:{background:bg,mainBkg:pal.surface,primaryColor:pal.surface,
+primaryTextColor:pal.text,lineColor:pal.line,primaryBorderColor:pal.border,
+nodeBorder:pal.border,clusterBorder:pal.border,edgeLabelBackground:bg,
+clusterBkg:'rgba(127,127,127,0.07)',titleColor:pal.text,
+darkMode:dark,rowOdd:bg,rowEven:'rgba(127,127,127,0.07)',
+attributeBackgroundColorOdd:bg,attributeBackgroundColorEven:'rgba(127,127,127,0.07)',
+fontSize:'16px',fontFamily:font},
+themeCSS:'.node rect, .node circle, .node polygon, .node path, .cluster rect { stroke-width: 2px; }'
+});
+items.forEach(function(it){
+var id='claude-mermaid-'+seq++;
+mermaid.render(id,it.src).then(function(r){
+if(gen!==renderGen)return;
+var prev=it.pre.previousElementSibling;
+if(prev&&prev.className==='mermaid-diagram'&&prev!==it.mount)return;
+it.mount.innerHTML=r.svg;
+if(!it.mount.parentNode)it.pre.parentNode.insertBefore(it.mount,it.pre);
+it.pre.style.display='none';
+},function(){
+var scratch=document.getElementById(id);
+if(scratch)scratch.parentNode.removeChild(scratch);
+scratch=document.getElementById('d'+id);
+if(scratch)scratch.parentNode.removeChild(scratch);
+if(gen!==renderGen)return;
+if(it.mount.parentNode)it.mount.parentNode.removeChild(it.mount);
+it.pre.style.display='';
+});
+});
+}
+render();
+if(mq&&mq.addEventListener)mq.addEventListener('change',render);
+if(typeof MutationObserver!=='undefined')new MutationObserver(render).observe(root,{attributes:true,attributeFilter:['data-theme']});
+});</script>
+<!--claude-mermaid-runtime-end-->
+</body>
+</html>
