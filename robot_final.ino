@@ -43,6 +43,7 @@
 #define IR_RIGHT   90   // →
 #define IR_LEFT    8    // ←
 #define IR_STOP    28   // OK
+#define IR_DANCE   25   // 0ボタン (0x19) - ダンス開始
 const uint8_t NUM_CODES[SONG_COUNT] = { 69, 70, 71, 68, 64, 67, 7, 21, 9 };  // ボタン1〜9
 
 // ---------- 状態 ----------
@@ -62,6 +63,13 @@ unsigned long lastCheckMs = 0;       // 最後に障害物を調べた時刻
 int pendingSongNum = 0;             // 再生を依頼された曲番号（0=依頼なし）
 unsigned long pendingSongMs = 0;     // 曲を依頼された時刻
 bool isCheckRequested = false;         // 新しい指示の直後はすぐ判断する
+
+// 0ボタンで開始するダンス（delayで待たずに進める）
+bool isDancing = false;
+uint8_t danceStep = 0;
+unsigned long danceStepStartMs = 0;
+unsigned long lastDanceCheckMs = 0;
+const uint8_t DANCE_STEPS = 9;
 
 // 音楽と警告音は delay で待たず、loop から定期的に更新する
 bool isMusicPlaying = false;
@@ -412,11 +420,83 @@ DriveState decide_AvoidAction() {   // 回避動作を決める（なければ D
 
 void checkSensorsAndObstacles() {
   if (isAvoiding) { update_Avoid(); return; }
+  if (isDancing) return;     // ダンス時は do_Dance_Tick が安全確認する
   if (!is_CheckTime()) return;
   mark_Checked();
   update_ObstacleFlags();
   DriveState action = decide_AvoidAction();
   if (action != DEF) start_Avoid(action);
+}
+
+// =====================================================
+// ダンス：0ボタンで開始（方向はステップごとに変更）
+// =====================================================
+void stop_Dance() {
+  isDancing = false;
+  Drive_Num = GO_STOP;
+  go_Stop();
+}
+
+DriveState dance_Action(uint8_t step) {
+  switch (step) {
+    case 0: return GO_LEFT;            // 左に回転
+    case 1: return GO_RIGHT;           // 右に回転
+    case 2: return GO_FORWARD_LEFT;    // 前進しながら左へ
+    case 3: return GO_FORWARD_RIGHT;   // 前進しながら右へ
+    case 4: return GO_STOP;            // 一拍休む
+    case 5: return GO_BACK_LEFT;       // 後退しながら左へ
+    case 6: return GO_BACK_RIGHT;      // 後退しながら右へ
+    case 7: return GO_RIGHT;           // 右に回転
+    default: return GO_STOP;           // 終了時は停止
+  }
+}
+
+unsigned int dance_Duration(uint8_t step) {
+  switch (step) {
+    case 0: case 1: return 400;
+    case 2: case 3: return 450;
+    case 4: return 250;
+    case 5: case 6: return 400;
+    case 7: return 500;
+    default: return 200;
+  }
+}
+
+void start_Dance() {
+  if (isAvoiding) return;
+  isDancing = true;
+  danceStep = 0;
+  danceStepStartMs = millis();
+  lastDanceCheckMs = 0;       // 開始直後にセンサー判定
+  lastDriveCmd = GO_STOP;
+  pendingSongNum = 0;         // 未開始の音楽予約だけ解除
+  Drive_Num = dance_Action(danceStep);
+  do_Drive_Tick();
+}
+
+void do_Dance_Tick() {
+  if (!isDancing) return;
+  unsigned long now = millis();
+
+  // ダンス中は前後の安全確認を定期的に行い、障害物があれば直ちに中止
+  if (lastDanceCheckMs == 0 || now - lastDanceCheckMs >= CHECK_INTERVAL_MS) {
+    lastDanceCheckMs = now;
+    if (is_FrontBlocked() || is_BackBlocked()) {
+      stop_Dance();
+      return;
+    }
+    now = millis();
+  }
+
+  // millis()に基づく非ブロッキングなステップ更新
+  if (now - danceStepStartMs < dance_Duration(danceStep)) return;
+  danceStep++;
+  if (danceStep >= DANCE_STEPS) {
+    stop_Dance();
+    return;
+  }
+  danceStepStartMs = now;
+  Drive_Num = dance_Action(danceStep);
 }
 
 // =====================================================
@@ -470,6 +550,7 @@ int read_IR_Command() {        // 受信コードを返す。受信なし・リ�
 
 void handle_StopButton() {     // OK：停止状態にする
   isAvoiding = false;
+  isDancing = false;
   stop_Music();               // OKで走行と音楽を一緒に止める
   Drive_Num = GO_STOP;
   lastDriveCmd = GO_STOP;      // モーターは出力層 do_Drive_Tick が止める
@@ -506,7 +587,9 @@ void do_IR_Tick() {            // リモコン入力の受付
   int command = read_IR_Command();
   if (command == NO_COMMAND) return;
   if (command == IR_STOP) { handle_StopButton(); return; }
-  if (isAvoiding) return;      // 回避動作中は、OK以外のボタンを受け付けない
+  if (isAvoiding) return;
+  if (command == IR_DANCE) { start_Dance(); return; }
+  if (isDancing) return;      // ダンス中はOKと0のみを受け付ける      // 回避動作中は、OK以外のボタンを受け付けない
   handle_DriveButton(command);
   handle_NumberButton(command);
 }
@@ -545,6 +628,7 @@ void setup() {
 
 void loop() {
   do_IR_Tick();                 // ① 入力：リモコンの入力受付
+  do_Dance_Tick();             // ダンス中は時間と障害物を確認
   checkSensorsAndObstacles();   // ② 判断：センサーの優先度判断（必要なら状態を上書き）
   do_Drive_Tick();              // ③ 出力：状態に基づいてモーターを実行
   do_Music_Tick();              // ④ 出力：走行を止めず音楽・警告音を更新
