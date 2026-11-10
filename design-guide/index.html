@@ -841,7 +841,17 @@ pre{max-width:100%;overflow:auto}
     IN-&gt;&gt;RQ: 曲3を依頼に記録
     Note over IN,MU: 0.3秒待つ
     MU-&gt;&gt;B: play_Music で曲3を再生</pre></div>
-    <h3>フローチャート：全体の流れ</h3>
+    <section class="overview" id="diagonal-driving">
+<h2>斜め走行（上下＋左右の連続入力）</h2>
+<p>0.3秒以内に方向ボタンを2つ続けて受信すると、進行しながら曲がります。赤外線リモコンは物理的な同時押しを個別に送信できない機種もあるため、送信された2つのコードを短時間の組み合わせとして解釈します。各組合せは入力順序を問いません。</p>
+<div class="tw"><table><thead><tr><th>入力</th><th>走行</th><th>右モーター</th><th>左モーター</th></tr></thead><tbody>
+<tr><td>←＋↑</td><td>前進しながら左へ</td><td>前進 200</td><td>前進 100</td></tr>
+<tr><td>→＋↑</td><td>前進しながら右へ</td><td>前進 100</td><td>前進 200</td></tr>
+<tr><td>←＋↓</td><td>後退しながら左へ</td><td>後退 100</td><td>後退 200</td></tr>
+<tr><td>→＋↓</td><td>後退しながら右へ</td><td>後退 200</td><td>後退 100</td></tr>
+</tbody></table></div>
+<p>↑と↓、←と→の矛盾入力が0.3秒以内に続いた場合は従来どおり停止します。回避中はリモコン入力より障害物回避を優先し、OKで停止できます。</p>
+</section><h3>フローチャート：全体の流れ</h3>
 <h4 id="loop-flow">図7　メインループ loop()</h4><p class="cap">実際のコードでは loop() が checkSensorsAndObstacles() を毎回呼びます。回避中かどうかの分岐と update_Avoid() の呼び出しは、その関数内にあります。詳細は <a href="#update-avoid-flow">図13</a> を参照してください。</p><div class="diagram"><pre class="mermaid">flowchart TD
     S([電源ON]) --&gt; B[setup]
     B --&gt; L[do_IR_Tick]
@@ -861,18 +871,16 @@ pre{max-width:100%;overflow:auto}
     B --&gt; C[&quot;init_SensorPins&lt;br/&gt;Trig 出力 / Echo と後方赤外線 入力&quot;]
     C --&gt; D[&quot;init_IrReceiver&lt;br/&gt;受信開始 / LED点滅は無効&quot;]
     D --&gt; E([終了])</pre></div>
-<h4>図9　関数 do_IR_Tick</h4><p class="cap">受信した1件を、ボタンの種類ごとの関数へ振り分けます。</p><div class="diagram"><pre class="mermaid">flowchart TD
-    S([do_IR_Tick]) --&gt; A[&quot;read_IR_Command で&lt;br/&gt;command を得る&quot;]
-    A --&gt; B{&quot;command は NO_COMMAND?&quot;}
-    B --&gt;|はい| Z([終了])
-    B --&gt;|いいえ| C{&quot;OKボタン?&quot;}
-    C --&gt;|はい| D[&quot;handle_StopButton&lt;br/&gt;回避を終えて Drive_Num = GO_STOP&lt;br/&gt;音楽の依頼も取り消す&quot;]
-    D --&gt; Z
-    C --&gt;|いいえ| E{&quot;isAvoiding ?&quot;}
-    E --&gt;|はい| Z
-    E --&gt;|いいえ| F[&quot;handle_DriveButton&lt;br/&gt;↑↓←→ のとき set_Drive&quot;]
-    F --&gt; G[&quot;handle_NumberButton&lt;br/&gt;1〜9 のとき曲を依頼&quot;]
-    G --&gt; Z</pre></div>
+<h4>図9　関数 do_IR_Tick</h4><p class="cap">赤外線入力を1件処理します。OKは即停止、回避中はOK以外を無視します。上下と左右の組合せは set_Drive が短時間の連続入力から判定します。</p><div class="diagram"><pre class="mermaid">flowchart TD
+ S([do_IR_Tick]) --&gt; A["read_IR_Command で command を取得"]
+ A --&gt; B{"NO_COMMAND?"}
+ B --&gt;|はい| Z([終了])
+ B --&gt;|いいえ| C{"OKボタン?"}
+ C --&gt;|はい| D["handle_StopButton / 停止"] --&gt; Z
+ C --&gt;|いいえ| E{"isAvoiding ?"}
+ E --&gt;|はい| Z
+ E --&gt;|いいえ| F["handle_DriveButton / 上下左右の入力を set_Drive へ"]
+ F --&gt; G["handle_NumberButton / 曲番号を確認"] --&gt; Z</pre></div>
 <h4>図10　関数 read_IR_Command</h4><p class="cap">受信コードを返します。受信なしとリピート信号は NO_COMMAND です。</p><div class="diagram"><pre class="mermaid">flowchart TD
     S([read_IR_Command]) --&gt; A{&quot;受信した?&quot;}
     A --&gt;|いいえ| N([&quot;NO_COMMAND を返す&quot;])
@@ -880,14 +888,20 @@ pre{max-width:100%;overflow:auto}
     B --&gt; C{&quot;isRepeat ?&quot;}
     C --&gt;|はい| N
     C --&gt;|いいえ| R([&quot;command を返す&quot;])</pre></div>
-<h4>図11　関数 set_Drive</h4><p class="cap">走行の指示を受け付けます。逆向きの指示が続いたら停止します。</p><div class="diagram"><pre class="mermaid">flowchart TD
-    S([&quot;set_Drive cmd&quot;]) --&gt; A{&quot;is_OppositeDrive&lt;br/&gt;直前の指示と逆向き?&quot;}
-    A --&gt;|いいえ| D
-    A --&gt;|はい| B{&quot;前の指示から&lt;br/&gt;0.3秒以内?&quot;}
-    B --&gt;|はい| C[&quot;Drive_Num = GO_STOP&lt;br/&gt;lastDriveCmd = GO_STOP&lt;br/&gt;lastDriveCmdMs = now&quot;]
-    B --&gt;|いいえ| D[&quot;Drive_Num = cmd&lt;br/&gt;lastDriveCmd = cmd&lt;br/&gt;lastDriveCmdMs = now&lt;br/&gt;isCheckRequested = true&quot;]
-    C --&gt; Z([終了])
-    D --&gt; Z</pre></div>
+<h4 id="diagonal-drive-flow">図11　関数 set_Drive と get_DiagonalDrive</h4><p class="cap">0.3秒以内に上下と左右の入力を受信した場合は、順番に関係なく前左・前右・後左・後右の斜め走行にします。↑↓・←→の矛盾は従来どおり停止します。0.3秒を超えたときは最後に受けた単独方向になります。</p><div class="diagram"><pre class="mermaid">flowchart TD
+ S([set_Drive cmd]) --&gt; A["now = millis()"]
+ A --&gt; B{"直前の入力から300ms以内?"}
+ B --&gt;|いいえ| N["Drive_Num = cmd"]
+ B --&gt;|はい| C{"is_OppositeDrive ?"}
+ C --&gt;|はい| X["Drive_Num = GO_STOP / lastDriveCmd = GO_STOP"]
+ X --&gt; Z([終了])
+ C --&gt;|いいえ| D["get_DiagonalDrive / 上下と左右の組合せ判定"]
+ D --&gt; E{"対応する斜め走行あり?"}
+ E --&gt;|はい| F["Drive_Num = GO_FORWARD_LEFT / RIGHT / GO_BACK_LEFT / RIGHT"]
+ E --&gt;|いいえ| N
+ F --&gt; G["lastDriveCmd = cmd / lastDriveCmdMs = now / isCheckRequested = true"]
+ N --&gt; G
+ G --&gt; Z</pre></div>
 <h4>図12　関数 checkSensorsAndObstacles</h4><p class="cap">判断の手順を順に呼ぶだけの関数です。</p><div class="diagram"><pre class="mermaid">flowchart TD
     S([checkSensorsAndObstacles]) --&gt; C{&quot;is_CheckTime ?&quot;}
     C --&gt;|いいえ| Z([終了])
@@ -912,19 +926,19 @@ pre{max-width:100%;overflow:auto}
     C --&gt;|いいえ| Z([回避状態のまま関数を終了])
     X --&gt; Y([停止状態で関数を終了])</pre></div><p class="cap">「そのまま続ける」は無限ループではありません。図7の loop() に戻り、次回の周期で再判定します。OKボタンを受信した場合は do_IR_Tick() が回避状態を取り消します。</p>
 <h4>図14　関数 is_CheckTime</h4><p class="cap">いま障害物を調べるかどうかを返します。</p><div class="diagram"><pre class="mermaid">flowchart TD
-    S([is_CheckTime]) --&gt; A{&quot;前進中または後退中?&quot;}
+    S([is_CheckTime]) --&gt; A{&quot;前進系または後退系の走行中?&quot;}
     A --&gt;|いいえ| F([&quot;false を返す&quot;])
     A --&gt;|はい| B{&quot;isCheckRequested&lt;br/&gt;または 100ms たった?&quot;}
     B --&gt;|はい| T([&quot;true を返す&quot;])
     B --&gt;|いいえ| F</pre></div>
-<h4>図15　関数 decide_AvoidAction</h4><p class="cap">front・back・Drive_Num から、回避動作を返します。</p><div class="diagram"><pre class="mermaid">flowchart TD
-    S([decide_AvoidAction]) --&gt; A{&quot;front=1 かつ back=1 ?&quot;}
-    A --&gt;|はい| R1([&quot;GO_RIGHT を返す&quot;])
-    A --&gt;|いいえ| B{&quot;front=1 かつ 前進中?&quot;}
-    B --&gt;|はい| R2([&quot;GO_BACK を返す&quot;])
-    B --&gt;|いいえ| C{&quot;back=1 かつ 後退中?&quot;}
-    C --&gt;|はい| R3([&quot;GO_ADVANCE を返す&quot;])
-    C --&gt;|いいえ| R4([&quot;DEF を返す&quot;])</pre></div>
+<h4>図15　関数 decide_AvoidAction</h4><p class="cap">斜め前進は前進系、斜め後退は後退系として障害物を検知します。前後両方に障害物がある場合は、その場で右旋回します。</p><div class="diagram"><pre class="mermaid">flowchart TD
+ S([decide_AvoidAction]) --&gt; A{"front=1 かつ back=1 ?"}
+ A --&gt;|はい| R1(["GO_RIGHT を返す"])
+ A --&gt;|いいえ| B{"front=1 かつ 前進系状態?"}
+ B --&gt;|はい| R2(["GO_BACK を返す"])
+ B --&gt;|いいえ| C{"back=1 かつ 後退系状態?"}
+ C --&gt;|はい| R3(["GO_ADVANCE を返す"])
+ C --&gt;|いいえ| R4(["DEF を返す"])</pre></div>
 <h4>図16　関数 start_Avoid と end_Avoid</h4><p class="cap">回避を始める関数と、終える関数です。</p><div class="diagram"><pre class="mermaid">flowchart TD
     subgraph start_Avoid
         A1[&quot;Drive_Num = 回避動作&lt;br/&gt;lastDriveCmd = GO_STOP&quot;] --&gt; A2[&quot;do_Drive_Tick&lt;br/&gt;先にモーターを動かす&quot;]
@@ -956,20 +970,28 @@ pre{max-width:100%;overflow:auto}
     B --&gt; C{&quot;反応あり?&quot;}
     C --&gt;|いいえ| D([&quot;999 を返す&quot;])
     C --&gt;|はい| E([&quot;パルス幅 ÷ 58 の cm を返す&quot;])</pre></div>
-<h4 id="drive-tick-flow">図19　関数 do_Drive_Tick</h4><p class="cap">switch (Drive_Num) で走行状態を分岐し、対応するモーター制御関数を1つ呼びます。未定義値は GO_STOP に変更して停止します。</p><div class="diagram"><pre class="mermaid">flowchart TD
-    S([do_Drive_Tick 開始]) --&gt; A{"switch (Drive_Num)"}
-    A --&gt;|"case GO_ADVANCE"| B["go_Advance()"]
-    A --&gt;|"case GO_BACK"| C["go_Back()"]
-    A --&gt;|"case GO_LEFT"| D["go_Left()"]
-    A --&gt;|"case GO_RIGHT"| E["go_Right()"]
-    A --&gt;|"case GO_STOP"| F["go_Stop()"]
-    A --&gt;|"default"| U["Drive_Num = GO_STOP"]
-    U --&gt; F
-    B --&gt; Z([break / 終了])
-    C --&gt; Z
-    D --&gt; Z
-    E --&gt; Z
-    F --&gt; Z</pre></div>
+<h4 id="drive-tick-flow">図19　関数 do_Drive_Tick</h4><p class="cap">switch (Drive_Num) で単独方向・斜め方向・停止を振り分けます。斜め走行では内側の車輪を半速にします。</p><div class="diagram"><pre class="mermaid">flowchart TD
+ S([do_Drive_Tick 開始]) --&gt; A{"switch (Drive_Num)"}
+ A --&gt;|"GO_ADVANCE"| B["go_Advance()"]
+ A --&gt;|"GO_BACK"| C["go_Back()"]
+ A --&gt;|"GO_LEFT"| D["go_Left()"]
+ A --&gt;|"GO_RIGHT"| E["go_Right()"]
+ A --&gt;|"GO_FORWARD_LEFT"| FL["go_ForwardLeft()"]
+ A --&gt;|"GO_FORWARD_RIGHT"| FR["go_ForwardRight()"]
+ A --&gt;|"GO_BACK_LEFT"| BL["go_BackLeft()"]
+ A --&gt;|"GO_BACK_RIGHT"| BR["go_BackRight()"]
+ A --&gt;|"GO_STOP"| F["go_Stop()"]
+ A --&gt;|default| U["Drive_Num = GO_STOP"]
+ U --&gt; F
+ B --&gt; Z([break / 終了])
+ C --&gt; Z
+ D --&gt; Z
+ E --&gt; Z
+ FL --&gt; Z
+ FR --&gt; Z
+ BL --&gt; Z
+ BR --&gt; Z
+ F --&gt; Z</pre></div>
 <h4>図20　関数 handle_NumberButton</h4><p class="cap">数字ボタンを曲の依頼として記録します。同時押しのときは依頼を取り消します。</p><div class="diagram"><pre class="mermaid">flowchart TD
     S([&quot;handle_NumberButton command&quot;]) --&gt; A[&quot;get_SongNum で曲番号を求める&quot;]
     A --&gt; B{&quot;数字ボタン?&lt;br/&gt;曲番号が 0 以外&quot;}
@@ -1100,7 +1122,8 @@ const uint8_t NUM_CODES[SONG_COUNT] = { 69, 70, 71, 68, 64, 67, 7, 21, 9 };  // 
 int front = 0;                   // 前方に障害物 1=あり
 int back  = 0;                   // 後方に障害物 1=あり
 
-enum DriveState { GO_ADVANCE, GO_LEFT, GO_RIGHT, GO_BACK, GO_STOP, DEF };  // DEF は「動作なし」
+enum DriveState { GO_ADVANCE, GO_LEFT, GO_RIGHT, GO_BACK, GO_STOP, DEF,
+                  GO_FORWARD_LEFT, GO_FORWARD_RIGHT, GO_BACK_LEFT, GO_BACK_RIGHT };  // DEF は「動作なし」
 DriveState Drive_Num = GO_STOP;          // 現在の動作状態（初期値は停止）
 DriveState lastDriveCmd = GO_STOP;            // 直前に受け付けた走行コマンド
 unsigned long lastDriveCmdMs = 0;
@@ -1189,6 +1212,27 @@ void go_Right() {              // 右折（その場旋回：右後退・左前�
   set_MotorSpeed(SPEED, SPEED);
 }
 
+// 左右の回転速度を変え、進みながら曲がる（内側は半速）
+void go_ForwardLeft() {
+  set_RightMotor(HIGH, LOW); set_LeftMotor(HIGH, LOW);
+  set_MotorSpeed(SPEED, SPEED / 2);
+}
+
+void go_ForwardRight() {
+  set_RightMotor(HIGH, LOW); set_LeftMotor(HIGH, LOW);
+  set_MotorSpeed(SPEED / 2, SPEED);
+}
+
+void go_BackLeft() {
+  set_RightMotor(LOW, HIGH); set_LeftMotor(LOW, HIGH);
+  set_MotorSpeed(SPEED / 2, SPEED);
+}
+
+void go_BackRight() {
+  set_RightMotor(LOW, HIGH); set_LeftMotor(LOW, HIGH);
+  set_MotorSpeed(SPEED, SPEED / 2);
+}
+
 void go_Stop() {               // 完全停止（PWM0・方向LOW/LOW）
   set_MotorSpeed(0, 0);
   set_RightMotor(LOW, LOW);  set_LeftMotor(LOW, LOW);
@@ -1200,6 +1244,10 @@ void do_Drive_Tick() {         // Drive_Num に従ってモーターを動かす
     case GO_BACK:    go_Back();    break;
     case GO_LEFT:    go_Left();    break;
     case GO_RIGHT:   go_Right();   break;
+    case GO_FORWARD_LEFT:  go_ForwardLeft();  break;
+    case GO_FORWARD_RIGHT: go_ForwardRight(); break;
+    case GO_BACK_LEFT:     go_BackLeft();     break;
+    case GO_BACK_RIGHT:    go_BackRight();    break;
     case GO_STOP:    go_Stop();    break;
     default: Drive_Num = GO_STOP; go_Stop(); break;
   }
@@ -1221,29 +1269,17 @@ void warning() {               // 警告音（50ms鳴動・50ms停止を2回、1
 }
 
 // 音楽用：周波数に合わせてON/OFFを繰り返す（パッシブブザー用・タイマー不使用）
-bool is_MusicStopPressed();
-
-bool play_Tone(int freq, int ms) {
-  if (ms &lt;= 0) return is_MusicStopPressed();
-  if (freq &lt;= 0) {
-    unsigned long startedAt = millis();
-    while (millis() - startedAt &lt; (unsigned long)ms) {
-      if (is_MusicStopPressed()) return true;
-      delay(1);
-    }
-    return is_MusicStopPressed();
-  }
+void play_Tone(int freq, int ms) {
+  if (freq &lt;= 0) { delay(ms); return; }
   unsigned long halfPeriodUs = 500000UL / freq;
   unsigned long cycleCount = (unsigned long)freq * ms / 1000UL;
   for (unsigned long i = 0; i &lt; cycleCount; i++) {
-    if (is_MusicStopPressed()) return true;
     digitalWrite(BUZZ_PIN, LOW);
     delayMicroseconds(halfPeriodUs);
     digitalWrite(BUZZ_PIN, HIGH);
     delayMicroseconds(halfPeriodUs);
   }
   digitalWrite(BUZZ_PIN, HIGH);
-  return is_MusicStopPressed();
 }
 
 int get_SongNote(const int16_t* notePtr) {     // 次の1音の高さ
@@ -1254,9 +1290,9 @@ int get_SongLength(const int16_t* notePtr) {   // 次の1音の長さ
   return (int16_t)pgm_read_word(notePtr + 1);
 }
 
-bool play_Note(const int16_t* notePtr) {       // OKを受けたらtrue
-  if (play_Tone(get_SongNote(notePtr), get_SongLength(notePtr) * TEMPO_MS - 20)) return true;
-  return play_Tone(0, 20);
+void play_Note(const int16_t* notePtr) {       // 1音を鳴らし、短い無音を入れる
+  play_Tone(get_SongNote(notePtr), get_SongLength(notePtr) * TEMPO_MS - 20);
+  delay(20);
 }
 
 bool is_MusicStopPressed() {                   // 再生中にOKが押されたか
@@ -1274,7 +1310,8 @@ void play_Music(int songNum) {                 // 曲を最後まで再生。OK�
 
   const int16_t* notePtr = (const int16_t*)pgm_read_word(&amp;SONG_TABLE[songNum - 1]);
   while (get_SongNote(notePtr) != END_MARK) {
-    if (play_Note(notePtr)) break;
+    play_Note(notePtr);
+    if (is_MusicStopPressed()) break;
     notePtr += 2;
   }
   digitalWrite(BUZZ_PIN, HIGH);
@@ -1344,16 +1381,24 @@ void end_Avoid() {             // 回避動作を終えて停止
   go_Stop();
 }
 
-void update_Avoid() {          // 回避動作中：終了条件を調べる
+void update_Avoid() {          // 回避動作中：1回だけ終了条件を判定する
   if (millis() - avoidStartMs &gt;= AVOID_MS) { end_Avoid(); return; }
-  // 行ったり来たりを防ぐため、逆側のセンサーが反応したら切り替えず停止
-  bool blocked = (Drive_Num == GO_BACK &amp;&amp; is_BackBlocked()) ||
-                 (Drive_Num == GO_ADVANCE &amp;&amp; is_FrontBlocked());
+
+  // 行ったり来たりを防ぐため、進行先が塞がっていれば切り替えず停止
+  bool blocked = false;
+  if (Drive_Num == GO_BACK || Drive_Num == GO_BACK_LEFT || Drive_Num == GO_BACK_RIGHT)
+    blocked = is_BackBlocked();
+  else if (Drive_Num == GO_ADVANCE || Drive_Num == GO_FORWARD_LEFT || Drive_Num == GO_FORWARD_RIGHT)
+    blocked = is_FrontBlocked();
+
+  // センサー測定にも時間がかかるため、測定直後に500msを再確認する
   if (blocked || millis() - avoidStartMs &gt;= AVOID_MS) end_Avoid();
 }
 
 bool is_CheckTime() {          // 障害物を調べる時刻か（前進中・後退中だけ）
-  if (Drive_Num != GO_ADVANCE &amp;&amp; Drive_Num != GO_BACK) return false;
+  if (Drive_Num != GO_ADVANCE &amp;&amp; Drive_Num != GO_BACK &amp;&amp;
+      Drive_Num != GO_FORWARD_LEFT &amp;&amp; Drive_Num != GO_FORWARD_RIGHT &amp;&amp;
+      Drive_Num != GO_BACK_LEFT &amp;&amp; Drive_Num != GO_BACK_RIGHT) return false;
   return isCheckRequested || millis() - lastCheckMs &gt;= CHECK_INTERVAL_MS;
 }
 
@@ -1369,12 +1414,15 @@ void update_ObstacleFlags() {  // front と back を更新する
 
 DriveState decide_AvoidAction() {   // 回避動作を決める（なければ DEF）
   if (front &amp;&amp; back)                    return GO_RIGHT;     // 前後両方：回転
-  if (front &amp;&amp; Drive_Num == GO_ADVANCE) return GO_BACK;      // 前方：後退
-  if (back  &amp;&amp; Drive_Num == GO_BACK)    return GO_ADVANCE;   // 後方：前進
+  if (front &amp;&amp; (Drive_Num == GO_ADVANCE || Drive_Num == GO_FORWARD_LEFT || Drive_Num == GO_FORWARD_RIGHT))
+    return GO_BACK;          // 前進系の方向で前方障害物：後退
+  if (back &amp;&amp; (Drive_Num == GO_BACK || Drive_Num == GO_BACK_LEFT || Drive_Num == GO_BACK_RIGHT))
+    return GO_ADVANCE;       // 後退系の方向で後方障害物：前進
   return DEF;
 }
 
 void checkSensorsAndObstacles() {
+  if (isAvoiding) { update_Avoid(); return; }
   if (!is_CheckTime()) return;
   mark_Checked();
   update_ObstacleFlags();
@@ -1390,21 +1438,37 @@ bool is_OppositeDrive(DriveState a, DriveState b) {
          (a == GO_LEFT &amp;&amp; b == GO_RIGHT)   || (a == GO_RIGHT &amp;&amp; b == GO_LEFT);
 }
 
-void set_Drive(DriveState cmd) {       // 走行コマンドを受け付ける
-  unsigned long now = millis();
+// 一方向（↑↓）と左右（←→）が短時間で続いた場合に斜め走行へ変更
+DriveState get_DiagonalDrive(DriveState a, DriveState b) {
+  if ((a == GO_ADVANCE &amp;&amp; b == GO_LEFT) || (a == GO_LEFT &amp;&amp; b == GO_ADVANCE))
+    return GO_FORWARD_LEFT;
+  if ((a == GO_ADVANCE &amp;&amp; b == GO_RIGHT) || (a == GO_RIGHT &amp;&amp; b == GO_ADVANCE))
+    return GO_FORWARD_RIGHT;
+  if ((a == GO_BACK &amp;&amp; b == GO_LEFT) || (a == GO_LEFT &amp;&amp; b == GO_BACK))
+    return GO_BACK_LEFT;
+  if ((a == GO_BACK &amp;&amp; b == GO_RIGHT) || (a == GO_RIGHT &amp;&amp; b == GO_BACK))
+    return GO_BACK_RIGHT;
+  return DEF;
+}
 
-  // 逆向きのコードが0.3秒以内に続いたら矛盾とみなして停止
-  if (is_OppositeDrive(lastDriveCmd, cmd) &amp;&amp; (now - lastDriveCmdMs) &lt;= CONFLICT_MS) {
+void set_Drive(DriveState cmd) {
+  unsigned long now = millis();
+  bool withinWindow = lastDriveCmd != GO_STOP &amp;&amp; (now - lastDriveCmdMs &lt;= CONFLICT_MS);
+
+  // 前後や左右の反対入力が0.3秒以内に続いた場合は従来どおり停止
+  if (withinWindow &amp;&amp; is_OppositeDrive(lastDriveCmd, cmd)) {
     Drive_Num = GO_STOP;
     lastDriveCmd = GO_STOP;
     lastDriveCmdMs = now;
     return;
   }
 
-  Drive_Num = cmd;
+  // 斜め入力は到着順に依存しない（物理同時押しの専用IRコードには非対応）
+  DriveState diagonal = withinWindow ? get_DiagonalDrive(lastDriveCmd, cmd) : DEF;
+  Drive_Num = (diagonal != DEF) ? diagonal : cmd;
   lastDriveCmd = cmd;
   lastDriveCmdMs = now;
-  isCheckRequested = true;           // 発進の直後にセンサー判断をすぐ行う
+  isCheckRequested = true;
 }
 
 int read_IR_Command() {        // 受信コードを返す。受信なし・リピート信号は NO_COMMAND
@@ -1492,12 +1556,7 @@ void setup() {
 
 void loop() {
   do_IR_Tick();                 // ① 入力：リモコンの入力受付
-  // ② 判断：回避中の更新と、通常時の障害物判定を切り替える
-  if (isAvoiding) {
-    update_Avoid();
-  } else {
-    checkSensorsAndObstacles();
-  }
+  checkSensorsAndObstacles();   // ② 判断：センサーの優先度判断（必要なら状態を上書き）
   do_Drive_Tick();              // ③ 出力：状態に基づいてモーターを実行
   do_Music_Tick();              // ④ 出力：音楽の依頼があれば再生
 
