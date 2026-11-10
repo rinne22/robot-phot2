@@ -242,6 +242,136 @@ pre{max-width:100%;overflow:auto}
   window.addEventListener('pagehide', () => { if (dirty && writable) save(); });
 })();
 </script>
+<section class="overview" id="memo-cloud" aria-labelledby="memo-cloud-title">
+<h2 id="memo-cloud-title">クラウドメモ（別PCと共有）</h2>
+<p>GitHubのリポジトリに暗号化して保存します。別のPCでは同じ合言葉を入力して「クラウドから読み込む」を押してください。別PCで編集・保存するにはGitHubの書き込み用トークンが必要です。上の端末内自動保存とは別なので、変更後は「クラウドへ保存」を押してください。</p>
+<div style="display:grid;gap:.5rem;max-width:48rem">
+<label for="memo-passphrase">暗号化の合言葉（12文字以上・全PC共通）</label>
+<input type="password" id="memo-passphrase" minlength="12" autocomplete="off" placeholder="12文字以上の合言葉" style="padding:.6rem;font:inherit;width:100%;box-sizing:border-box">
+<label for="memo-gh-token">GitHubトークン（クラウド保存するときのみ必要）</label>
+<input type="password" id="memo-gh-token" autocomplete="off" placeholder="github_pat_... （読み込みだけなら不要）" style="padding:.6rem;font:inherit;width:100%;box-sizing:border-box">
+<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin:.5rem 0">
+<button id="memo-cloud-load" type="button" style="padding:.55rem .9rem;cursor:pointer">クラウドから読み込む</button>
+<button id="memo-cloud-save" type="button" style="padding:.55rem .9rem;cursor:pointer">クラウドへ保存</button>
+</div>
+<p id="memo-cloud-status" role="status" aria-live="polite">未接続</p>
+</div>
+<p style="font-size:.9em">初回設定：<a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">GitHubでFine-grained tokenを作成</a>し、対象リポジトリを <code>rinne22/robot-phot2</code> のみに限定、Repository permissions の Contents を Read and write に設定してください。トークンは入力欄にのみ入力し、チャットやメモ本文に貼らないでください。合言葉・トークンはサイトに保存しません。共有PCでは使用後にタブを閉じてください。</p>
+<p style="font-size:.9em"><strong>注意：</strong>暗号化データは公開リポジトリに置かれるため、合言葉は推測されにくいものにしてください。合言葉を忘れると復元できません。別PCで更新された場合は先に読み込み直す必要があります。既存のテキストファイルへのバックアップ機能も利用できます。</p>
+</section>
+<script>
+(() => {
+  const field = document.getElementById('memo-text');
+  const pass = document.getElementById('memo-passphrase');
+  const token = document.getElementById('memo-gh-token');
+  const status = document.getElementById('memo-cloud-status');
+  const loadBtn = document.getElementById('memo-cloud-load');
+  const saveBtn = document.getElementById('memo-cloud-save');
+  const url = 'https://api.github.com/repos/rinne22/robot-phot2/contents/memo-sync.enc.json';
+  const encoder = new TextEncoder(), decoder = new TextDecoder();
+  let loadedSha = undefined; // undefined: 未確認, null: 新規, string: 前回読み込んだ版
+  let lastCloudText = null;
+  const b64 = bytes => { let out=''; for(const c of bytes) out += String.fromCharCode(c); return btoa(out); };
+  const unb64 = text => Uint8Array.from(atob(text.replace(/\s+/g,'')), c => c.charCodeAt(0));
+  const say = text => { status.textContent = text; };
+  const password = () => {
+    const value = pass.value;
+    if (value.length < 12) throw Error('合言葉は12文字以上にしてください。');
+    if (!crypto.subtle) throw Error('このブラウザは暗号化に対応していません。');
+    return value;
+  };
+  async function keyFor(secret, salt, iterations) {
+    const base = await crypto.subtle.importKey('raw', encoder.encode(secret),'PBKDF2',false,['deriveKey']);
+    return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+  }
+  async function encrypt(text) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const iterations = 250000;
+    const key = await keyFor(password(),salt,iterations);
+    const ciphertext = new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,encoder.encode(text)));
+    return JSON.stringify({version:1,algorithm:'AES-256-GCM',iterations,salt:b64(salt),iv:b64(iv),data:b64(ciphertext),updatedAt:new Date().toISOString()},null,2)+'\n';
+  }
+  async function decrypt(text) {
+    const o = JSON.parse(text);
+    if(o.version!==1 || o.algorithm!=='AES-256-GCM' || !Number.isInteger(o.iterations) || o.iterations<100000 || o.iterations>1000000) throw Error('対応していないクラウドメモ形式です。');
+    try {
+      const key = await keyFor(password(),unb64(o.salt),o.iterations);
+      return decoder.decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(o.iv)},key,unb64(o.data)));
+    } catch(e) { throw Error('合言葉が違うか、保存データが破損しています。'); }
+  }
+  async function request(method, body, withToken) {
+    const headers = {'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
+    if (withToken) {
+      const t = token.value.trim();
+      if(!t) throw Error('クラウドへ保存するにはGitHubトークンが必要です。');
+      headers.Authorization = 'Bearer ' + t;
+    }
+    if (body) headers['Content-Type'] = 'application/json';
+    const res = await fetch(url+'?t='+Date.now(),{method,headers,body:body?JSON.stringify(body):undefined,cache:'no-store'});
+    if (res.status===404 && method==='GET') return null;
+    if(!res.ok) {
+      if(res.status===401) throw Error('トークンが無効です（401）。');
+      if(res.status===403) throw Error('アクセス権限がありません（403）。トークンの Contents 権限を確認してください。');
+      if(res.status===409 || res.status===422) throw Error('競合しました。クラウドを読み込み直してから保存してください。');
+      throw Error('GitHub通信エラー: HTTP '+res.status);
+    }
+    return res.json();
+  }
+  async function getRemote(withToken=false) {
+    const obj = await request('GET',null,withToken);
+    if(!obj) return null;
+    if(obj.type!=='file' || typeof obj.content!=='string') throw Error('クラウド保存ファイルを読み込めません。');
+    return {sha:obj.sha,text:decoder.decode(unb64(obj.content))};
+  }
+  function busy(flag) { loadBtn.disabled=flag; saveBtn.disabled=flag; }
+  loadBtn.addEventListener('click',async()=>{
+    busy(true); say('クラウドを読み込み中…');
+    try {
+      password();
+      const remote = await getRemote(false);
+      if(!remote) {
+        loadedSha=null; lastCloudText=null;
+        say('クラウドメモはまだありません。現在のメモを「クラウドへ保存」で初回登録できます。');
+        return;
+      }
+      const text = await decrypt(remote.text);
+      if(field.value!==text && field.value.trim() && !confirm('現在表示中のメモをクラウドの内容で置き換えますか？ 端末内の変更がある場合は先にバックアップしてください。')) return;
+      field.value = text;
+      field.dispatchEvent(new Event('input',{bubbles:true}));
+      document.getElementById('memo-save').click();
+      loadedSha=remote.sha;
+      lastCloudText=text;
+      say('クラウドから読み込み成功。現在のメモは端末内にも保存しました。');
+    } catch(e){say('読み込み失敗: '+e.message);}
+    finally{busy(false);}
+  });
+  saveBtn.addEventListener('click',async()=>{
+    busy(true); say('クラウドへ暗号化して保存中…');
+    try {
+      password();
+      if(!token.value.trim()) throw Error('書き込み用GitHubトークンを入力してください。');
+      const remote = await getRemote(true);
+      if(remote && loadedSha===undefined) throw Error('既存クラウドデータがあります。先に「クラウドから読み込む」を押してください。');
+      if(remote && remote.sha!==loadedSha) throw Error('他のPCで更新されています。先に読み込み直してください。');
+      if(!remote && loadedSha!==undefined && loadedSha!==null) throw Error('クラウドデータが削除されました。読み込み直してください。');
+      const encrypted = await encrypt(field.value);
+      const body={message:'Update encrypted shared design memo',content:b64(encoder.encode(encrypted))};
+      if(remote) body.sha=remote.sha;
+      const result=await request('PUT',body,true);
+      if(!result.content || !result.content.sha) throw Error('保存結果を確認できません。');
+      loadedSha=result.content.sha;
+      lastCloudText=field.value;
+      document.getElementById('memo-save').click();
+      say('クラウドへ保存成功。別PCで同じ合言葉を使って読み込めます。');
+    }catch(e){say('クラウド保存失敗: '+e.message);}
+    finally{busy(false);}
+  });
+  field.addEventListener('input',()=>{
+    if(lastCloudText!==null && field.value!==lastCloudText) say('この端末で変更しました。別PCと共有するには「クラウドへ保存」を押してください。');
+  });
+})();
+</script>
 <section class="overview" id="revision"><h2>修正記録・版1.5</h2><p>音楽の途中でもOKで中断できるようにし、回避中はセンサー測定の直後にも500 msの経過を確認します。</p><p>回避中の更新は loop() が直接呼び出します。回避中と通常時の障害物判定は、1周につきどちらか一方だけを実行します。</p><p><a href="robot_final.ino" download>修正版Arduinoコードをダウンロード</a></p><p>要件・設計・図・コードの共通仕様を以下に補足しました。</p><ul><li>回避開始時に音楽の予約を取り消し、回避中は曲を開始しません。回避後に数字ボタンで再予約します。</li><li>回避の500 msは駆動開始直後から計測します。警告音の約200 msを回避時間に含めます。停止判定は周期処理で行うため、実測時間には処理遅延が加わります。</li><li>不正な走行状態は停止に倒します。</li><li>停止出力はPWM 0・方向LOW/LOWです。空転停止のため、車輪の静止までの時間は実機で確認します。</li><li>OKの応答時間は実機未測定です。警告音・センサー測定は処理完了後、音楽は発音中・休符中・音符間にも受信を確認します。0.3秒以内は検証対象の目標値です。</li></ul><p>掲載済みの「OK」は版1.2の疑似環境での実施記録です。版1.5のArduino全体ビルドと実機試験は未実施です。版1.3の変更箇所4項目は抽出したC++関数の疑似試験で確認しました。Arduino全体のビルド・全体再試験・実機試験は未実施です。</p></section><section class="overview" id="overview" aria-labelledby="overview-title">
 <h2 id="overview-title">ロボットの主な動作</h2>
 <div class="tiles">
