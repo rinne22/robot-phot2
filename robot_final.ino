@@ -282,11 +282,16 @@ void end_Avoid() {             // 回避動作を終えて停止
   go_Stop();
 }
 
-void update_Avoid() {          // 回避動作中：終了条件を調べる
+void update_Avoid() {          // 回避動作中：1回だけ終了条件を判定する
   if (millis() - avoidStartMs >= AVOID_MS) { end_Avoid(); return; }
-  // 行ったり来たりを防ぐため、逆側のセンサーが反応したら切り替えず停止
-  if (Drive_Num == GO_BACK && is_BackBlocked())          end_Avoid();
-  else if (Drive_Num == GO_ADVANCE && is_FrontBlocked()) end_Avoid();
+
+  // 行ったり来たりを防ぐため、進行先が塞がっていれば切り替えず停止
+  bool blocked = false;
+  if (Drive_Num == GO_BACK)         blocked = is_BackBlocked();
+  else if (Drive_Num == GO_ADVANCE) blocked = is_FrontBlocked();
+
+  // センサー測定にも時間がかかるため、測定直後に500msを再確認する
+  if (blocked || millis() - avoidStartMs >= AVOID_MS) end_Avoid();
 }
 
 bool is_CheckTime() {          // 障害物を調べる時刻か（前進中・後退中だけ）
