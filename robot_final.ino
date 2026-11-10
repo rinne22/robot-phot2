@@ -49,7 +49,8 @@ const uint8_t NUM_CODES[SONG_COUNT] = { 69, 70, 71, 68, 64, 67, 7, 21, 9 };  // 
 int front = 0;                   // 前方に障害物 1=あり
 int back  = 0;                   // 後方に障害物 1=あり
 
-enum DriveState { GO_ADVANCE, GO_LEFT, GO_RIGHT, GO_BACK, GO_STOP, DEF };  // DEF は「動作なし」
+enum DriveState { GO_ADVANCE, GO_LEFT, GO_RIGHT, GO_BACK, GO_STOP, DEF,
+                  GO_FORWARD_LEFT, GO_FORWARD_RIGHT, GO_BACK_LEFT, GO_BACK_RIGHT };  // DEF は「動作なし」
 DriveState Drive_Num = GO_STOP;          // 現在の動作状態（初期値は停止）
 DriveState lastDriveCmd = GO_STOP;            // 直前に受け付けた走行コマンド
 unsigned long lastDriveCmdMs = 0;
@@ -138,6 +139,27 @@ void go_Right() {              // 右折（その場旋回：右後退・左前�
   set_MotorSpeed(SPEED, SPEED);
 }
 
+// 左右の回転速度を変え、進みながら曲がる（内側は半速）
+void go_ForwardLeft() {
+  set_RightMotor(HIGH, LOW); set_LeftMotor(HIGH, LOW);
+  set_MotorSpeed(SPEED, SPEED / 2);
+}
+
+void go_ForwardRight() {
+  set_RightMotor(HIGH, LOW); set_LeftMotor(HIGH, LOW);
+  set_MotorSpeed(SPEED / 2, SPEED);
+}
+
+void go_BackLeft() {
+  set_RightMotor(LOW, HIGH); set_LeftMotor(LOW, HIGH);
+  set_MotorSpeed(SPEED / 2, SPEED);
+}
+
+void go_BackRight() {
+  set_RightMotor(LOW, HIGH); set_LeftMotor(LOW, HIGH);
+  set_MotorSpeed(SPEED, SPEED / 2);
+}
+
 void go_Stop() {               // 完全停止（PWM0・方向LOW/LOW）
   set_MotorSpeed(0, 0);
   set_RightMotor(LOW, LOW);  set_LeftMotor(LOW, LOW);
@@ -149,6 +171,10 @@ void do_Drive_Tick() {         // Drive_Num に従ってモーターを動かす
     case GO_BACK:    go_Back();    break;
     case GO_LEFT:    go_Left();    break;
     case GO_RIGHT:   go_Right();   break;
+    case GO_FORWARD_LEFT:  go_ForwardLeft();  break;
+    case GO_FORWARD_RIGHT: go_ForwardRight(); break;
+    case GO_BACK_LEFT:     go_BackLeft();     break;
+    case GO_BACK_RIGHT:    go_BackRight();    break;
     case GO_STOP:    go_Stop();    break;
     default: Drive_Num = GO_STOP; go_Stop(); break;
   }
@@ -287,15 +313,19 @@ void update_Avoid() {          // 回避動作中：1回だけ終了条件を判
 
   // 行ったり来たりを防ぐため、進行先が塞がっていれば切り替えず停止
   bool blocked = false;
-  if (Drive_Num == GO_BACK)         blocked = is_BackBlocked();
-  else if (Drive_Num == GO_ADVANCE) blocked = is_FrontBlocked();
+  if (Drive_Num == GO_BACK || Drive_Num == GO_BACK_LEFT || Drive_Num == GO_BACK_RIGHT)
+    blocked = is_BackBlocked();
+  else if (Drive_Num == GO_ADVANCE || Drive_Num == GO_FORWARD_LEFT || Drive_Num == GO_FORWARD_RIGHT)
+    blocked = is_FrontBlocked();
 
   // センサー測定にも時間がかかるため、測定直後に500msを再確認する
   if (blocked || millis() - avoidStartMs >= AVOID_MS) end_Avoid();
 }
 
 bool is_CheckTime() {          // 障害物を調べる時刻か（前進中・後退中だけ）
-  if (Drive_Num != GO_ADVANCE && Drive_Num != GO_BACK) return false;
+  if (Drive_Num != GO_ADVANCE && Drive_Num != GO_BACK &&
+      Drive_Num != GO_FORWARD_LEFT && Drive_Num != GO_FORWARD_RIGHT &&
+      Drive_Num != GO_BACK_LEFT && Drive_Num != GO_BACK_RIGHT) return false;
   return isCheckRequested || millis() - lastCheckMs >= CHECK_INTERVAL_MS;
 }
 
@@ -311,8 +341,10 @@ void update_ObstacleFlags() {  // front と back を更新する
 
 DriveState decide_AvoidAction() {   // 回避動作を決める（なければ DEF）
   if (front && back)                    return GO_RIGHT;     // 前後両方：回転
-  if (front && Drive_Num == GO_ADVANCE) return GO_BACK;      // 前方：後退
-  if (back  && Drive_Num == GO_BACK)    return GO_ADVANCE;   // 後方：前進
+  if (front && (Drive_Num == GO_ADVANCE || Drive_Num == GO_FORWARD_LEFT || Drive_Num == GO_FORWARD_RIGHT))
+    return GO_BACK;          // 前進系の方向で前方障害物：後退
+  if (back && (Drive_Num == GO_BACK || Drive_Num == GO_BACK_LEFT || Drive_Num == GO_BACK_RIGHT))
+    return GO_ADVANCE;       // 後退系の方向で後方障害物：前進
   return DEF;
 }
 
@@ -333,21 +365,37 @@ bool is_OppositeDrive(DriveState a, DriveState b) {
          (a == GO_LEFT && b == GO_RIGHT)   || (a == GO_RIGHT && b == GO_LEFT);
 }
 
-void set_Drive(DriveState cmd) {       // 走行コマンドを受け付ける
-  unsigned long now = millis();
+// 一方向（↑↓）と左右（←→）が短時間で続いた場合に斜め走行へ変更
+DriveState get_DiagonalDrive(DriveState a, DriveState b) {
+  if ((a == GO_ADVANCE && b == GO_LEFT) || (a == GO_LEFT && b == GO_ADVANCE))
+    return GO_FORWARD_LEFT;
+  if ((a == GO_ADVANCE && b == GO_RIGHT) || (a == GO_RIGHT && b == GO_ADVANCE))
+    return GO_FORWARD_RIGHT;
+  if ((a == GO_BACK && b == GO_LEFT) || (a == GO_LEFT && b == GO_BACK))
+    return GO_BACK_LEFT;
+  if ((a == GO_BACK && b == GO_RIGHT) || (a == GO_RIGHT && b == GO_BACK))
+    return GO_BACK_RIGHT;
+  return DEF;
+}
 
-  // 逆向きのコードが0.3秒以内に続いたら矛盾とみなして停止
-  if (is_OppositeDrive(lastDriveCmd, cmd) && (now - lastDriveCmdMs) <= CONFLICT_MS) {
+void set_Drive(DriveState cmd) {
+  unsigned long now = millis();
+  bool withinWindow = lastDriveCmd != GO_STOP && (now - lastDriveCmdMs <= CONFLICT_MS);
+
+  // 前後や左右の反対入力が0.3秒以内に続いた場合は従来どおり停止
+  if (withinWindow && is_OppositeDrive(lastDriveCmd, cmd)) {
     Drive_Num = GO_STOP;
     lastDriveCmd = GO_STOP;
     lastDriveCmdMs = now;
     return;
   }
 
-  Drive_Num = cmd;
+  // 斜め入力は到着順に依存しない（物理同時押しの専用IRコードには非対応）
+  DriveState diagonal = withinWindow ? get_DiagonalDrive(lastDriveCmd, cmd) : DEF;
+  Drive_Num = (diagonal != DEF) ? diagonal : cmd;
   lastDriveCmd = cmd;
   lastDriveCmdMs = now;
-  isCheckRequested = true;           // 発進の直後にセンサー判断をすぐ行う
+  isCheckRequested = true;
 }
 
 int read_IR_Command() {        // 受信コードを返す。受信なし・リピート信号は NO_COMMAND
