@@ -956,21 +956,20 @@ pre{max-width:100%;overflow:auto}
     B --&gt; C{&quot;反応あり?&quot;}
     C --&gt;|いいえ| D([&quot;999 を返す&quot;])
     C --&gt;|はい| E([&quot;パルス幅 ÷ 58 の cm を返す&quot;])</pre></div>
-<h4>図19　関数 do_Drive_Tick</h4><p class="cap">Drive_Num に合う動作関数を呼びます。</p><div class="diagram"><pre class="mermaid">flowchart TD
-    S([do_Drive_Tick]) --&gt; A{&quot;Drive_Num は?&quot;}
-    A --&gt;|GO_ADVANCE| B[&quot;go_Advance&quot;]
-    A --&gt;|GO_BACK| C[&quot;go_Back&quot;]
-    A --&gt;|GO_LEFT| D[&quot;go_Left&quot;]
-    A --&gt;|GO_RIGHT| E[&quot;go_Right&quot;]
-    A --&gt;|GO_STOP| F[&quot;go_Stop&quot;]
-    A --&gt;|定義外| U[&quot;Drive_Num = GO_STOP&quot;]
+<h4 id="drive-tick-flow">図19　関数 do_Drive_Tick</h4><p class="cap">switch (Drive_Num) で走行状態を分岐し、対応するモーター制御関数を1つ呼びます。未定義値は GO_STOP に変更して停止します。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    S([do_Drive_Tick 開始]) --&gt; A{"switch (Drive_Num)"}
+    A --&gt;|"case GO_ADVANCE"| B["go_Advance()"]
+    A --&gt;|"case GO_BACK"| C["go_Back()"]
+    A --&gt;|"case GO_LEFT"| D["go_Left()"]
+    A --&gt;|"case GO_RIGHT"| E["go_Right()"]
+    A --&gt;|"case GO_STOP"| F["go_Stop()"]
+    A --&gt;|"default"| U["Drive_Num = GO_STOP"]
     U --&gt; F
-    B --&gt; G[&quot;set_RightMotor と set_LeftMotor で方向&lt;br/&gt;set_MotorSpeed で速度&quot;]
-    C --&gt; G
-    D --&gt; G
-    E --&gt; G
-    F --&gt; G
-    G --&gt; Z([終了])</pre></div>
+    B --&gt; Z([break / 終了])
+    C --&gt; Z
+    D --&gt; Z
+    E --&gt; Z
+    F --&gt; Z</pre></div>
 <h4>図20　関数 handle_NumberButton</h4><p class="cap">数字ボタンを曲の依頼として記録します。同時押しのときは依頼を取り消します。</p><div class="diagram"><pre class="mermaid">flowchart TD
     S([&quot;handle_NumberButton command&quot;]) --&gt; A[&quot;get_SongNum で曲番号を求める&quot;]
     A --&gt; B{&quot;数字ボタン?&lt;br/&gt;曲番号が 0 以外&quot;}
@@ -1003,24 +1002,35 @@ pre{max-width:100%;overflow:auto}
     F --&gt;|いいえ| H[&quot;notePtr を次の音へ進める&quot;]
     H --&gt; D
     G --&gt; Z</pre></div>
-<h4>図23　関数 warning</h4><p class="cap">警告音を鳴らします。1秒に1回までです。</p><div class="diagram"><pre class="mermaid">flowchart TD
-    S([warning]) --&gt; A{&quot;前回の記録があり、そこから1秒未満？&quot;}
+<h4 id="warning-flow">図23　関数 warning</h4><p class="cap">前回から1秒以内の再警告を防ぎ、for (int i = 0; i &lt; 2; i++) で LOW 50ms・HIGH 50ms の警告音を2回繰り返します。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    S([warning 開始]) --&gt; A{"lastWarnMs != 0 かつ<br/>前回から WARN_INTERVAL_MS 未満？"}
     A --&gt;|はい| Z([何もせず終了])
-    A --&gt;|いいえ| B[&quot;lastWarnMs = 現在時刻&quot;]
-    B --&gt; C[&quot;2回くり返す&lt;br/&gt;LOW 50ms で鳴動 / HIGH 50ms で停止&quot;]
-    C --&gt; Y([終了])</pre></div>
-<h4>図24　関数 play_Tone</h4><p class="cap">発音中・休符中にOKを確認し、受信結果を呼び出し元に返します。</p><div class="diagram"><pre class="mermaid">flowchart TD
-    S([play_Tone]) --&gt; A{長さが0以下？}
-    A --&gt;|はい| E[最後にOKを確認]
-    A --&gt;|いいえ| B{周波数が0以下？}
-    B --&gt;|はい| R[休符の間、約1 msごとにOKを確認]
-    B --&gt;|いいえ| P[周期数を求め、各周期の前にOKを確認]
-    R --&gt;|OKを受信| T([true])
-    P --&gt;|OKを受信| T
-    P --&gt;|全周期を完了| H[ブザーをHIGHにする]
-    H --&gt; E
-    R --&gt;|休符終了| E
-    E --&gt; U([受信結果を返す])</pre></div>
+    A --&gt;|いいえ| B["lastWarnMs = millis()"]
+    B --&gt; C["for 初期化：i = 0"]
+    C --&gt; D{"i &lt; 2 ?"}
+    D --&gt;|はい| E["digitalWrite(BUZZ_PIN, LOW)"]
+    E --&gt; F["delay(50)"]
+    F --&gt; G["digitalWrite(BUZZ_PIN, HIGH)"]
+    G --&gt; H["delay(50)"]
+    H --&gt; I["i++"]
+    I --&gt; D
+    D --&gt;|いいえ| Z</pre></div>
+<h4 id="play-tone-flow">図24　関数 play_Tone</h4><p class="cap">freq が0以下なら休符として delay(ms) を実行します。それ以外では半周期と繰り返し回数を計算し、for (unsigned long i = 0; i &lt; cycleCount; i++) で LOW / HIGH を交互に出力します。実際のコードでは play_Tone 内でOKボタン判定は行いません。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    S([play_Tone 開始]) --&gt; A{"freq &lt;= 0 ?"}
+    A --&gt;|はい| R["delay(ms) / 休符"]
+    R --&gt; Z([終了])
+    A --&gt;|いいえ| B["halfPeriodUs = 500000 / freq"]
+    B --&gt; C["cycleCount = freq × ms / 1000"]
+    C --&gt; D["for 初期化：i = 0"]
+    D --&gt; E{"i &lt; cycleCount ?"}
+    E --&gt;|はい| F["digitalWrite(BUZZ_PIN, LOW)"]
+    F --&gt; G["delayMicroseconds(halfPeriodUs)"]
+    G --&gt; H["digitalWrite(BUZZ_PIN, HIGH)"]
+    H --&gt; I["delayMicroseconds(halfPeriodUs)"]
+    I --&gt; J["i++"]
+    J --&gt; E
+    E --&gt;|いいえ| K["digitalWrite(BUZZ_PIN, HIGH)"]
+    K --&gt; Z</pre></div>
   </section>
 
   <section class="env">
