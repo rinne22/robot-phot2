@@ -471,7 +471,7 @@ void start_Dance() {
   lastDriveCmd = GO_STOP;
   pendingSongNum = 0;         // 未開始の音楽予約だけ解除
   Drive_Num = dance_Action(danceStep);
-  do_Drive_Tick();
+  // 最初のモーター出力はloop内でセンサーを確認した後に行う
 }
 
 void do_Dance_Tick() {
