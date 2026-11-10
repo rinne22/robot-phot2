@@ -375,7 +375,7 @@ pre{max-width:100%;overflow:auto}
 <section class="overview" id="revision"><h2>修正記録・版1.5</h2><p>音楽の途中でもOKで中断できるようにし、回避中はセンサー測定の直後にも500 msの経過を確認します。</p><p>回避中の更新は loop() が直接呼び出します。回避中と通常時の障害物判定は、1周につきどちらか一方だけを実行します。</p><p><a href="../robot_final.ino" download>修正版Arduinoコードをダウンロード</a></p><p>要件・設計・図・コードの共通仕様を以下に補足しました。</p><ul><li>回避中も音楽の再生状態を保持します。警告音が鳴る間は音楽を一時中断し、警告終了後に再開します。</li><li>回避の500 msは駆動開始直後から計測します。警告音は非ブロッキングで約200 ms鳴らし、回避時間は独立して判定します。停止判定は周期処理で行うため、実測時間には処理遅延が加わります。</li><li>不正な走行状態は停止に倒します。</li><li>停止出力はPWM 0・方向LOW/LOWです。空転停止のため、車輪の静止までの時間は実機で確認します。</li><li>OKの応答時間は実機未測定です。センサー測定中はIR処理が一時的に遅れますが、音楽と警告音はループ処理で定期更新します。0.3秒以内は検証対象の目標値です。</li></ul><p>掲載済みの「OK」は版1.2の疑似環境での実施記録です。版1.5のArduino全体ビルドと実機試験は未実施です。版1.3の変更箇所4項目は抽出したC++関数の疑似試験で確認しました。Arduino全体のビルド・全体再試験・実機試験は未実施です。</p></section><section class="overview" id="overview" aria-labelledby="overview-title">
 <h2 id="overview-title">ロボットの主な動作</h2>
 <div class="tiles">
-<article><h3>01　リモコン操作</h3><p>矢印ボタンで前進・後退・その場旋回。OKボタンで停止します。</p></article>
+<article><h3>01　リモコン操作</h3><p>矢印ボタンで前後移動・旋回・斜め走行。0ボタンでダンス、OKボタンで停止します。</p></article>
 <article><h3>02　障害物回避</h3><p>前方の超音波と後方の赤外線センサーを使い、障害物を検知すると走行指示より回避を優先します。</p></article>
 <article><h3>03　メロディー再生</h3><p>数字1〜9で曲を選択。走行中も曲を再生しながら方向転換できます。OKで走行と演奏を停止します。</p></article>
 </div>
@@ -841,7 +841,11 @@ pre{max-width:100%;overflow:auto}
     IN-&gt;&gt;RQ: 曲3を依頼に記録
     Note over IN,MU: 0.3秒待つ
     MU-&gt;&gt;B: play_Music で曲3を再生</pre></div>
-    <section class="overview" id="drive-music"><h2>走行しながら音楽を再生</h2>
+    <section class="overview" id="dance-mode"><h2>0ボタンでダンスモード</h2>
+<p>リモコンの <strong>0</strong> を押すと、左回転 → 右回転 → 前進左カーブ → 前進右カーブ → 一時停止 → 後退左カーブ → 後退右カーブ → 右回転 → 停止を順番に実行します。およそ3.9秒で終了します。もう一度0を押すと最初からやり直し、OKでいつでも停止できます。</p>
+<p>ダンス中は方向ボタンを受け付けず、前後の障害物を約100msごとに確認します。障害物を検知したら安全のためダンスを中止して停止します。ダンス中にすでに流れている音楽はそのまま再生できます。開始待ちの曲予約は解除します。</p>
+<p class="cap">0ボタンの受信コードは <code>25（0x19）</code> としています。リモコンの種類によって違う場合は <code>IR_DANCE</code> を実際の受信コードに変更してください。実機での動作確認は未実施です。</p>
+</section><section class="overview" id="drive-music"><h2>走行しながら音楽を再生</h2>
 <p>数字ボタン1〜9で曲を選ぶと、0.3秒後に演奏が始まります。走行中でも止まらずに演奏し、再生中も↑↓←→や斜め走行が操作できます。OKボタンではモーターと音楽を同時に停止します。</p>
 <p>ブザーD13はソフトウェア方式で、<code>micros()</code> を使ってLOW/HIGHを短く切り替えます。障害物を検知した場合は回避を優先し、警告音（約200ms）の間は音楽を一時中断します。<code>tone()</code> は使用しません。</p>
 <p><strong>実機での注意：</strong>超音波測定の <code>pulseIn()</code> やセンサー待機によって音の波形が一時的に乱れ、音程や音質に影響することがあります。Arduino UnoとIRremoteの組み合わせではタイマーの競合にも注意が必要です。実機で音と走行・緊急停止を確認してください。</p><p class="cap">注意：以下の旧版テスト仕様・旧版設計の記録には、音楽再生時に停止する方式の記述が残っている場合があります。現在有効な仕様はこの節、図21〜24、および掲載Arduinoコードです。変更後の実機確認は未実施です。</p></section><section class="overview" id="diagonal-driving">
@@ -855,18 +859,15 @@ pre{max-width:100%;overflow:auto}
 </tbody></table></div>
 <p>↑と↓、←と→の矛盾入力が0.3秒以内に続いた場合は従来どおり停止します。回避中はリモコン入力より障害物回避を優先し、OKで停止できます。</p>
 </section><h3>フローチャート：全体の流れ</h3>
-<h4 id="loop-flow">図7　メインループ loop()</h4><p class="cap">実際のコードでは loop() が checkSensorsAndObstacles() を毎回呼びます。回避中かどうかの分岐と update_Avoid() の呼び出しは、その関数内にあります。詳細は <a href="#update-avoid-flow">図13</a> を参照してください。</p><div class="diagram"><pre class="mermaid">flowchart TD
-    S([電源ON]) --&gt; B[setup]
-    B --&gt; L[do_IR_Tick]
-    L --&gt; C[checkSensorsAndObstacles]
-    C --&gt; A{回避中？}
-    A --&gt;|はい| U["update_Avoid を1回実行"]
-    A --&gt;|いいえ| N["必要なとき障害物を確認 / 回避開始"]
-    U --&gt; D[do_Drive_Tick]
-    N --&gt; D
-    D --&gt; M[do_Music_Tick]
-    M --&gt; W["IS_IR に応じて100または20 μs待つ"]
-    W --&gt; L</pre></div>
+<h4 id="loop-flow">図7　メインループ loop()</h4><p class="cap">リモコン入力後にダンスの1ステップを更新し、障害物確認・走行出力・音楽出力を順番に実行します。ダンス中の障害物検査はdo_Dance_Tick内で行います。</p><div class="diagram"><pre class="mermaid">flowchart TD
+ S([電源ON]) --&gt; B["setup()"]
+ B --&gt; L["do_IR_Tick()"]
+ L --&gt; DA["do_Dance_Tick()"]
+ DA --&gt; C["checkSensorsAndObstacles()"]
+ C --&gt; D["do_Drive_Tick()"]
+ D --&gt; M["do_Music_Tick()"]
+ M --&gt; W["20 または100μs待機"]
+ W --&gt; L</pre></div>
 <h3>フローチャート：関数別</h3>
 <h4>図8　関数 setup</h4><p class="cap">初期化の関数を順に呼びます。</p><div class="diagram"><pre class="mermaid">flowchart TD
     S([setup]) --&gt; A[&quot;init_MotorPins&lt;br/&gt;ピン出力設定 / go_Stop&quot;]
@@ -874,16 +875,20 @@ pre{max-width:100%;overflow:auto}
     B --&gt; C[&quot;init_SensorPins&lt;br/&gt;Trig 出力 / Echo と後方赤外線 入力&quot;]
     C --&gt; D[&quot;init_IrReceiver&lt;br/&gt;受信開始 / LED点滅は無効&quot;]
     D --&gt; E([終了])</pre></div>
-<h4>図9　関数 do_IR_Tick</h4><p class="cap">赤外線入力を1件処理します。OKは即停止、回避中はOK以外を無視します。上下と左右の組合せは set_Drive が短時間の連続入力から判定します。</p><div class="diagram"><pre class="mermaid">flowchart TD
- S([do_IR_Tick]) --&gt; A["read_IR_Command で command を取得"]
- A --&gt; B{"NO_COMMAND?"}
+<h4>図9　関数 do_IR_Tick</h4><p class="cap">0でダンス開始、OKでダンス・音楽・走行を停止します。ダンス中は0とOK以外を無視します。</p><div class="diagram"><pre class="mermaid">flowchart TD
+ S([do_IR_Tick]) --&gt; A["read_IR_Command()"]
+ A --&gt; B{"受信なし？"}
  B --&gt;|はい| Z([終了])
- B --&gt;|いいえ| C{"OKボタン?"}
- C --&gt;|はい| D["handle_StopButton / 停止"] --&gt; Z
- C --&gt;|いいえ| E{"isAvoiding ?"}
- E --&gt;|はい| Z
- E --&gt;|いいえ| F["handle_DriveButton / 上下左右の入力を set_Drive へ"]
- F --&gt; G["handle_NumberButton / 曲番号を確認"] --&gt; Z</pre></div>
+ B --&gt;|いいえ| C{"OK？"}
+ C --&gt;|はい| ST["handle_StopButton()"] --&gt; Z
+ C --&gt;|いいえ| D{"障害物回避中？"}
+ D --&gt;|はい| Z
+ D --&gt;|いいえ| E{"0ボタン？"}
+ E --&gt;|はい| G["start_Dance()"] --&gt; Z
+ E --&gt;|いいえ| F{"ダンス中？"}
+ F --&gt;|はい| Z
+ F --&gt;|いいえ| I["handle_DriveButton()"]
+ I --&gt; J["handle_NumberButton()"] --&gt; Z</pre></div>
 <h4>図10　関数 read_IR_Command</h4><p class="cap">受信コードを返します。受信なしとリピート信号は NO_COMMAND です。</p><div class="diagram"><pre class="mermaid">flowchart TD
     S([read_IR_Command]) --&gt; A{&quot;受信した?&quot;}
     A --&gt;|いいえ| N([&quot;NO_COMMAND を返す&quot;])
@@ -1058,6 +1063,22 @@ end</pre></div>
  H --&gt; I{"警告音を再生中？"}
  I --&gt;|はい| Z([終了])
  I --&gt;|いいえ| J["BUZZ HIGH にする"] --&gt; Z</pre></div>
+<h4 id="dance-flow">図25　関数 start_Dance / do_Dance_Tick / stop_Dance</h4><p class="cap">ダンス開始後、時間の経過に合わせて次の動作へ進みます。各呼び出しはすぐに終了し、loop()で繰り返し処理します。障害物があれば途中で停止します。</p><div class="diagram"><pre class="mermaid">flowchart TD
+ S([0ボタンでstart_Dance]) --&gt; A["isDancing = true<br/>danceStep = 0<br/>danceStepStartMs = millis()"]
+ A --&gt; B["Drive_Num = dance_Action(0)"]
+ B --&gt; C([loopへ戻る])
+ T([do_Dance_Tick]) --&gt; D{"ダンス中？"}
+ D --&gt;|いいえ| Z([終了])
+ D --&gt;|はい| E{"センサー確認時刻？"}
+ E --&gt;|はい| F{"前後に障害物あり？"}
+ F --&gt;|はい| STOP["stop_Dance / 停止"] --&gt; Z
+ F --&gt;|いいえ| G{"ステップ時間が経過？"}
+ E --&gt;|いいえ| G
+ G --&gt;|いいえ| Z
+ G --&gt;|はい| H["danceStep++"]
+ H --&gt; I{"danceStep が9以上？"}
+ I --&gt;|はい| STOP
+ I --&gt;|いいえ| J["次の開始時刻とDrive_Numを更新"] --&gt; Z</pre></div>
   </section>
 
   <section class="env">
@@ -1121,6 +1142,7 @@ end</pre></div>
 #define IR_RIGHT   90   // →
 #define IR_LEFT    8    // ←
 #define IR_STOP    28   // OK
+#define IR_DANCE   25   // 0ボタン (0x19) - ダンス開始
 const uint8_t NUM_CODES[SONG_COUNT] = { 69, 70, 71, 68, 64, 67, 7, 21, 9 };  // ボタン1〜9
 
 // ---------- 状態 ----------
@@ -1140,6 +1162,13 @@ unsigned long lastCheckMs = 0;       // 最後に障害物を調べた時刻
 int pendingSongNum = 0;             // 再生を依頼された曲番号（0=依頼なし）
 unsigned long pendingSongMs = 0;     // 曲を依頼された時刻
 bool isCheckRequested = false;         // 新しい指示の直後はすぐ判断する
+
+// 0ボタンで開始するダンス（delayで待たずに進める）
+bool isDancing = false;
+uint8_t danceStep = 0;
+unsigned long danceStepStartMs = 0;
+unsigned long lastDanceCheckMs = 0;
+const uint8_t DANCE_STEPS = 9;
 
 // 音楽と警告音は delay で待たず、loop から定期的に更新する
 bool isMusicPlaying = false;
@@ -1490,11 +1519,83 @@ DriveState decide_AvoidAction() {   // 回避動作を決める（なければ D
 
 void checkSensorsAndObstacles() {
   if (isAvoiding) { update_Avoid(); return; }
+  if (isDancing) return;     // ダンス時は do_Dance_Tick が安全確認する
   if (!is_CheckTime()) return;
   mark_Checked();
   update_ObstacleFlags();
   DriveState action = decide_AvoidAction();
   if (action != DEF) start_Avoid(action);
+}
+
+// =====================================================
+// ダンス：0ボタンで開始（方向はステップごとに変更）
+// =====================================================
+void stop_Dance() {
+  isDancing = false;
+  Drive_Num = GO_STOP;
+  go_Stop();
+}
+
+DriveState dance_Action(uint8_t step) {
+  switch (step) {
+    case 0: return GO_LEFT;            // 左に回転
+    case 1: return GO_RIGHT;           // 右に回転
+    case 2: return GO_FORWARD_LEFT;    // 前進しながら左へ
+    case 3: return GO_FORWARD_RIGHT;   // 前進しながら右へ
+    case 4: return GO_STOP;            // 一拍休む
+    case 5: return GO_BACK_LEFT;       // 後退しながら左へ
+    case 6: return GO_BACK_RIGHT;      // 後退しながら右へ
+    case 7: return GO_RIGHT;           // 右に回転
+    default: return GO_STOP;           // 終了時は停止
+  }
+}
+
+unsigned int dance_Duration(uint8_t step) {
+  switch (step) {
+    case 0: case 1: return 400;
+    case 2: case 3: return 450;
+    case 4: return 250;
+    case 5: case 6: return 400;
+    case 7: return 500;
+    default: return 200;
+  }
+}
+
+void start_Dance() {
+  if (isAvoiding) return;
+  isDancing = true;
+  danceStep = 0;
+  danceStepStartMs = millis();
+  lastDanceCheckMs = 0;       // 開始直後にセンサー判定
+  lastDriveCmd = GO_STOP;
+  pendingSongNum = 0;         // 未開始の音楽予約だけ解除
+  Drive_Num = dance_Action(danceStep);
+  do_Drive_Tick();
+}
+
+void do_Dance_Tick() {
+  if (!isDancing) return;
+  unsigned long now = millis();
+
+  // ダンス中は前後の安全確認を定期的に行い、障害物があれば直ちに中止
+  if (lastDanceCheckMs == 0 || now - lastDanceCheckMs &gt;= CHECK_INTERVAL_MS) {
+    lastDanceCheckMs = now;
+    if (is_FrontBlocked() || is_BackBlocked()) {
+      stop_Dance();
+      return;
+    }
+    now = millis();
+  }
+
+  // millis()に基づく非ブロッキングなステップ更新
+  if (now - danceStepStartMs &lt; dance_Duration(danceStep)) return;
+  danceStep++;
+  if (danceStep &gt;= DANCE_STEPS) {
+    stop_Dance();
+    return;
+  }
+  danceStepStartMs = now;
+  Drive_Num = dance_Action(danceStep);
 }
 
 // =====================================================
@@ -1548,6 +1649,7 @@ int read_IR_Command() {        // 受信コードを返す。受信なし・リ�
 
 void handle_StopButton() {     // OK：停止状態にする
   isAvoiding = false;
+  isDancing = false;
   stop_Music();               // OKで走行と音楽を一緒に止める
   Drive_Num = GO_STOP;
   lastDriveCmd = GO_STOP;      // モーターは出力層 do_Drive_Tick が止める
@@ -1584,7 +1686,9 @@ void do_IR_Tick() {            // リモコン入力の受付
   int command = read_IR_Command();
   if (command == NO_COMMAND) return;
   if (command == IR_STOP) { handle_StopButton(); return; }
-  if (isAvoiding) return;      // 回避動作中は、OK以外のボタンを受け付けない
+  if (isAvoiding) return;
+  if (command == IR_DANCE) { start_Dance(); return; }
+  if (isDancing) return;      // ダンス中はOKと0のみを受け付ける      // 回避動作中は、OK以外のボタンを受け付けない
   handle_DriveButton(command);
   handle_NumberButton(command);
 }
@@ -1623,6 +1727,7 @@ void setup() {
 
 void loop() {
   do_IR_Tick();                 // ① 入力：リモコンの入力受付
+  do_Dance_Tick();             // ダンス中は時間と障害物を確認
   checkSensorsAndObstacles();   // ② 判断：センサーの優先度判断（必要なら状態を上書き）
   do_Drive_Tick();              // ③ 出力：状態に基づいてモーターを実行
   do_Music_Tick();              // ④ 出力：走行を止めず音楽・警告音を更新
