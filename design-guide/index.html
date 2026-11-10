@@ -372,12 +372,12 @@ pre{max-width:100%;overflow:auto}
   });
 })();
 </script>
-<section class="overview" id="revision"><h2>修正記録・版1.5</h2><p>音楽の途中でもOKで中断できるようにし、回避中はセンサー測定の直後にも500 msの経過を確認します。</p><p>回避中の更新は loop() が直接呼び出します。回避中と通常時の障害物判定は、1周につきどちらか一方だけを実行します。</p><p><a href="robot_final.ino" download>修正版Arduinoコードをダウンロード</a></p><p>要件・設計・図・コードの共通仕様を以下に補足しました。</p><ul><li>回避開始時に音楽の予約を取り消し、回避中は曲を開始しません。回避後に数字ボタンで再予約します。</li><li>回避の500 msは駆動開始直後から計測します。警告音の約200 msを回避時間に含めます。停止判定は周期処理で行うため、実測時間には処理遅延が加わります。</li><li>不正な走行状態は停止に倒します。</li><li>停止出力はPWM 0・方向LOW/LOWです。空転停止のため、車輪の静止までの時間は実機で確認します。</li><li>OKの応答時間は実機未測定です。警告音・センサー測定は処理完了後、音楽は発音中・休符中・音符間にも受信を確認します。0.3秒以内は検証対象の目標値です。</li></ul><p>掲載済みの「OK」は版1.2の疑似環境での実施記録です。版1.5のArduino全体ビルドと実機試験は未実施です。版1.3の変更箇所4項目は抽出したC++関数の疑似試験で確認しました。Arduino全体のビルド・全体再試験・実機試験は未実施です。</p></section><section class="overview" id="overview" aria-labelledby="overview-title">
+<section class="overview" id="revision"><h2>修正記録・版1.5</h2><p>音楽の途中でもOKで中断できるようにし、回避中はセンサー測定の直後にも500 msの経過を確認します。</p><p>回避中の更新は loop() が直接呼び出します。回避中と通常時の障害物判定は、1周につきどちらか一方だけを実行します。</p><p><a href="../robot_final.ino" download>修正版Arduinoコードをダウンロード</a></p><p>要件・設計・図・コードの共通仕様を以下に補足しました。</p><ul><li>回避中も音楽の再生状態を保持します。警告音が鳴る間は音楽を一時中断し、警告終了後に再開します。</li><li>回避の500 msは駆動開始直後から計測します。警告音は非ブロッキングで約200 ms鳴らし、回避時間は独立して判定します。停止判定は周期処理で行うため、実測時間には処理遅延が加わります。</li><li>不正な走行状態は停止に倒します。</li><li>停止出力はPWM 0・方向LOW/LOWです。空転停止のため、車輪の静止までの時間は実機で確認します。</li><li>OKの応答時間は実機未測定です。センサー測定中はIR処理が一時的に遅れますが、音楽と警告音はループ処理で定期更新します。0.3秒以内は検証対象の目標値です。</li></ul><p>掲載済みの「OK」は版1.2の疑似環境での実施記録です。版1.5のArduino全体ビルドと実機試験は未実施です。版1.3の変更箇所4項目は抽出したC++関数の疑似試験で確認しました。Arduino全体のビルド・全体再試験・実機試験は未実施です。</p></section><section class="overview" id="overview" aria-labelledby="overview-title">
 <h2 id="overview-title">ロボットの主な動作</h2>
 <div class="tiles">
 <article><h3>01　リモコン操作</h3><p>矢印ボタンで前進・後退・その場旋回。OKボタンで停止します。</p></article>
 <article><h3>02　障害物回避</h3><p>前方の超音波と後方の赤外線センサーを使い、障害物を検知すると走行指示より回避を優先します。</p></article>
-<article><h3>03　メロディー再生</h3><p>数字1〜9で曲を選択。再生時には車体が停止し、OKで演奏を中断できます。</p></article>
+<article><h3>03　メロディー再生</h3><p>数字1〜9で曲を選択。走行中も曲を再生しながら方向転換できます。OKで走行と演奏を停止します。</p></article>
 </div>
 <p class="cap">結合テストはPC上の疑似環境で実施。実機確認項目は開発設計に記載しています。</p>
 <p><a href="https://osoyoo.com/2020/05/12/v2-1-robot-car-kit-for-arduino-tutorial-introduction/">OSOYOO公式組み立てガイド ↗</a></p>
@@ -402,12 +402,12 @@ pre{max-width:100%;overflow:auto}
   <details><summary><span class="id">2</span><span>設計方針と実施結果</span></summary><div class="body dbody"><div class="tw"><table><thead><tr><th>#</th><th>方針</th><th>やり方</th><th>実施結果</th></tr></thead><tbody><tr><td>1</td><td>変更量は必要最小限</td><td>1回の変更は1つの目的。変更のたびにテストをやり直す</td><td>4ステップと1機能の追加。毎回、擬似テストすべてOK</td></tr><tr><td>2</td><td>1つの関数に1つの目的</td><td>名前を「動詞＋対象」で言い切れない関数は分ける</td><td>長かった4つの関数を分割。関数は全部で45個</td></tr><tr><td>3</td><td>関数は短く</td><td>20行以内、ネスト3段以内、引数3個以内を目安にする</td><td>最長は <code>set_Drive</code> の16行</td></tr><tr><td>4</td><td>変更しやすい構成</td><td>数値は先頭の定義に集める。入力・判断・出力の3層に分ける</td><td>設定値を先頭に集約。3層に整理</td></tr><tr><td>5</td><td>複雑にしない</td><td>同じ処理を2か所に書かない</td><td>PWM設定の重複4か所を <code>set_MotorSpeed</code> にまとめた</td></tr><tr><td>6</td><td>名前を使い回さない</td><td>1つの名前は1つの意味だけ。別の用途に流用しない</td><td>守っている</td></tr><tr><td>7</td><td>名前は役割にぴったり</td><td>3章の命名規則に従う</td><td>7章の対応表のとおり直した</td></tr></tbody></table></div></div></details>
   <details><summary><span class="id">3</span><span>命名規則</span></summary><div class="body dbody"><div class="tw"><table><thead><tr><th>対象</th><th>ルール</th><th>例</th></tr></thead><tbody><tr><td>固定値（#define、const）</td><td>すべて大文字。単語は _ でつなぐ</td><td><code>DISTANCE_LIMIT</code>、<code>SONG_TABLE</code></td></tr><tr><td>時間・距離の固定値</td><td>単位を末尾に付ける</td><td><code>AVOID_MS</code></td></tr><tr><td>bool型の変数と関数</td><td>先頭に is を付ける。真のとき何が起きているか名前で分かるようにする</td><td><code>isAvoiding</code>、<code>is_FrontBlocked()</code></td></tr><tr><td>関数</td><td>動詞_対象。動詞は下の表に統一する</td><td><code>go_Advance()</code>、<code>set_Drive()</code></td></tr><tr><td>変数</td><td>小文字で始め、単語は大文字でつなぐ</td><td><code>lastDriveCmd</code>、<code>avoidStartMs</code></td></tr><tr><td>ループカウンタ</td><td>i から始め、2重なら j、3重なら k</td><td><code>for (int i = 0; ...)</code></td></tr><tr><td>長さ</td><td>目安は2〜3単語、20文字以内。1文字名や、役割が分からない短い名前は使わない</td><td><code>echoUs</code>（<code>t</code> は不可）</td></tr><tr><td>略語</td><td>IR、PWM、MS（ミリ秒）、US（マイクロ秒）、CMD（指示）、NUM（番号）だけ使う</td><td><code>lastDriveCmd</code></td></tr><tr><td>同じ意味は同じ単語</td><td>前後は Front / Back、左右は Left / Right、開始・終了は start_ / end_</td><td>Rear、Forward は混ぜない</td></tr><tr><td>慣例の優先</td><td>サンプルコード由来の名前は変えない</td><td><code>Drive_Num</code>、<code>IS_IR</code>、<code>front</code>、<code>back</code>、<code>watch()</code>、<code>warning()</code>、<code>go_Advance()</code></td></tr></tbody></table></div><p>関数の動詞：<code>go_</code>（モーターを動かす）、<code>do_</code>（毎回の処理）、<code>set_</code>（値や状態を決める）、<code>get_</code>（値を取り出す）、<code>is_</code>（真偽を返す）、<code>play_</code>（音を出す）、<code>init_</code>（初期化）、<code>handle_</code>（ボタンの処理）、<code>update_</code>（変数を更新する）、<code>decide_</code>（判断して値を返す）、<code>mark_</code>（記録する）。</p></div></details>
   <details><summary><span class="id">4</span><span>ハードウェア構成</span></summary><div class="body dbody"><div class="tw"><table><thead><tr><th>部品</th><th>ピン</th><th>定義名</th><th>備考</th></tr></thead><tbody><tr><td>IR受信機</td><td>D4</td><td><code>IR_RECEIVE_PIN</code></td><td></td></tr><tr><td>右モーター</td><td>PWM D9、方向 D12・D11</td><td><code>SPEED_PIN_R</code>、<code>RIGHT_DIR_PIN1</code>・<code>RIGHT_DIR_PIN2</code></td><td></td></tr><tr><td>左モーター</td><td>PWM D6、方向 D7・D8</td><td><code>SPEED_PIN_L</code>、<code>LEFT_DIR_PIN1</code>・<code>LEFT_DIR_PIN2</code></td><td></td></tr><tr><td>ブザー</td><td>D13</td><td><code>BUZZ_PIN</code></td><td>LOWで鳴動、HIGHで停止</td></tr><tr><td>超音波センサー</td><td>Trig D10、Echo D3</td><td><code>TRIG_PIN</code>、<code>ECHO_PIN</code></td><td>前方用</td></tr><tr><td>後方赤外線センサー</td><td>左 D0、右 D2</td><td><code>BACK_IR_L_PIN</code>、<code>BACK_IR_R_PIN</code></td><td>障害物でLOW。D0は書き込み時に配線を外す</td></tr></tbody></table></div></div></details>
-  <details><summary><span class="id">5</span><span>ソフト構成</span></summary><div class="body dbody"><p>処理を入力・判断・出力の3層に分け、<code>loop()</code> だけが順に呼びます。層の間は、変数 <code>Drive_Num</code>（現在の動作）と <code>pendingSongNum</code>（曲の依頼）で受け渡します。</p><div class="tw"><table><thead><tr><th>層</th><th>役割</th><th>書く変数</th><th>読む変数</th></tr></thead><tbody><tr><td>入力</td><td>リモコンを読み、動作と曲の依頼を決める</td><td><code>Drive_Num</code>、<code>lastDriveCmd</code>、<code>pendingSongNum</code></td><td>―</td></tr><tr><td>判断</td><td>センサーを見て、危ないときは <code>Drive_Num</code> を書き換える</td><td><code>Drive_Num</code>、<code>front</code>、<code>back</code></td><td><code>Drive_Num</code></td></tr><tr><td>出力</td><td><code>Drive_Num</code> に従いモーターを動かし、依頼された曲を再生する</td><td><code>pendingSongNum</code>（再生時に0に戻す）</td><td><code>Drive_Num</code>、<code>pendingSongNum</code></td></tr></tbody></table></div><h5>loop() の順番</h5><ul><li>① <code>do_IR_Tick</code>（入力）</li><li>② <code>checkSensorsAndObstacles</code>（判断）</li><li>③ <code>do_Drive_Tick</code>（出力：走行）</li><li>④ <code>do_Music_Tick</code>（出力：音楽）</li><li>⑤ 遅延（<code>IS_IR</code> により100μsまたは20μs）</li></ul><h5>呼び出しの規則</h5><ul><li>入力層は、モーターもブザーも直接動かさない。状態を更新するだけにする。</li><li>OKの停止も <code>Drive_Num = GO_STOP</code> にするだけで、直後の出力層が止める。</li><li>数字ボタンは曲の依頼として記録し、0.3秒後に <code>do_Music_Tick</code> が再生する。</li></ul><h5>規則の例外（意図したもの）</h5><ul><li><code>start_Avoid</code> は、回避と同時に警告音を鳴らすため、<code>do_Drive_Tick</code> と <code>warning</code> を直接呼ぶ。</li><li><code>play_Music</code> は、再生前にモーターを止めるため、<code>go_Stop</code> を直接呼ぶ。</li></ul><p>ファイルは <code>robot_final.ino</code> の1つです（437行）。</p></div></details>
+  <details><summary><span class="id">5</span><span>ソフト構成</span></summary><div class="body dbody"><p>処理を入力・判断・出力の3層に分け、<code>loop()</code> だけが順に呼びます。層の間は、変数 <code>Drive_Num</code>（現在の動作）と <code>pendingSongNum</code>（曲の依頼）で受け渡します。</p><div class="tw"><table><thead><tr><th>層</th><th>役割</th><th>書く変数</th><th>読む変数</th></tr></thead><tbody><tr><td>入力</td><td>リモコンを読み、動作と曲の依頼を決める</td><td><code>Drive_Num</code>、<code>lastDriveCmd</code>、<code>pendingSongNum</code></td><td>―</td></tr><tr><td>判断</td><td>センサーを見て、危ないときは <code>Drive_Num</code> を書き換える</td><td><code>Drive_Num</code>、<code>front</code>、<code>back</code></td><td><code>Drive_Num</code></td></tr><tr><td>出力</td><td><code>Drive_Num</code> に従いモーターを動かし、依頼された曲を再生する</td><td><code>pendingSongNum</code>（再生時に0に戻す）</td><td><code>Drive_Num</code>、<code>pendingSongNum</code></td></tr></tbody></table></div><h5>loop() の順番</h5><ul><li>① <code>do_IR_Tick</code>（入力）</li><li>② <code>checkSensorsAndObstacles</code>（判断）</li><li>③ <code>do_Drive_Tick</code>（出力：走行）</li><li>④ <code>do_Music_Tick</code>（出力：音楽）</li><li>⑤ 遅延（<code>IS_IR</code> により100μsまたは20μs）</li></ul><h5>呼び出しの規則</h5><ul><li>入力層は、モーターもブザーも直接動かさない。状態を更新するだけにする。</li><li>OKの停止も <code>Drive_Num = GO_STOP</code> にするだけで、直後の出力層が止める。</li><li>数字ボタンは曲の依頼として記録し、0.3秒後に <code>do_Music_Tick</code> が再生する。</li></ul><h5>規則の例外（意図したもの）</h5><ul><li><code>start_Avoid</code> は、回避と同時に警告音を鳴らすため、<code>do_Drive_Tick</code> と <code>warning</code> を直接呼ぶ。</li><li><code>play_Music</code> は走行を止めず再生状態を設定します。音符とブザーは <code>do_Music_Tick</code> で逐次更新します。</li></ul><p>ファイルは <code>robot_final.ino</code> の1つです（437行）。</p></div></details>
   <details><summary><span class="id">6</span><span>関数設計（現在のコード）</span></summary><div class="body dbody"><h5>入力層</h5><div class="tw"><table><thead><tr><th>関数</th><th>1つの目的</th><th>行数</th></tr></thead><tbody><tr><td><code>do_IR_Tick</code></td><td>受信した1件を、ボタンの種類ごとの関数へ振り分ける</td><td>8</td></tr><tr><td><code>read_IR_Command</code></td><td>受信コードを返す（受信なし・リピート信号は NO_COMMAND）</td><td>7</td></tr><tr><td><code>handle_StopButton</code></td><td>OK：回避と音楽の依頼を取り消し、停止状態にする</td><td>6</td></tr><tr><td><code>handle_DriveButton</code></td><td>↑↓←→：走行の指示を set_Drive に渡す</td><td>6</td></tr><tr><td><code>get_SongNum</code></td><td>ボタンのコードから曲番号（1〜9）を返す</td><td>6</td></tr><tr><td><code>is_NumberConflict</code></td><td>依頼中の曲と別の数字か返す（同時押し）</td><td>3</td></tr><tr><td><code>handle_NumberButton</code></td><td>1〜9：曲を依頼として記録する</td><td>8</td></tr><tr><td><code>set_Drive</code></td><td>走行の指示で Drive_Num を更新する</td><td>16</td></tr><tr><td><code>is_OppositeDrive</code></td><td>2つの指示が逆向きか返す</td><td>4</td></tr></tbody></table></div><h5>判断層</h5><div class="tw"><table><thead><tr><th>関数</th><th>1つの目的</th><th>行数</th></tr></thead><tbody><tr><td><code>checkSensorsAndObstacles</code></td><td>判断の手順を順に呼ぶ</td><td>8</td></tr><tr><td><code>update_Avoid</code></td><td>回避中に、終了条件を調べる</td><td>6</td></tr><tr><td><code>is_CheckTime</code></td><td>いま障害物を調べる時刻か返す</td><td>4</td></tr><tr><td><code>mark_Checked</code></td><td>調べた時刻を記録する</td><td>4</td></tr><tr><td><code>update_ObstacleFlags</code></td><td>front と back を更新する</td><td>4</td></tr><tr><td><code>decide_AvoidAction</code></td><td>front・back・Drive_Num から回避動作を返す（なければ DEF）</td><td>6</td></tr><tr><td><code>start_Avoid</code></td><td>回避動作を始める（状態を上書き、モーター、警告音）</td><td>8</td></tr><tr><td><code>end_Avoid</code></td><td>回避動作を終えて停止する</td><td>5</td></tr></tbody></table></div><h5>センサー</h5><div class="tw"><table><thead><tr><th>関数</th><th>1つの目的</th><th>行数</th></tr></thead><tbody><tr><td><code>watch</code></td><td>超音波で前方の距離（cm）を返す</td><td>10</td></tr><tr><td><code>is_FrontBlocked</code></td><td>前方の障害物を2回続けて検知したか返す</td><td>7</td></tr><tr><td><code>is_BackBlocked</code></td><td>後方の障害物を2回続けて検知したか返す</td><td>7</td></tr><tr><td><code>is_BackIrOn</code></td><td>後方赤外線のどちらかが反応しているか返す</td><td>3</td></tr></tbody></table></div><h5>出力層（走行）</h5><div class="tw"><table><thead><tr><th>関数</th><th>1つの目的</th><th>行数</th></tr></thead><tbody><tr><td><code>do_Drive_Tick</code></td><td>Drive_Num に合う go_ 関数を呼ぶ</td><td>9</td></tr><tr><td><code>go_Advance</code></td><td>前進のモーター設定</td><td>4</td></tr><tr><td><code>go_Back</code></td><td>後退のモーター設定</td><td>4</td></tr><tr><td><code>go_Left</code></td><td>左折（その場旋回）のモーター設定</td><td>4</td></tr><tr><td><code>go_Right</code></td><td>右折（その場旋回）のモーター設定</td><td>4</td></tr><tr><td><code>go_Stop</code></td><td>完全停止（PWM0・方向LOW）</td><td>4</td></tr><tr><td><code>set_MotorSpeed</code></td><td>左右のPWMを設定する</td><td>4</td></tr><tr><td><code>set_RightMotor</code></td><td>右モーターの方向ピンを設定する</td><td>4</td></tr><tr><td><code>set_LeftMotor</code></td><td>左モーターの方向ピンを設定する</td><td>4</td></tr></tbody></table></div><h5>出力層（ブザー・音楽）</h5><div class="tw"><table><thead><tr><th>関数</th><th>1つの目的</th><th>行数</th></tr></thead><tbody><tr><td><code>do_Music_Tick</code></td><td>依頼から0.3秒たったら曲を再生する</td><td>6</td></tr><tr><td><code>is_MusicDue</code></td><td>依頼があり、0.3秒たったか返す</td><td>3</td></tr><tr><td><code>play_Music</code></td><td>曲を最後まで再生する（OKで中止）</td><td>14</td></tr><tr><td><code>play_Note</code></td><td>1音を鳴らし、短い無音を入れる</td><td>4</td></tr><tr><td><code>get_SongNote</code></td><td>曲データの次の1音の高さを返す</td><td>3</td></tr><tr><td><code>get_SongLength</code></td><td>曲データの次の1音の長さを返す</td><td>3</td></tr><tr><td><code>is_MusicStopPressed</code></td><td>再生中にOKが押されたか返す</td><td>6</td></tr><tr><td><code>play_Tone</code></td><td>指定した高さと長さで1音を鳴らす</td><td>12</td></tr><tr><td><code>warning</code></td><td>警告音を鳴らす（1秒に1回まで）</td><td>11</td></tr></tbody></table></div><h5>初期化とメイン</h5><div class="tw"><table><thead><tr><th>関数</th><th>1つの目的</th><th>行数</th></tr></thead><tbody><tr><td><code>setup</code></td><td>初期化の関数を順に呼ぶ</td><td>6</td></tr><tr><td><code>init_MotorPins</code></td><td>モーターのピンを設定し、停止させる</td><td>5</td></tr><tr><td><code>init_BuzzerPin</code></td><td>ブザーのピンを設定し、停止（HIGH）にする</td><td>4</td></tr><tr><td><code>init_SensorPins</code></td><td>超音波と後方赤外線のピンを設定する</td><td>6</td></tr><tr><td><code>init_IrReceiver</code></td><td>リモコン受信を始める（LED点滅は無効）</td><td>3</td></tr><tr><td><code>loop</code></td><td>入力→判断→出力→音楽→遅延 を繰り返す</td><td>9</td></tr></tbody></table></div><p>行数は、関数の先頭行から閉じ括弧までです。</p></div></details>
   <details><summary><span class="id">7</span><span>データ設計と名前の見直し</span></summary><div class="body dbody"><h5>グローバル変数</h5><div class="tw"><table><thead><tr><th>名前</th><th>型</th><th>意味</th></tr></thead><tbody><tr><td><code>Drive_Num</code></td><td><code>DriveState</code></td><td>現在の動作（<code>GO_ADVANCE</code>、<code>GO_LEFT</code>、<code>GO_RIGHT</code>、<code>GO_BACK</code>、<code>GO_STOP</code>、<code>DEF</code>＝動作なし）</td></tr><tr><td><code>front</code>、<code>back</code></td><td><code>int</code></td><td>前方・後方に障害物があるか（1＝あり）</td></tr><tr><td><code>lastDriveCmd</code>、<code>lastDriveCmdMs</code></td><td><code>DriveState</code>、<code>unsigned long</code></td><td>直前の走行指示と、その時刻（矛盾判定用）</td></tr><tr><td><code>isAvoiding</code></td><td><code>bool</code></td><td>回避動作中か</td></tr><tr><td><code>avoidStartMs</code></td><td><code>unsigned long</code></td><td>回避を始めた時刻</td></tr><tr><td><code>isCheckRequested</code></td><td><code>bool</code></td><td>新しい指示の直後に、すぐ障害物を調べるか</td></tr><tr><td><code>lastCheckMs</code></td><td><code>unsigned long</code></td><td>最後に障害物を調べた時刻</td></tr><tr><td><code>pendingSongNum</code>、<code>pendingSongMs</code></td><td><code>int</code>、<code>unsigned long</code></td><td>再生を依頼された曲番号（0＝なし）と、その時刻</td></tr><tr><td><code>IS_IR</code></td><td><code>bool</code></td><td>ループ遅延の切り替え（サンプル由来。大文字だが慣例を優先して例外とした）</td></tr></tbody></table></div><h5>設定値（先頭の定義）</h5><div class="tw"><table><thead><tr><th>名前</th><th>値</th><th>意味</th></tr></thead><tbody><tr><td><code>DISTANCE_LIMIT</code></td><td><code>20</code></td><td>前方の障害物とみなす距離（cm）</td></tr><tr><td><code>SPEED</code></td><td><code>200</code></td><td>モーター速度（0〜255）</td></tr><tr><td><code>CHECK_INTERVAL_MS</code></td><td><code>100</code></td><td>センサー確認の間隔（ms）</td></tr><tr><td><code>CONFLICT_MS</code></td><td><code>300</code></td><td>逆向きのコードを矛盾とみなす時間（ms）</td></tr><tr><td><code>AVOID_MS</code></td><td><code>500</code></td><td>回避動作を続ける時間（ms）</td></tr><tr><td><code>WARN_INTERVAL_MS</code></td><td><code>1000</code></td><td>警告音の最短間隔（ms）</td></tr><tr><td><code>TEMPO_MS</code></td><td><code>150</code></td><td>8分音符1つの長さ（ms）</td></tr><tr><td><code>SONG_COUNT</code></td><td><code>9</code></td><td>曲の数（ボタン1〜9）</td></tr><tr><td><code>NO_COMMAND</code></td><td><code>-1</code></td><td>受信なし</td></tr></tbody></table></div><h5>名前の見直し（実施済み）</h5><div class="tw"><table><thead><tr><th>元の名前</th><th>新しい名前</th><th>理由</th></tr></thead><tbody><tr><td><code>DN</code></td><td><code>DriveState</code></td><td>短くて意味が分からない</td></tr><tr><td><code>avoiding</code>、<code>forceCheck</code></td><td><code>isAvoiding</code>、<code>isCheckRequested</code></td><td>bool型は is を付ける</td></tr><tr><td><code>lastCmd</code>、<code>lastCmdTime</code>、<code>avoidStart</code></td><td><code>lastDriveCmd</code>、<code>lastDriveCmdMs</code>、<code>avoidStartMs</code></td><td>何の指示か、単位は何かを明記する</td></tr><tr><td><code>speedPinR</code> など</td><td><code>SPEED_PIN_R</code> など</td><td>固定値は大文字</td></tr><tr><td><code>LFSensor_bl</code>、<code>LFSensor_br</code></td><td><code>BACK_IR_L_PIN</code>、<code>BACK_IR_R_PIN</code></td><td>役割が分かる名前にする</td></tr><tr><td><code>Trig_PIN</code>、<code>Echo_PIN</code>、<code>distancelimit</code></td><td><code>TRIG_PIN</code>、<code>ECHO_PIN</code>、<code>DISTANCE_LIMIT</code></td><td>固定値は大文字</td></tr><tr><td><code>CHECK_INTERVAL</code>、<code>WARN_INTERVAL</code></td><td><code>CHECK_INTERVAL_MS</code>、<code>WARN_INTERVAL_MS</code></td><td>単位の付け方を <code>AVOID_MS</code> に統一</td></tr><tr><td><code>song1</code>〜<code>song9</code>、<code>songs</code></td><td><code>SONG_1</code>〜<code>SONG_9</code>、<code>SONG_TABLE</code></td><td>固定データは大文字</td></tr><tr><td><code>front_Blocked</code>、<code>back_Blocked</code>、<code>rawBack</code></td><td><code>is_FrontBlocked</code>、<code>is_BackBlocked</code>、<code>is_BackIrOn</code></td><td>bool型を返す関数は is_ を付ける</td></tr><tr><td><code>isOpposite</code>、<code>rightMotor</code>、<code>leftMotor</code>、<code>playTone</code></td><td><code>is_OppositeDrive</code>、<code>set_RightMotor</code>、<code>set_LeftMotor</code>、<code>play_Tone</code></td><td>関数名を「動詞_対象」に統一</td></tr><tr><td><code>p</code>、<code>t</code>、<code>c</code>、<code>d1</code>、<code>d2</code></td><td><code>notePtr</code>、<code>echoUs</code>、<code>command</code>、<code>isDir1High</code>、<code>isDir2High</code></td><td>1文字名をやめる</td></tr></tbody></table></div></div></details>
   <details><summary><span class="id">8</span><span>変更しやすさ：触る場所</span></summary><div class="body dbody"><div class="tw"><table><thead><tr><th>変えたいこと</th><th>触る場所</th></tr></thead><tbody><tr><td>モーターの速さ</td><td><code>SPEED</code></td></tr><tr><td>障害物とみなす距離</td><td><code>DISTANCE_LIMIT</code></td></tr><tr><td>回避動作の長さ</td><td><code>AVOID_MS</code></td></tr><tr><td>センサーを調べる間隔</td><td><code>CHECK_INTERVAL_MS</code></td></tr><tr><td>警告音の間隔</td><td><code>WARN_INTERVAL_MS</code></td></tr><tr><td>同時押しとみなす時間（矢印・数字の共通）</td><td><code>CONFLICT_MS</code></td></tr><tr><td>曲の速さ</td><td><code>TEMPO_MS</code></td></tr><tr><td>リモコンのボタン</td><td><code>IR_ADVANCE</code> など、<code>NUM_CODES</code></td></tr><tr><td>曲を変える・足す</td><td><code>SONG_n</code>、<code>SONG_TABLE</code>、<code>SONG_COUNT</code></td></tr><tr><td>ピンの変更</td><td>4章の定義名</td></tr><tr><td>タイヤの向きが逆</td><td><code>go_Advance()</code> と <code>go_Back()</code> の HIGH／LOW（<code>go_Left()</code> と <code>go_Right()</code> も同様）</td></tr></tbody></table></div></div></details>
   <details><summary><span class="id">9</span><span>変更の実施結果</span></summary><div class="body dbody"><div class="tw"><table><thead><tr><th>ステップ</th><th>内容</th><th>結合テスト（パソコン上）</th></tr></thead><tbody><tr><td>修正前</td><td>動作の確認</td><td>18項目すべてOK</td></tr><tr><td>1 名前の統一</td><td>7章の対応表のとおり</td><td>18項目すべてOK</td></tr><tr><td>2 重複の整理</td><td><code>set_MotorSpeed</code> にまとめる</td><td>18項目すべてOK</td></tr><tr><td>3 関数の分割</td><td><code>checkSensorsAndObstacles</code>、<code>do_IR_Tick</code>、<code>play_Music</code>、<code>setup</code></td><td>18項目すべてOK</td></tr><tr><td>4 入力層の整理</td><td>OKの処理がモーターを直接止めない</td><td>18項目すべてOK</td></tr><tr><td>5 機能追加</td><td>数字ボタンの同時押し（要求2-7）</td><td>24項目すべてOK</td></tr></tbody></table></div><p>各ステップのあとに、結合テストをやり直しました。単体テストは、最終のコードに対して実施しました（10章）。</p></div></details>
-  <details><summary><span class="id">10</span><span>テスト（単体テストと結合テスト）</span></summary><div class="body dbody"><p>テストを、単体テストと結合テストに分けて行います。どちらも、コードを変えるたびにすべてやり直します。</p><div class="tw"><table><thead><tr><th>種類</th><th>対象</th><th>方法</th><th>件数</th><th>結果</th></tr></thead><tbody><tr><td>単体テスト</td><td>関数1つずつ</td><td>他の関数の結果や部品は、擬似品に置き換えて確認する</td><td>85</td><td>すべてOK</td></tr><tr><td>結合テスト</td><td>入力・判断・出力・音楽を組み合わせた動き</td><td><code>loop()</code> を繰り返し動かし、リモコンとセンサーの入力を擬似的に与えて確認する</td><td>24</td><td>すべてOK</td></tr><tr><td>実機での結合テスト</td><td>実際のロボット</td><td>組み立て後に、結合テストの内容を実機で確認する</td><td>―</td><td>未実施</td></tr></tbody></table></div><h5>10.1 単体テスト仕様（85件）</h5><div class="tw"><table><thead><tr><th>対象の関数</th><th>確認内容</th><th>件数</th><th>結果</th></tr></thead><tbody><tr><td><code>is_OppositeDrive</code></td><td>・↑↓・↓↑・←→・→← は、すべて逆向き<br>・↑と←、停止と↑は、逆向きではない</td><td>2</td><td>すべてOK</td></tr><tr><td><code>get_SongNum</code></td><td>・ボタン1〜9のコードが、曲1〜9になる<br>・矢印・OK・未定義のコードは 0</td><td>2</td><td>すべてOK</td></tr><tr><td><code>is_NumberConflict</code></td><td>・依頼がないときは false<br>・依頼中と別の数字は true、同じ数字は false</td><td>2</td><td>すべてOK</td></tr><tr><td><code>decide_AvoidAction</code></td><td>・前後とも反応・前進中 → 回転（GO_RIGHT）<br>・前後とも反応・後退中 → 回転（GO_RIGHT）<br>・前方だけ・前進中 → 後退（GO_BACK）<br>・前方だけ・後退中 → 回避なし（DEF）<br>・後方だけ・後退中 → 前進（GO_ADVANCE）<br>・後方だけ・前進中 → 回避なし（DEF）<br>・障害物なし → 回避なし（DEF）<br>・前方だけ・旋回中 → 回避なし（DEF）</td><td>8</td><td>すべてOK</td></tr><tr><td><code>is_CheckTime</code></td><td>・停止中は、依頼があっても false<br>・旋回中は false<br>・前進中で、すぐ調べる依頼があれば true<br>・前進中で、前回から100ms未満なら false<br>・前進中で、前回から100ms以上なら true</td><td>5</td><td>すべてOK</td></tr><tr><td><code>mark_Checked</code></td><td>・依頼を消し、調べた時刻を記録する</td><td>1</td><td>すべてOK</td></tr><tr><td><code>watch</code></td><td>・往復580μs → 10cm<br>・往復5800μs → 100cm<br>・反応なし → 999</td><td>3</td><td>すべてOK</td></tr><tr><td><code>is_FrontBlocked</code></td><td>・10cmで2回続けて検知 → true<br>・30cm（しきい値より遠い）→ false<br>・反応なし → false<br>・1回目だけ近く、2回目は遠い → false（ノイズ対策）</td><td>4</td><td>すべてOK</td></tr><tr><td><code>is_BackIrOn</code></td><td>・左右とも反応なし → false<br>・左だけ反応 → true<br>・右だけ反応 → true</td><td>3</td><td>すべてOK</td></tr><tr><td><code>is_BackBlocked</code></td><td>・2回続けて反応 → true<br>・反応なし → false<br>・1回目だけ反応、2回目は反応なし → false（ノイズ対策）</td><td>3</td><td>すべてOK</td></tr><tr><td><code>update_ObstacleFlags</code></td><td>・前方10cm・後方反応 → front=1、back=1<br>・障害物なし → front=0、back=0</td><td>2</td><td>すべてOK</td></tr><tr><td><code>read_IR_Command</code></td><td>・受信なし → NO_COMMAND<br>・コード24を受信 → 24<br>・リピート信号 → NO_COMMAND、受信は消費される</td><td>3</td><td>すべてOK</td></tr><tr><td><code>set_Drive</code></td><td>・↑を受け付ける → Drive_Num、lastDriveCmd が前進、すぐ調べる依頼が立つ<br>・↑の0.1秒後に↓ → 矛盾で停止<br>・停止のあとの↓ → 後退<br>・←の0.4秒後に→ → 矛盾にならず右折</td><td>4</td><td>すべてOK</td></tr><tr><td><code>handle_StopButton</code></td><td>・回避中・曲の依頼中・前進中 → すべて取り消して GO_STOP</td><td>1</td><td>すべてOK</td></tr><tr><td><code>handle_DriveButton</code></td><td>・←のコード → GO_LEFT<br>・未定義のコード → 変化なし</td><td>2</td><td>すべてOK</td></tr><tr><td><code>handle_NumberButton</code></td><td>・数字3 → 曲3を依頼し、時刻を記録<br>・同じ数字をもう一度 → 依頼はそのまま（時刻も変えない）<br>・別の数字 → 依頼を取り消す<br>・数字以外のコード → 依頼しない</td><td>4</td><td>すべてOK</td></tr><tr><td><code>set_MotorSpeed</code></td><td>・右PWM=100、左PWM=50 に設定</td><td>1</td><td>すべてOK</td></tr><tr><td><code>set_RightMotor</code>、<code>set_LeftMotor</code></td><td>・方向ピンが指定どおりになる</td><td>1</td><td>すべてOK</td></tr><tr><td><code>go_Advance</code></td><td>・両輪が前進、速度は SPEED</td><td>1</td><td>すべてOK</td></tr><tr><td><code>go_Back</code></td><td>・両輪が後退、速度は SPEED</td><td>1</td><td>すべてOK</td></tr><tr><td><code>go_Left</code></td><td>・右輪が前進、左輪が後退（その場で左旋回）</td><td>1</td><td>すべてOK</td></tr><tr><td><code>go_Right</code></td><td>・右輪が後退、左輪が前進（その場で右旋回）</td><td>1</td><td>すべてOK</td></tr><tr><td><code>go_Stop</code></td><td>・PWMが0、方向ピン4本がすべてLOW</td><td>1</td><td>すべてOK</td></tr><tr><td><code>do_Drive_Tick</code></td><td>・Drive_Num の5つの値に合った動きをする</td><td>1</td><td>すべてOK</td></tr><tr><td><code>warning</code></td><td>・1回目 → 2回鳴る<br>・1秒以内にもう一度 → 鳴らない<br>・1秒たてば → また2回鳴る</td><td>3</td><td>すべてOK</td></tr><tr><td><code>play_Tone</code></td><td>・1000Hzを100ms → 約100回振動し、約100msかかり、最後はHIGH<br>・周波数0（休符）→ 鳴らさず、50ms待つ</td><td>2</td><td>すべてOK</td></tr><tr><td><code>get_SongNote</code></td><td>・曲1の先頭の音は NC4（262）</td><td>1</td><td>すべてOK</td></tr><tr><td><code>get_SongLength</code></td><td>・曲1の先頭の長さは 2</td><td>1</td><td>すべてOK</td></tr><tr><td><code>get_SongNote</code></td><td>・曲1の8音目の次は、終わりの印 END_MARK</td><td>1</td><td>すべてOK</td></tr><tr><td><code>is_MusicStopPressed</code></td><td>・受信なし → false<br>・OKを受信 → true<br>・OK以外を受信 → false</td><td>3</td><td>すべてOK</td></tr><tr><td><code>play_Music</code></td><td>・曲番号が範囲外（0、10）→ 何もしない<br>・曲1 → モーターを止めて、最後まで鳴らし、最後はHIGH<br>・再生中にOK → 途中で止まる（全体2.7秒より大幅に短い）</td><td>3</td><td>すべてOK</td></tr><tr><td><code>is_MusicDue</code></td><td>・依頼なし → false<br>・依頼から0.3秒未満 → false<br>・依頼から0.3秒以上 → true</td><td>3</td><td>すべてOK</td></tr><tr><td><code>do_Music_Tick</code></td><td>・依頼から0.3秒未満 → 鳴らさず、依頼も残る<br>・0.3秒たったら → 依頼を消して曲を鳴らす</td><td>2</td><td>すべてOK</td></tr><tr><td><code>start_Avoid</code></td><td>・後退で回避開始 → 状態を上書き、モーターが後退、警告音、回避中フラグ</td><td>1</td><td>すべてOK</td></tr><tr><td><code>end_Avoid</code></td><td>・回避を終える → 回避中フラグを下げ、停止</td><td>1</td><td>すべてOK</td></tr><tr><td><code>update_Avoid</code></td><td>・0.5秒たったら → 回避を終える<br>・0.1秒・障害物なし → 回避を続ける<br>・後退中に後方が反応 → 前進せず停止（行き来の防止）<br>・前進中に前方が反応 → 停止</td><td>4</td><td>すべてOK</td></tr><tr><td><code>init_MotorPins</code></td><td>・モーターを停止状態にする</td><td>1</td><td>すべてOK</td></tr><tr><td><code>init_BuzzerPin</code></td><td>・ブザーのピンをHIGH（停止）にする</td><td>1</td><td>すべてOK</td></tr><tr><td><code>setup</code></td><td>・起動直後：停止し、ブザー停止、動作は GO_STOP</td><td>1</td><td>すべてOK</td></tr></tbody></table></div><h5>10.2 結合テスト仕様（24件）</h5><div class="tw"><table><thead><tr><th>ID</th><th>区分</th><th>操作と状況</th><th>期待する結果</th><th>結果</th></tr></thead><tbody><tr><td>IT-01</td><td>起動</td><td>電源を入れた直後</td><td>モーターは停止、ブザーは無音</td><td>OK</td></tr><tr><td>IT-02</td><td>走行</td><td>↑を押す（前方に障害物なし）</td><td>前進する</td><td>OK</td></tr><tr><td>IT-03</td><td>回避</td><td>前進中に、前方20cm以内に壁が現れる</td><td>後退し、警告音が鳴る</td><td>OK</td></tr><tr><td>IT-04</td><td>回避</td><td>IT-03の0.5秒後</td><td>停止する</td><td>OK</td></tr><tr><td>IT-05</td><td>回避</td><td>壁の前で↑を押す</td><td>前進せず、後退する</td><td>OK</td></tr><tr><td>IT-06</td><td>回避</td><td>前後の両方に障害物がある状態で↑を押す</td><td>その場で右回転する</td><td>OK</td></tr><tr><td>IT-07</td><td>回避</td><td>後方に障害物がある状態で↓を押す</td><td>前進する</td><td>OK</td></tr><tr><td>IT-08</td><td>回避</td><td>IT-07の0.5秒後</td><td>停止する</td><td>OK</td></tr><tr><td>IT-09</td><td>矢印の同時押し</td><td>↑と↓を0.3秒以内に続けて押す</td><td>停止する</td><td>OK</td></tr><tr><td>IT-10</td><td>矢印の同時押し</td><td>←と→を0.3秒以内に続けて押す</td><td>停止する</td><td>OK</td></tr><tr><td>IT-11</td><td>走行</td><td>←を押す</td><td>左旋回する</td><td>OK</td></tr><tr><td>IT-12</td><td>停止</td><td>旋回中にOKを押す</td><td>完全停止（PWM0・方向ピンLOW）</td><td>OK</td></tr><tr><td>IT-13</td><td>停止</td><td>回避動作中にOKを押す</td><td>すぐ停止する</td><td>OK</td></tr><tr><td>IT-14</td><td>未定義コード</td><td>停止中に、未定義のコードを受信</td><td>停止のまま</td><td>OK</td></tr><tr><td>IT-15</td><td>未定義コード</td><td>前進中に、未定義のコードを受信</td><td>前進を続ける</td><td>OK</td></tr><tr><td>IT-16</td><td>音楽</td><td>前進中に数字ボタンを押す（直後）</td><td>0.3秒間は前進を続け、まだ鳴らない</td><td>OK</td></tr><tr><td>IT-17</td><td>音楽</td><td>IT-16の0.3秒後</td><td>モーターを止め、曲を最後まで再生する</td><td>OK</td></tr><tr><td>IT-18</td><td>音楽</td><td>再生中にOKを押す</td><td>曲が途中で止まる</td><td>OK</td></tr><tr><td>IT-19</td><td>矢印の同時押し</td><td>←→で停止したあと、0.3秒より後に↑を押す</td><td>矛盾にならず、前進する</td><td>OK</td></tr><tr><td>IT-20</td><td>数字の同時押し</td><td>数字1と2を0.3秒以内に押す</td><td>どの曲も鳴らない</td><td>OK</td></tr><tr><td>IT-21</td><td>数字の同時押し</td><td>同じ数字を0.3秒以内に2回押す</td><td>1回だけ再生する</td><td>OK</td></tr><tr><td>IT-22</td><td>数字の同時押し</td><td>数字を押した直後にOKを押す</td><td>曲は鳴らない</td><td>OK</td></tr><tr><td>IT-23</td><td>数字の同時押し</td><td>同時押しで取り消したあと、別の数字を押す</td><td>その数字の曲が鳴る</td><td>OK</td></tr><tr><td>IT-24</td><td>数字の同時押し</td><td>前進中に数字1と2を同時に押す</td><td>前進を続け、曲は鳴らない</td><td>OK</td></tr></tbody></table></div><h5>10.3 実機で確認すること（未実施）</h5><ul><li>タイヤの向き（前進と後退、左折と右折）</li><li>センサーの感度（<code>DISTANCE_LIMIT</code>、後方赤外線のボリューム）</li><li>ブザーの種類（アクティブでは曲がメロディーにならない）</li><li>電源投入時にブザーが短く鳴らないか（D13はブートローダーが点滅させる）</li><li>D0のセンサー配線を外して書き込めるか</li></ul><h5>10.4 テストの実行方法</h5><p>テストは、パソコンの <code>g++</code> で動かします。Arduinoの部品は擬似品に置き換えているため、実機の動作確認の代わりにはなりません。</p><pre class="cmd">bash run_tests.sh</pre><p>同じフォルダに、<code>robot_final.ino</code>、<code>stub.h</code>、<code>unit_test.cpp</code>、<code>integration_test.cpp</code>、<code>run_tests.sh</code> を置きます。</p></div></details>
+  <details><summary><span class="id">10</span><span>テスト（単体テストと結合テスト）</span></summary><div class="body dbody"><p>テストを、単体テストと結合テストに分けて行います。どちらも、コードを変えるたびにすべてやり直します。</p><div class="tw"><table><thead><tr><th>種類</th><th>対象</th><th>方法</th><th>件数</th><th>結果</th></tr></thead><tbody><tr><td>単体テスト</td><td>関数1つずつ</td><td>他の関数の結果や部品は、擬似品に置き換えて確認する</td><td>85</td><td>すべてOK</td></tr><tr><td>結合テスト</td><td>入力・判断・出力・音楽を組み合わせた動き</td><td><code>loop()</code> を繰り返し動かし、リモコンとセンサーの入力を擬似的に与えて確認する</td><td>24</td><td>すべてOK</td></tr><tr><td>実機での結合テスト</td><td>実際のロボット</td><td>組み立て後に、結合テストの内容を実機で確認する</td><td>―</td><td>未実施</td></tr></tbody></table></div><h5>10.1 単体テスト仕様（85件）</h5><div class="tw"><table><thead><tr><th>対象の関数</th><th>確認内容</th><th>件数</th><th>結果</th></tr></thead><tbody><tr><td><code>is_OppositeDrive</code></td><td>・↑↓・↓↑・←→・→← は、すべて逆向き<br>・↑と←、停止と↑は、逆向きではない</td><td>2</td><td>すべてOK</td></tr><tr><td><code>get_SongNum</code></td><td>・ボタン1〜9のコードが、曲1〜9になる<br>・矢印・OK・未定義のコードは 0</td><td>2</td><td>すべてOK</td></tr><tr><td><code>is_NumberConflict</code></td><td>・依頼がないときは false<br>・依頼中と別の数字は true、同じ数字は false</td><td>2</td><td>すべてOK</td></tr><tr><td><code>decide_AvoidAction</code></td><td>・前後とも反応・前進中 → 回転（GO_RIGHT）<br>・前後とも反応・後退中 → 回転（GO_RIGHT）<br>・前方だけ・前進中 → 後退（GO_BACK）<br>・前方だけ・後退中 → 回避なし（DEF）<br>・後方だけ・後退中 → 前進（GO_ADVANCE）<br>・後方だけ・前進中 → 回避なし（DEF）<br>・障害物なし → 回避なし（DEF）<br>・前方だけ・旋回中 → 回避なし（DEF）</td><td>8</td><td>すべてOK</td></tr><tr><td><code>is_CheckTime</code></td><td>・停止中は、依頼があっても false<br>・旋回中は false<br>・前進中で、すぐ調べる依頼があれば true<br>・前進中で、前回から100ms未満なら false<br>・前進中で、前回から100ms以上なら true</td><td>5</td><td>すべてOK</td></tr><tr><td><code>mark_Checked</code></td><td>・依頼を消し、調べた時刻を記録する</td><td>1</td><td>すべてOK</td></tr><tr><td><code>watch</code></td><td>・往復580μs → 10cm<br>・往復5800μs → 100cm<br>・反応なし → 999</td><td>3</td><td>すべてOK</td></tr><tr><td><code>is_FrontBlocked</code></td><td>・10cmで2回続けて検知 → true<br>・30cm（しきい値より遠い）→ false<br>・反応なし → false<br>・1回目だけ近く、2回目は遠い → false（ノイズ対策）</td><td>4</td><td>すべてOK</td></tr><tr><td><code>is_BackIrOn</code></td><td>・左右とも反応なし → false<br>・左だけ反応 → true<br>・右だけ反応 → true</td><td>3</td><td>すべてOK</td></tr><tr><td><code>is_BackBlocked</code></td><td>・2回続けて反応 → true<br>・反応なし → false<br>・1回目だけ反応、2回目は反応なし → false（ノイズ対策）</td><td>3</td><td>すべてOK</td></tr><tr><td><code>update_ObstacleFlags</code></td><td>・前方10cm・後方反応 → front=1、back=1<br>・障害物なし → front=0、back=0</td><td>2</td><td>すべてOK</td></tr><tr><td><code>read_IR_Command</code></td><td>・受信なし → NO_COMMAND<br>・コード24を受信 → 24<br>・リピート信号 → NO_COMMAND、受信は消費される</td><td>3</td><td>すべてOK</td></tr><tr><td><code>set_Drive</code></td><td>・↑を受け付ける → Drive_Num、lastDriveCmd が前進、すぐ調べる依頼が立つ<br>・↑の0.1秒後に↓ → 矛盾で停止<br>・停止のあとの↓ → 後退<br>・←の0.4秒後に→ → 矛盾にならず右折</td><td>4</td><td>すべてOK</td></tr><tr><td><code>handle_StopButton</code></td><td>・回避中・曲の依頼中・前進中 → すべて取り消して GO_STOP</td><td>1</td><td>すべてOK</td></tr><tr><td><code>handle_DriveButton</code></td><td>・←のコード → GO_LEFT<br>・未定義のコード → 変化なし</td><td>2</td><td>すべてOK</td></tr><tr><td><code>handle_NumberButton</code></td><td>・数字3 → 曲3を依頼し、時刻を記録<br>・同じ数字をもう一度 → 依頼はそのまま（時刻も変えない）<br>・別の数字 → 依頼を取り消す<br>・数字以外のコード → 依頼しない</td><td>4</td><td>すべてOK</td></tr><tr><td><code>set_MotorSpeed</code></td><td>・右PWM=100、左PWM=50 に設定</td><td>1</td><td>すべてOK</td></tr><tr><td><code>set_RightMotor</code>、<code>set_LeftMotor</code></td><td>・方向ピンが指定どおりになる</td><td>1</td><td>すべてOK</td></tr><tr><td><code>go_Advance</code></td><td>・両輪が前進、速度は SPEED</td><td>1</td><td>すべてOK</td></tr><tr><td><code>go_Back</code></td><td>・両輪が後退、速度は SPEED</td><td>1</td><td>すべてOK</td></tr><tr><td><code>go_Left</code></td><td>・右輪が前進、左輪が後退（その場で左旋回）</td><td>1</td><td>すべてOK</td></tr><tr><td><code>go_Right</code></td><td>・右輪が後退、左輪が前進（その場で右旋回）</td><td>1</td><td>すべてOK</td></tr><tr><td><code>go_Stop</code></td><td>・PWMが0、方向ピン4本がすべてLOW</td><td>1</td><td>すべてOK</td></tr><tr><td><code>do_Drive_Tick</code></td><td>・Drive_Num の5つの値に合った動きをする</td><td>1</td><td>すべてOK</td></tr><tr><td><code>warning</code></td><td>・1回目 → 2回鳴る<br>・1秒以内にもう一度 → 鳴らない<br>・1秒たてば → また2回鳴る</td><td>3</td><td>すべてOK</td></tr><tr><td><code>play_Tone</code></td><td>・1000Hzを100ms → 約100回振動し、約100msかかり、最後はHIGH<br>・周波数0（休符）→ 鳴らさず、50ms待つ</td><td>2</td><td>すべてOK</td></tr><tr><td><code>get_SongNote</code></td><td>・曲1の先頭の音は NC4（262）</td><td>1</td><td>すべてOK</td></tr><tr><td><code>get_SongLength</code></td><td>・曲1の先頭の長さは 2</td><td>1</td><td>すべてOK</td></tr><tr><td><code>get_SongNote</code></td><td>・曲1の8音目の次は、終わりの印 END_MARK</td><td>1</td><td>すべてOK</td></tr><tr><td><code>is_MusicStopPressed</code></td><td>・受信なし → false<br>・OKを受信 → true<br>・OK以外を受信 → false</td><td>3</td><td>すべてOK</td></tr><tr><td><code>play_Music</code></td><td>・曲番号が範囲外（0、10）→ 何もしない<br>・曲1 → モーターを止めて、最後まで鳴らし、最後はHIGH<br>・再生中にOK → 途中で止まる（全体2.7秒より大幅に短い）</td><td>3</td><td>すべてOK</td></tr><tr><td><code>is_MusicDue</code></td><td>・依頼なし → false<br>・依頼から0.3秒未満 → false<br>・依頼から0.3秒以上 → true</td><td>3</td><td>すべてOK</td></tr><tr><td><code>do_Music_Tick</code></td><td>・依頼から0.3秒未満 → 鳴らさず、依頼も残る<br>・0.3秒たったら → 依頼を消して曲を鳴らす</td><td>2</td><td>すべてOK</td></tr><tr><td><code>start_Avoid</code></td><td>・後退で回避開始 → 状態を上書き、モーターが後退、警告音、回避中フラグ</td><td>1</td><td>すべてOK</td></tr><tr><td><code>end_Avoid</code></td><td>・回避を終える → 回避中フラグを下げ、停止</td><td>1</td><td>すべてOK</td></tr><tr><td><code>update_Avoid</code></td><td>・0.5秒たったら → 回避を終える<br>・0.1秒・障害物なし → 回避を続ける<br>・後退中に後方が反応 → 前進せず停止（行き来の防止）<br>・前進中に前方が反応 → 停止</td><td>4</td><td>すべてOK</td></tr><tr><td><code>init_MotorPins</code></td><td>・モーターを停止状態にする</td><td>1</td><td>すべてOK</td></tr><tr><td><code>init_BuzzerPin</code></td><td>・ブザーのピンをHIGH（停止）にする</td><td>1</td><td>すべてOK</td></tr><tr><td><code>setup</code></td><td>・起動直後：停止し、ブザー停止、動作は GO_STOP</td><td>1</td><td>すべてOK</td></tr></tbody></table></div><h5>10.2 結合テスト仕様（24件）</h5><div class="tw"><table><thead><tr><th>ID</th><th>区分</th><th>操作と状況</th><th>期待する結果</th><th>結果</th></tr></thead><tbody><tr><td>IT-01</td><td>起動</td><td>電源を入れた直後</td><td>モーターは停止、ブザーは無音</td><td>OK</td></tr><tr><td>IT-02</td><td>走行</td><td>↑を押す（前方に障害物なし）</td><td>前進する</td><td>OK</td></tr><tr><td>IT-03</td><td>回避</td><td>前進中に、前方20cm以内に壁が現れる</td><td>後退し、警告音が鳴る</td><td>OK</td></tr><tr><td>IT-04</td><td>回避</td><td>IT-03の0.5秒後</td><td>停止する</td><td>OK</td></tr><tr><td>IT-05</td><td>回避</td><td>壁の前で↑を押す</td><td>前進せず、後退する</td><td>OK</td></tr><tr><td>IT-06</td><td>回避</td><td>前後の両方に障害物がある状態で↑を押す</td><td>その場で右回転する</td><td>OK</td></tr><tr><td>IT-07</td><td>回避</td><td>後方に障害物がある状態で↓を押す</td><td>前進する</td><td>OK</td></tr><tr><td>IT-08</td><td>回避</td><td>IT-07の0.5秒後</td><td>停止する</td><td>OK</td></tr><tr><td>IT-09</td><td>矢印の同時押し</td><td>↑と↓を0.3秒以内に続けて押す</td><td>停止する</td><td>OK</td></tr><tr><td>IT-10</td><td>矢印の同時押し</td><td>←と→を0.3秒以内に続けて押す</td><td>停止する</td><td>OK</td></tr><tr><td>IT-11</td><td>走行</td><td>←を押す</td><td>左旋回する</td><td>OK</td></tr><tr><td>IT-12</td><td>停止</td><td>旋回中にOKを押す</td><td>完全停止（PWM0・方向ピンLOW）</td><td>OK</td></tr><tr><td>IT-13</td><td>停止</td><td>回避動作中にOKを押す</td><td>すぐ停止する</td><td>OK</td></tr><tr><td>IT-14</td><td>未定義コード</td><td>停止中に、未定義のコードを受信</td><td>停止のまま</td><td>OK</td></tr><tr><td>IT-15</td><td>未定義コード</td><td>前進中に、未定義のコードを受信</td><td>前進を続ける</td><td>OK</td></tr><tr><td>IT-16</td><td>音楽</td><td>前進中に数字ボタンを押す（直後）</td><td>0.3秒間は前進を続け、まだ鳴らない</td><td>OK</td></tr><tr><td>IT-17</td><td>音楽</td><td>IT-16の0.3秒後</td><td>前進を続けながら曲を再生する</td><td>要再試験</td></tr><tr><td>IT-18</td><td>音楽</td><td>再生中にOKを押す</td><td>曲とモーターが停止する</td><td>要再試験</td></tr><tr><td>IT-19</td><td>矢印の同時押し</td><td>←→で停止したあと、0.3秒より後に↑を押す</td><td>矛盾にならず、前進する</td><td>OK</td></tr><tr><td>IT-20</td><td>数字の同時押し</td><td>数字1と2を0.3秒以内に押す</td><td>どの曲も鳴らない</td><td>OK</td></tr><tr><td>IT-21</td><td>数字の同時押し</td><td>同じ数字を0.3秒以内に2回押す</td><td>1回だけ再生する</td><td>OK</td></tr><tr><td>IT-22</td><td>数字の同時押し</td><td>数字を押した直後にOKを押す</td><td>曲は鳴らない</td><td>OK</td></tr><tr><td>IT-23</td><td>数字の同時押し</td><td>同時押しで取り消したあと、別の数字を押す</td><td>その数字の曲が鳴る</td><td>OK</td></tr><tr><td>IT-24</td><td>数字の同時押し</td><td>前進中に数字1と2を同時に押す</td><td>前進を続け、曲は鳴らない</td><td>OK</td></tr></tbody></table></div><h5>10.3 実機で確認すること（未実施）</h5><ul><li>タイヤの向き（前進と後退、左折と右折）</li><li>センサーの感度（<code>DISTANCE_LIMIT</code>、後方赤外線のボリューム）</li><li>ブザーの種類（アクティブでは曲がメロディーにならない）</li><li>電源投入時にブザーが短く鳴らないか（D13はブートローダーが点滅させる）</li><li>D0のセンサー配線を外して書き込めるか</li></ul><h5>10.4 テストの実行方法</h5><p>テストは、パソコンの <code>g++</code> で動かします。Arduinoの部品は擬似品に置き換えているため、実機の動作確認の代わりにはなりません。</p><pre class="cmd">bash run_tests.sh</pre><p>同じフォルダに、<code>robot_final.ino</code>、<code>stub.h</code>、<code>unit_test.cpp</code>、<code>integration_test.cpp</code>、<code>run_tests.sh</code> を置きます。</p></div></details>
   <details><summary><span class="id">11</span><span>変更履歴と未決事項</span></summary><div class="body dbody"><div class="tw"><table><thead><tr><th>版</th><th>日付</th><th>内容</th></tr></thead><tbody><tr><td>1.0</td><td>2026年11月4日</td><td>初版</td></tr><tr><td>1.1</td><td>2026年11月7日</td><td>実施結果を反映。関数一覧を現在のコードに合わせた。数字ボタンの同時押しを追加</td></tr><tr><td>1.2</td><td>2026年11月7日</td><td>テストを単体テストと結合テストに分け、テスト仕様を追加</td></tr></tbody></table></div><h5>未決事項</h5><ul><li>ファイルが437行になった。曲データ（<code>SONG_n</code>）を別タブに分けるかどうか（変更量を抑えるため、今は分けていない）</li><li>依頼文の「変数名や関数名を作らない。包信しない」は、「名前を別の用途に使い回さない」と解釈した（方針6）</li><li>関数の長さ（20行）、ネスト（3段）、引数（3個）の目安は、提案した値</li></ul></div></details>
 </section>
 <section class="design" id="functions" aria-labelledby="functions-title">
@@ -841,7 +841,10 @@ pre{max-width:100%;overflow:auto}
     IN-&gt;&gt;RQ: 曲3を依頼に記録
     Note over IN,MU: 0.3秒待つ
     MU-&gt;&gt;B: play_Music で曲3を再生</pre></div>
-    <section class="overview" id="diagonal-driving">
+    <section class="overview" id="drive-music"><h2>走行しながら音楽を再生</h2>
+<p>数字ボタン1〜9で曲を選ぶと、0.3秒後に演奏が始まります。走行中でも止まらずに演奏し、再生中も↑↓←→や斜め走行が操作できます。OKボタンではモーターと音楽を同時に停止します。</p>
+<p>ブザーD13はソフトウェア方式で、<code>micros()</code> を使ってLOW/HIGHを短く切り替えます。障害物を検知した場合は回避を優先し、警告音（約200ms）の間は音楽を一時中断します。<code>tone()</code> は使用しません。</p>
+<p><strong>実機での注意：</strong>超音波測定の <code>pulseIn()</code> やセンサー待機によって音の波形が一時的に乱れ、音程や音質に影響することがあります。Arduino UnoとIRremoteの組み合わせではタイマーの競合にも注意が必要です。実機で音と走行・緊急停止を確認してください。</p></section><section class="overview" id="diagonal-driving">
 <h2>斜め走行（上下＋左右の連続入力）</h2>
 <p>0.3秒以内に方向ボタンを2つ続けて受信すると、進行しながら曲がります。赤外線リモコンは物理的な同時押しを個別に送信できない機種もあるため、送信された2つのコードを短時間の組み合わせとして解釈します。各組合せは入力順序を問いません。</p>
 <div class="tw"><table><thead><tr><th>入力</th><th>走行</th><th>右モーター</th><th>左モーター</th></tr></thead><tbody>
@@ -939,16 +942,15 @@ pre{max-width:100%;overflow:auto}
  B --&gt;|いいえ| C{"back=1 かつ 後退系状態?"}
  C --&gt;|はい| R3(["GO_ADVANCE を返す"])
  C --&gt;|いいえ| R4(["DEF を返す"])</pre></div>
-<h4>図16　関数 start_Avoid と end_Avoid</h4><p class="cap">回避を始める関数と、終える関数です。</p><div class="diagram"><pre class="mermaid">flowchart TD
-    subgraph start_Avoid
-        A1[&quot;Drive_Num = 回避動作&lt;br/&gt;lastDriveCmd = GO_STOP&quot;] --&gt; A2[&quot;do_Drive_Tick&lt;br/&gt;先にモーターを動かす&quot;]
-        A2 --&gt; A4[&quot;isAvoiding = true&lt;br/&gt;avoidStartMs = 現在時刻&lt;br/&gt;pendingSongNum = 0&quot;]
-        A4 --&gt; A3[&quot;warning 警告音&quot;]
-    end
-    subgraph end_Avoid
-        B1[&quot;isAvoiding = false&quot;] --&gt; B2[&quot;Drive_Num = GO_STOP&quot;]
-        B2 --&gt; B3[&quot;go_Stop&quot;]
-    end</pre></div>
+<h4>図16　関数 start_Avoid と end_Avoid</h4><p class="cap">回避開始時にはモーターの回避方向を設定し、警告音を開始します。音楽は停止せず、警告音を優先して一時中断後に続行します。</p><div class="diagram"><pre class="mermaid">flowchart TD
+subgraph start_Avoid
+ A1["Drive_Num = 回避動作 / lastDriveCmd = GO_STOP"] --&gt; A2["do_Drive_Tick / 回避方向へ動かす"]
+ A2 --&gt; A3["isAvoiding = true / avoidStartMs = 現在時刻"]
+ A3 --&gt; A4["warning() / 非ブロッキング警告を開始"]
+end
+subgraph end_Avoid
+ B1["isAvoiding = false"] --&gt; B2["Drive_Num = GO_STOP"] --&gt; B3["go_Stop()"]
+end</pre></div>
 <h4>図17　関数 is_FrontBlocked と is_BackBlocked</h4><p class="cap">どちらも、2回続けて検知したときだけ true を返します。</p><div class="diagram"><pre class="mermaid">flowchart TD
     subgraph is_FrontBlocked
         F1{&quot;watch が 20cm 以下?&quot;} --&gt;|はい| F2[&quot;30ms 待つ&quot;]
@@ -1003,56 +1005,59 @@ pre{max-width:100%;overflow:auto}
     E --&gt;|いいえ| F[&quot;pendingSongNum = 曲番号&lt;br/&gt;pendingSongMs = 現在時刻&quot;]
     D --&gt; Z
     F --&gt; Z</pre></div>
-<h4>図21　関数 do_Music_Tick</h4><p class="cap">依頼から0.3秒たったら、曲を再生します。</p><div class="diagram"><pre class="mermaid">flowchart TD
-    S([do_Music_Tick]) --&gt; V{&quot;回避中？&quot;}
-    V --&gt;|はい| Z
-    V --&gt;|いいえ| A{&quot;is_MusicDue&lt;br/&gt;依頼があり 0.3秒たった?&quot;}
-    A --&gt;|いいえ| Z([終了])
-    A --&gt;|はい| B[&quot;曲番号を退避してから&lt;br/&gt;pendingSongNum = 0&quot;]
-    B --&gt; C[&quot;play_Music 曲番号&quot;]
-    C --&gt; Z</pre></div>
-    <h4>図22　関数 play_Music</h4><p class="cap">曲番号の曲を、最後まで（またはOKが押されるまで）再生します。</p><div class="diagram"><pre class="mermaid">flowchart TD
-    S([&quot;play_Music 曲番号&quot;]) --&gt; A{&quot;1 〜 9 の範囲?&quot;}
-    A --&gt;|いいえ| Z([終了])
-    A --&gt;|はい| B[&quot;go_Stop / Drive_Num = GO_STOP&quot;]
-    B --&gt; C[&quot;notePtr を曲データの先頭にする&quot;]
-    C --&gt; D{&quot;get_SongNote が END_MARK?&quot;}
-    D --&gt;|はい| G[&quot;ブザーを HIGH にして停止&quot;]
-    D --&gt;|いいえ| E[&quot;play_Note&lt;br/&gt;1音を鳴らし 20ms の無音&quot;]
-    E --&gt; F{&quot;play_Note が true を返した?&quot;}
-    F --&gt;|はい| G
-    F --&gt;|いいえ| H[&quot;notePtr を次の音へ進める&quot;]
-    H --&gt; D
-    G --&gt; Z</pre></div>
-<h4 id="warning-flow">図23　関数 warning</h4><p class="cap">前回から1秒以内の再警告を防ぎ、for (int i = 0; i &lt; 2; i++) で LOW 50ms・HIGH 50ms の警告音を2回繰り返します。</p><div class="diagram"><pre class="mermaid">flowchart TD
-    S([warning 開始]) --&gt; A{"lastWarnMs != 0 かつ<br/>前回から WARN_INTERVAL_MS 未満？"}
-    A --&gt;|はい| Z([何もせず終了])
-    A --&gt;|いいえ| B["lastWarnMs = millis()"]
-    B --&gt; C["for 初期化：i = 0"]
-    C --&gt; D{"i &lt; 2 ?"}
-    D --&gt;|はい| E["digitalWrite(BUZZ_PIN, LOW)"]
-    E --&gt; F["delay(50)"]
-    F --&gt; G["digitalWrite(BUZZ_PIN, HIGH)"]
-    G --&gt; H["delay(50)"]
-    H --&gt; I["i++"]
-    I --&gt; D
-    D --&gt;|いいえ| Z</pre></div>
-<h4 id="play-tone-flow">図24　関数 play_Tone</h4><p class="cap">freq が0以下なら休符として delay(ms) を実行します。それ以外では半周期と繰り返し回数を計算し、for (unsigned long i = 0; i &lt; cycleCount; i++) で LOW / HIGH を交互に出力します。実際のコードでは play_Tone 内でOKボタン判定は行いません。</p><div class="diagram"><pre class="mermaid">flowchart TD
-    S([play_Tone 開始]) --&gt; A{"freq &lt;= 0 ?"}
-    A --&gt;|はい| R["delay(ms) / 休符"]
-    R --&gt; Z([終了])
-    A --&gt;|いいえ| B["halfPeriodUs = 500000 / freq"]
-    B --&gt; C["cycleCount = freq × ms / 1000"]
-    C --&gt; D["for 初期化：i = 0"]
-    D --&gt; E{"i &lt; cycleCount ?"}
-    E --&gt;|はい| F["digitalWrite(BUZZ_PIN, LOW)"]
-    F --&gt; G["delayMicroseconds(halfPeriodUs)"]
-    G --&gt; H["digitalWrite(BUZZ_PIN, HIGH)"]
-    H --&gt; I["delayMicroseconds(halfPeriodUs)"]
-    I --&gt; J["i++"]
-    J --&gt; E
-    E --&gt;|いいえ| K["digitalWrite(BUZZ_PIN, HIGH)"]
-    K --&gt; Z</pre></div>
+<h4 id="music-tick-flow">図21　関数 do_Music_Tick</h4><p class="cap">走行中も毎周呼び出します。警告音の更新を優先し、曲の開始・音符切替・ブザーのLOW/HIGHを1回ずつ進めます。曲を再生するためにモーターを停止しません。</p><div class="diagram"><pre class="mermaid">flowchart TD
+ S([do_Music_Tick]) --&gt; W["do_Warning_Tick()"]
+ W --&gt; A{"警告音を再生中？"}
+ A --&gt;|はい| Z([終了 / 次のloopへ])
+ A --&gt;|いいえ| B{"is_MusicDue() ?"}
+ B --&gt;|はい| C["play_Music(songNum) / 曲を開始・切替"]
+ B --&gt;|いいえ| D{"isMusicPlaying ?"}
+ C --&gt; D
+ D --&gt;|いいえ| Z
+ D --&gt;|はい| E{"音符の長さが経過？"}
+ E --&gt;|はい| F["次の音符に進む"]
+ F --&gt; G{"END_MARK ?"}
+ G --&gt;|はい| H["再生状態を解除 / BUZZ HIGH"] --&gt; Z
+ G --&gt;|いいえ| I["play_Note / 次の音符の時刻を設定"]
+ I --&gt; J{"休符または末尾20msの無音？"}
+ E --&gt;|いいえ| J
+ J --&gt;|はい| K["BUZZ HIGH / 必要なら無音にする"] --&gt; Z
+ J --&gt;|いいえ| L{"半周期の時間が経過？"}
+ L --&gt;|いいえ| Z
+ L --&gt;|はい| M["BUZZ LOW / HIGH を1回切替"] --&gt; Z</pre></div>
+<h4>図22　関数 play_Music</h4><p class="cap">曲番号を受け取って再生状態と最初の音符を設定するだけです。曲の最後まで待たずに関数を終了します。走行状態 Drive_Num は変更しません。</p><div class="diagram"><pre class="mermaid">flowchart TD
+ S([play_Music songNum]) --&gt; A{"1〜9の範囲内？"}
+ A --&gt;|いいえ| Z([終了])
+ A --&gt;|はい| B["currentNotePtr = 指定曲の先頭"]
+ B --&gt; C["isMusicPlaying = true"]
+ C --&gt; D["play_Note / 最初の音符を設定"] --&gt; Z</pre></div>
+<h4 id="warning-flow">図23　関数 warning と do_Warning_Tick</h4><p class="cap">以前のfor文によるdelay待機を廃止しました。warning()で警告開始を記録し、do_Warning_Tick()が50msごとにLOW/HIGHを4フェーズ切り替えます。警告中は音楽より警告を優先します。</p><div class="diagram"><pre class="mermaid">flowchart TD
+ S([warning 開始]) --&gt; A{"警告中、または前回から1秒未満？"}
+ A --&gt;|はい| Z([終了])
+ A --&gt;|いいえ| B["警告開始時刻を記録 / warningPhase = 0"]
+ B --&gt; C["isWarningPlaying = true / BUZZ LOW"] --&gt; Z
+ T([do_Warning_Tick 開始]) --&gt; D{"isWarningPlaying ?"}
+ D --&gt;|いいえ| E([終了])
+ D --&gt;|はい| F{"フェーズ開始から50ms経過？"}
+ F --&gt;|いいえ| E
+ F --&gt;|はい| G["warningPhase++"]
+ G --&gt; H{"warningPhase が4以上？"}
+ H --&gt;|はい| I["警告終了 / BUZZ HIGH / 音楽時間を補正"] --&gt; E
+ H --&gt;|いいえ| J["偶数ならLOW / 奇数ならHIGH"] --&gt; E</pre></div>
+<h4 id="play-tone-flow">図24　関数 play_Tone</h4><p class="cap">以前のfor文でLOW/HIGHを連続出力する方式から、非ブロッキング方式へ変更しました。play_Tone()は半周期・発音時間を設定し、実際の繰り返し波形は図21のdo_Music_Tick()で更新します。</p><div class="diagram"><pre class="mermaid">flowchart TD
+ S([play_Tone freq, ms]) --&gt; A{"ms が正の値？"}
+ A --&gt;|はい| B["toneDurationMs = ms"]
+ A --&gt;|いいえ| C["toneDurationMs = 0"]
+ B --&gt; D{"freq は正の値？"}
+ C --&gt; D
+ D --&gt;|はい| E["halfPeriodUs = 500000 / freq"]
+ D --&gt;|いいえ| F["halfPeriodUs = 0 / 休符"]
+ E --&gt; G["lastToneToggleUs = micros()"]
+ F --&gt; G
+ G --&gt; H["isToneLow = false"]
+ H --&gt; I{"警告音を再生中？"}
+ I --&gt;|はい| Z([終了])
+ I --&gt;|いいえ| J["BUZZ HIGH にする"] --&gt; Z</pre></div>
   </section>
 
   <section class="env">
@@ -1135,6 +1140,21 @@ unsigned long lastCheckMs = 0;       // 最後に障害物を調べた時刻
 int pendingSongNum = 0;             // 再生を依頼された曲番号（0=依頼なし）
 unsigned long pendingSongMs = 0;     // 曲を依頼された時刻
 bool isCheckRequested = false;         // 新しい指示の直後はすぐ判断する
+
+// 音楽と警告音は delay で待たず、loop から定期的に更新する
+bool isMusicPlaying = false;
+const int16_t* currentNotePtr = nullptr;
+unsigned long noteStartMs = 0;
+unsigned long noteDurationMs = 0;
+unsigned long toneDurationMs = 0;
+unsigned long halfPeriodUs = 0;
+unsigned long lastToneToggleUs = 0;
+bool isToneLow = false;
+bool isWarningPlaying = false;
+unsigned long warningStartMs = 0;
+unsigned long warningPhaseMs = 0;
+unsigned long lastWarnMs = 0;
+uint8_t warningPhase = 0;
 
 // ---------- 音階 ----------
 #define NC4 262
@@ -1256,76 +1276,124 @@ void do_Drive_Tick() {         // Drive_Num に従ってモーターを動かす
 // =====================================================
 // ブザー
 // =====================================================
-void warning() {               // 警告音（50ms鳴動・50ms停止を2回、1秒に1回まで）
-  static unsigned long lastWarnMs = 0;
-  if (lastWarnMs != 0 &amp;&amp; millis() - lastWarnMs &lt; WARN_INTERVAL_MS) return;
-  lastWarnMs = millis();
-  for (int i = 0; i &lt; 2; i++) {
-    digitalWrite(BUZZ_PIN, LOW);    // 鳴動
-    delay(50);
-    digitalWrite(BUZZ_PIN, HIGH);   // 停止
-    delay(50);
-  }
+// 警告音は音楽より優先。4フェーズ (LOW/HIGH/LOW/HIGH) を各50ms。
+void warning() {
+  unsigned long now = millis();
+  if (isWarningPlaying || (lastWarnMs != 0 &amp;&amp; now - lastWarnMs &lt; WARN_INTERVAL_MS)) return;
+  lastWarnMs = now;
+  warningStartMs = now;
+  warningPhaseMs = now;
+  warningPhase = 0;
+  isWarningPlaying = true;
+  digitalWrite(BUZZ_PIN, LOW);
 }
 
-// 音楽用：周波数に合わせてON/OFFを繰り返す（パッシブブザー用・タイマー不使用）
-void play_Tone(int freq, int ms) {
-  if (freq &lt;= 0) { delay(ms); return; }
-  unsigned long halfPeriodUs = 500000UL / freq;
-  unsigned long cycleCount = (unsigned long)freq * ms / 1000UL;
-  for (unsigned long i = 0; i &lt; cycleCount; i++) {
-    digitalWrite(BUZZ_PIN, LOW);
-    delayMicroseconds(halfPeriodUs);
+void do_Warning_Tick() {
+  if (!isWarningPlaying) return;
+  unsigned long now = millis();
+  if (now - warningPhaseMs &lt; 50) return;
+  warningPhaseMs = now;
+  warningPhase++;
+  if (warningPhase &gt;= 4) {
+    isWarningPlaying = false;
     digitalWrite(BUZZ_PIN, HIGH);
-    delayMicroseconds(halfPeriodUs);
+    // 警告中の経過時間は音符の長さに数えない
+    if (isMusicPlaying) noteStartMs += now - warningStartMs;
+    lastToneToggleUs = micros();
+    isToneLow = false;
+    return;
   }
-  digitalWrite(BUZZ_PIN, HIGH);
+  digitalWrite(BUZZ_PIN, (warningPhase % 2 == 0) ? LOW : HIGH);
 }
 
-int get_SongNote(const int16_t* notePtr) {     // 次の1音の高さ
+// 指定した1音の発音を開始する。実際のLOW/HIGH切替はdo_Music_Tickで行う。
+void play_Tone(int freq, int ms) {
+  toneDurationMs = ms &gt; 0 ? (unsigned long)ms : 0;
+  halfPeriodUs = freq &gt; 0 ? 500000UL / (unsigned long)freq : 0;
+  lastToneToggleUs = micros();
+  isToneLow = false;
+  if (!isWarningPlaying) digitalWrite(BUZZ_PIN, HIGH);
+}
+
+int get_SongNote(const int16_t* notePtr) {
   return (int16_t)pgm_read_word(notePtr);
 }
 
-int get_SongLength(const int16_t* notePtr) {   // 次の1音の長さ
+int get_SongLength(const int16_t* notePtr) {
   return (int16_t)pgm_read_word(notePtr + 1);
 }
 
-void play_Note(const int16_t* notePtr) {       // 1音を鳴らし、短い無音を入れる
-  play_Tone(get_SongNote(notePtr), get_SongLength(notePtr) * TEMPO_MS - 20);
-  delay(20);
+// 1音 + 20msの休止をスケジュールする
+void play_Note(const int16_t* notePtr) {
+  noteDurationMs = (unsigned long)get_SongLength(notePtr) * TEMPO_MS;
+  noteStartMs = millis();
+  int soundMs = noteDurationMs &gt; 20 ? (int)(noteDurationMs - 20) : 0;
+  play_Tone(get_SongNote(notePtr), soundMs);
 }
 
-bool is_MusicStopPressed() {                   // 再生中にOKが押されたか
-  if (!IrReceiver.decode()) return false;
-  int command = IrReceiver.decodedIRData.command;
-  IrReceiver.resume();
-  return command == IR_STOP;
-}
-
-void play_Music(int songNum) {                 // 曲を最後まで再生。OKで中止
-  if (songNum &lt; 1 || songNum &gt; SONG_COUNT) return;
-
-  go_Stop();                                   // 再生前にモーターを止める
-  Drive_Num = GO_STOP;
-
-  const int16_t* notePtr = (const int16_t*)pgm_read_word(&amp;SONG_TABLE[songNum - 1]);
-  while (get_SongNote(notePtr) != END_MARK) {
-    play_Note(notePtr);
-    if (is_MusicStopPressed()) break;
-    notePtr += 2;
-  }
+void stop_Music() {
+  isMusicPlaying = false;
+  currentNotePtr = nullptr;
+  pendingSongNum = 0;
+  isWarningPlaying = false;
+  halfPeriodUs = 0;
   digitalWrite(BUZZ_PIN, HIGH);
 }
 
-bool is_MusicDue() {           // 依頼があり、0.3秒たったか
+// 再生を開始するが、走行状態は変更しない
+void play_Music(int songNum) {
+  if (songNum &lt; 1 || songNum &gt; SONG_COUNT) return;
+  currentNotePtr = (const int16_t*)pgm_read_word(&amp;SONG_TABLE[songNum - 1]);
+  isMusicPlaying = true;
+  play_Note(currentNotePtr);
+}
+
+bool is_MusicDue() {
   return pendingSongNum != 0 &amp;&amp; millis() - pendingSongMs &gt;= CONFLICT_MS;
 }
 
-void do_Music_Tick() {         // 依頼から0.3秒たったら曲を再生する
-  if (isAvoiding || !is_MusicDue()) return;
-  int songNum = pendingSongNum;
-  pendingSongNum = 0;
-  play_Music(songNum);
+void do_Music_Tick() {
+  do_Warning_Tick();
+  if (isWarningPlaying) return;  // 同じブザーなので警告音を優先
+
+  // 走行中・停止中を問わず曲を開始 / 切替
+  if (is_MusicDue()) {
+    int songNum = pendingSongNum;
+    pendingSongNum = 0;
+    play_Music(songNum);
+  }
+  if (!isMusicPlaying || currentNotePtr == nullptr) return;
+
+  unsigned long nowMs = millis();
+  if (nowMs - noteStartMs &gt;= noteDurationMs) {
+    currentNotePtr += 2;  // 周波数と長さの次の組
+    if (get_SongNote(currentNotePtr) == END_MARK) {
+      isMusicPlaying = false;
+      currentNotePtr = nullptr;
+      halfPeriodUs = 0;
+      digitalWrite(BUZZ_PIN, HIGH);
+      return;
+    }
+    play_Note(currentNotePtr);
+    nowMs = millis();
+  }
+
+  // 休符 / 音符末尾の20ms無音
+  if (halfPeriodUs == 0 || nowMs - noteStartMs &gt;= toneDurationMs) {
+    if (isToneLow) {
+      isToneLow = false;
+      digitalWrite(BUZZ_PIN, HIGH);
+    }
+    return;
+  }
+
+  // 1ループにつき1回だけ波形を進め、他の制御をブロックしない
+  unsigned long nowUs = micros();
+  if (nowUs - lastToneToggleUs &gt;= halfPeriodUs) {
+    lastToneToggleUs = nowUs;
+    isToneLow = !isToneLow;
+    digitalWrite(BUZZ_PIN, isToneLow ? LOW : HIGH);
+  }
 }
 
 // =====================================================
@@ -1371,7 +1439,6 @@ void start_Avoid(DriveState act) {     // 回避動作を始める
   do_Drive_Tick();             // 先にモーターを動かし
   isAvoiding = true;
   avoidStartMs = millis();     // 駆動開始直後から回避時間を測る
-  pendingSongNum = 0;          // 回避を音楽予約が中断しないように解除
   warning();                   // 動かしながら警告音を鳴らす
 }
 
@@ -1481,7 +1548,7 @@ int read_IR_Command() {        // 受信コードを返す。受信なし・リ�
 
 void handle_StopButton() {     // OK：停止状態にする
   isAvoiding = false;
-  pendingSongNum = 0;          // 音楽の依頼も取り消す
+  stop_Music();               // OKで走行と音楽を一緒に止める
   Drive_Num = GO_STOP;
   lastDriveCmd = GO_STOP;      // モーターは出力層 do_Drive_Tick が止める
 }
@@ -1558,7 +1625,7 @@ void loop() {
   do_IR_Tick();                 // ① 入力：リモコンの入力受付
   checkSensorsAndObstacles();   // ② 判断：センサーの優先度判断（必要なら状態を上書き）
   do_Drive_Tick();              // ③ 出力：状態に基づいてモーターを実行
-  do_Music_Tick();              // ④ 出力：音楽の依頼があれば再生
+  do_Music_Tick();              // ④ 出力：走行を止めず音楽・警告音を更新
 
   if (IS_IR) delayMicroseconds(100);
   else       delayMicroseconds(20);
