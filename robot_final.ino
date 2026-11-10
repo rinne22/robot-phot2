@@ -1,6 +1,6 @@
 // リモコン操作ロボット（走行・音楽・超音波センサー・後方赤外線センサー・ブザー）
 // 処理の流れ： 入力(do_IR_Tick) → 判断(checkSensorsAndObstacles) → 出力(do_Drive_Tick)
-// Arduino Uno / IRremote 4.x
+// Arduino Uno / IRremote 4.x / レビュー改訂 1.6 (2026-11-10)
 //
 // 【配線の注意】
 //  ・D0（左後方センサー）をつないだままだとUSB書き込みに失敗することがあります。
@@ -32,6 +32,8 @@
 #define CHECK_INTERVAL_MS   100  // センサー確認の間隔（ms）
 #define CONFLICT_MS      300  // 逆向きのコードを矛盾とみなす時間（ms）
 #define AVOID_MS         500  // 回避動作を続ける時間（ms）
+#define WARN_TONE_HZ     2000 // パッシブブザーの警告周波数（Hz）
+#define WARN_PHASE_MS    50   // 警告の各フェーズ（ms）
 #define WARN_INTERVAL_MS    1000 // 警告音の最短間隔（ms）
 #define TEMPO_MS         150  // 8分音符1つの長さ（ms）
 #define SONG_COUNT       9    // 曲の数（ボタン1〜9）
@@ -84,6 +86,9 @@ bool isWarningPlaying = false;
 unsigned long warningStartMs = 0;
 unsigned long warningPhaseMs = 0;
 unsigned long lastWarnMs = 0;
+bool isWarningIssued = false;
+unsigned long lastWarningToggleUs = 0;
+bool isWarningToneLow = false;
 uint8_t warningPhase = 0;
 
 // ---------- 音階 ----------
@@ -206,34 +211,45 @@ void do_Drive_Tick() {         // Drive_Num に従ってモーターを動かす
 // =====================================================
 // ブザー
 // =====================================================
-// 警告音は音楽より優先。4フェーズ (LOW/HIGH/LOW/HIGH) を各50ms。
+// 警告音は音楽より優先。50msの2kHz音と50msの無音を2回。
 void warning() {
   unsigned long now = millis();
-  if (isWarningPlaying || (lastWarnMs != 0 && now - lastWarnMs < WARN_INTERVAL_MS)) return;
+  if (isWarningPlaying || (isWarningIssued && now - lastWarnMs < WARN_INTERVAL_MS)) return;
+  isWarningIssued = true;
   lastWarnMs = now;
   warningStartMs = now;
   warningPhaseMs = now;
   warningPhase = 0;
   isWarningPlaying = true;
-  digitalWrite(BUZZ_PIN, LOW);
+  lastWarningToggleUs = micros();
+  isWarningToneLow = false;
+  digitalWrite(BUZZ_PIN, HIGH);
 }
 
 void do_Warning_Tick() {
   if (!isWarningPlaying) return;
   unsigned long now = millis();
-  if (now - warningPhaseMs < 50) return;
-  warningPhaseMs = now;
-  warningPhase++;
-  if (warningPhase >= 4) {
+  unsigned long elapsedMs = now - warningStartMs;
+  if (elapsedMs >= 4UL * WARN_PHASE_MS) {
     isWarningPlaying = false;
     digitalWrite(BUZZ_PIN, HIGH);
-    // 警告中の経過時間は音符の長さに数えない
-    if (isMusicPlaying) noteStartMs += now - warningStartMs;
+    if (isMusicPlaying) noteStartMs += elapsedMs;
     lastToneToggleUs = micros();
     isToneLow = false;
     return;
   }
-  digitalWrite(BUZZ_PIN, (warningPhase % 2 == 0) ? LOW : HIGH);
+  warningPhase = elapsedMs / WARN_PHASE_MS;
+  if (warningPhase % 2 != 0) {
+    isWarningToneLow = false;
+    digitalWrite(BUZZ_PIN, HIGH);
+    return;
+  }
+  unsigned long nowUs = micros();
+  if (nowUs - lastWarningToggleUs >= 500000UL / WARN_TONE_HZ) {
+    lastWarningToggleUs = nowUs;
+    isWarningToneLow = !isWarningToneLow;
+    digitalWrite(BUZZ_PIN, isWarningToneLow ? LOW : HIGH);
+  }
 }
 
 // 指定した1音の発音を開始する。実際のLOW/HIGH切替はdo_Music_Tickで行う。
@@ -273,7 +289,7 @@ void stop_Music() {
 // 再生を開始するが、走行状態は変更しない
 void play_Music(int songNum) {
   if (songNum < 1 || songNum > SONG_COUNT) return;
-  currentNotePtr = (const int16_t*)pgm_read_word(&SONG_TABLE[songNum - 1]);
+  currentNotePtr = (const int16_t*)pgm_read_ptr(&SONG_TABLE[songNum - 1]);
   isMusicPlaying = true;
   play_Note(currentNotePtr);
 }
@@ -571,14 +587,15 @@ int get_SongNum(int command) {            // ボタンのコードから曲番�
 }
 
 bool is_NumberConflict(int songNum) {     // 依頼中の曲と別の数字か（同時押し）
-  return pendingSongNum != 0 && pendingSongNum != songNum;
+  return pendingSongNum != 0 && pendingSongNum != songNum &&
+         millis() - pendingSongMs < CONFLICT_MS;
 }
 
 void handle_NumberButton(int command) {   // 1〜9：曲を依頼する（0.3秒待ってから再生）
   int songNum = get_SongNum(command);
   if (songNum == 0) return;
   if (is_NumberConflict(songNum)) { pendingSongNum = 0; return; }   // 同時押し：どの曲も鳴らさない
-  if (pendingSongNum == songNum) return;                            // 同じ数字は1回だけ
+  if (pendingSongNum == songNum && millis() - pendingSongMs < CONFLICT_MS) return;                            // 同じ数字は1回だけ
   pendingSongNum = songNum;
   pendingSongMs = millis();
 }
@@ -589,7 +606,7 @@ void do_IR_Tick() {            // リモコン入力の受付
   if (command == IR_STOP) { handle_StopButton(); return; }
   if (isAvoiding) return;
   if (command == IR_DANCE) { start_Dance(); return; }
-  if (isDancing) return;      // ダンス中はOKと0のみを受け付ける      // 回避動作中は、OK以外のボタンを受け付けない
+  if (isDancing) return;      // ダンス中はOKと0のみを受け付ける
   handle_DriveButton(command);
   handle_NumberButton(command);
 }
@@ -604,6 +621,7 @@ void init_MotorPins() {
 }
 
 void init_BuzzerPin() {
+  digitalWrite(BUZZ_PIN, HIGH);   // 出力へ切り替える前に停止値を用意
   pinMode(BUZZ_PIN, OUTPUT);
   digitalWrite(BUZZ_PIN, HIGH);   // ブザー停止（LOWで鳴るため）
 }
