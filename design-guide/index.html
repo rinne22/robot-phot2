@@ -623,23 +623,14 @@ pre{max-width:100%;overflow:auto}
     Note over IN,MU: 0.3秒待つ
     MU-&gt;&gt;B: play_Music で曲3を再生</pre></div>
     <h3>フローチャート：全体の流れ</h3>
-<h4 id="loop-flow">図7　メインループ loop()</h4><p class="cap">回避開始時に記録した時刻を基準にします。500 msは待ち時間ではなく、各ループで確認する終了条件です。進行方向に障害物があれば、500 msを待たずに停止します。</p><div class="diagram"><pre class="mermaid">flowchart TD
+<h4 id="loop-flow">図7　メインループ loop()</h4><p class="cap">リモコン入力を処理したあと、回避中なら update_Avoid() を1回呼びます。回避を終える条件は <a href="#update-avoid-flow">図13</a> を参照してください。</p><div class="diagram"><pre class="mermaid">flowchart TD
     S([電源ON]) --&gt; B[setup]
-    B --&gt; L[do_IR_Tick で入力を処理]
+    B --&gt; L[do_IR_Tick]
     L --&gt; A{回避中？}
+    A --&gt;|はい| U[update_Avoid]
     A --&gt;|いいえ| N[checkSensorsAndObstacles]
-    A --&gt;|はい| T{回避開始から500 ms以上？}
-    T --&gt;|はい| X[end_Avoid で停止]
-    T --&gt;|いいえ| Q{回避方向は？}
-    Q --&gt;|後退| R[後方を測定]
-    Q --&gt;|前進| F[前方を測定]
-    Q --&gt;|旋回| C
-    R --&gt; C{障害物を検知 または 回避開始から500 ms以上？}
-    F --&gt; C
-    C --&gt;|はい| X
-    C --&gt;|いいえ| D
-    N --&gt; D[do_Drive_Tick]
-    X --&gt; D
+    U --&gt; D[do_Drive_Tick]
+    N --&gt; D
     D --&gt; M[do_Music_Tick]
     M --&gt; W[IS_IR に応じて100または20 μs待つ]
     W --&gt; L</pre></div>
@@ -687,7 +678,19 @@ pre{max-width:100%;overflow:auto}
     G --&gt;|はい| H[&quot;start_Avoid&quot;]
     G --&gt;|いいえ| Z
     H --&gt; Z</pre></div>
-<h4>図13　回避更新の参照先</h4><p class="cap"><code>update_Avoid()</code> の終了判定は <a href="#loop-flow">図7 メインループ</a> にまとめています。</p>
+<h4 id="update-avoid-flow">図13　関数 update_Avoid</h4><p class="cap">1回の呼び出しで回避の終了条件を調べ、loop() に戻ります。経過時間は回避開始時刻 avoidStartMs から測ります。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    S([update_Avoid 開始]) --&gt; A{&quot;millis() - avoidStartMs が AVOID_MS 以上？&quot;}
+    A --&gt;|はい| X[&quot;end_Avoid() で回避を終了し停止&quot;]
+    A --&gt;|いいえ| B{現在の回避方向は？}
+    B --&gt;|後退| R[&quot;後方を測り、結果を blocked に入れる&quot;]
+    B --&gt;|前進| F[&quot;前方を測り、結果を blocked に入れる&quot;]
+    B --&gt;|旋回| Q[&quot;センサー測定なし、blocked は false&quot;]
+    R --&gt; C{&quot;blocked が true、または回避開始から500 ms以上？&quot;}
+    F --&gt; C
+    Q --&gt; C
+    C --&gt;|はい| X
+    C --&gt;|いいえ| Z([回避状態を維持して loop に戻る])
+    X --&gt; Y([停止状態で loop に戻る])</pre></div>
 <h4>図14　関数 is_CheckTime</h4><p class="cap">いま障害物を調べるかどうかを返します。</p><div class="diagram"><pre class="mermaid">flowchart TD
     S([is_CheckTime]) --&gt; A{&quot;前進中または後退中?&quot;}
     A --&gt;|いいえ| F([&quot;false を返す&quot;])
