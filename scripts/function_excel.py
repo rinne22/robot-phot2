@@ -95,8 +95,7 @@ def form_html(f):
  return h+'</tbody></table></div>'
 
 def build_xlsx(funcs):
- template=openpyxl.load_workbook(io.BytesIO(base64.b64decode(Path(__file__).with_name('function_template.b64').read_text())))
- src=template.active;w=openpyxl.Workbook();index=w.active;index.title='関数一覧'
+ w=openpyxl.Workbook();index=w.active;index.title='関数一覧'
  index.append(['関数設計書（改訂1.6）','2026年11月10日'])
  index.append(['添付の帳票に合わせた全56関数','実機試験は未実施'])
  index.append(['No.','関数名','機能概要','関数形式','ソース行'])
@@ -104,14 +103,15 @@ def build_xlsx(funcs):
  for col,width in [('A',8),('B',32),('C',65),('D',65),('E',12)]:index.column_dimensions[col].width=width
  for i,f in enumerate(funcs,1):
   s=w.create_sheet(f['name']);s.sheet_view.showGridLines=False
-  for row in src.iter_rows(min_row=2,max_row=19,min_col=2,max_col=5):
+  # Recreate the observed form structure without publishing the uploaded workbook.
+  edge=Side(style='thin',color='808080')
+  for row in s.iter_rows(min_row=2,max_row=19,min_col=2,max_col=5):
    for cell in row:
-    dst=s.cell(cell.row,cell.column)
-    for attr in ['font','fill','border','alignment','protection']:setattr(dst,attr,copy(getattr(cell,attr)))
-    dst.number_format=cell.number_format
-    if cell.value is not None:dst.value=cell.value
-  for region in src.merged_cells.ranges:
-   if region.min_row>=2 and region.max_row<=19:s.merge_cells(str(region))
+    cell.font=Font(name='ＭＳ Ｐゴシック',size=11)
+    cell.border=Border(left=edge,right=edge,top=edge,bottom=edge)
+  for region in ['B3:B4','B6:B14','B16:B18','C2:E2','C3:E4','C5:E5','C10:C14','C15:E15']:s.merge_cells(region)
+  for cell,value in {'B2':'機能概要','B3':'処理内容','B5':'関数形式','B6':'入出力','C6':'種類','D6':'形式','E6':'内容','C7':'引数','C8':'戻り値','C9':'入力','C10':'出力','B15':'ソースファイル','B16':'呼び出し関数','B19':'備考'}.items():
+   s[cell]=value;s[cell].fill=PatternFill('solid',fgColor='DDDDDD');s[cell].font=Font(name='ＭＳ Ｐゴシック',size=11,bold=True)
   # Keep the template's four-column account form, enlarge text areas to avoid clipping.
   s.column_dimensions['A'].width=3;s.column_dimensions['B'].width=17
   s.column_dimensions['C'].width=13;s.column_dimensions['D'].width=24;s.column_dimensions['E'].width=68
