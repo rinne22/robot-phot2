@@ -623,18 +623,19 @@ pre{max-width:100%;overflow:auto}
     Note over IN,MU: 0.3秒待つ
     MU-&gt;&gt;B: play_Music で曲3を再生</pre></div>
     <h3>フローチャート：全体の流れ</h3>
-<h4 id="loop-flow">図7　メインループ loop()</h4><p class="cap">リモコン入力を処理したあと、回避中なら update_Avoid() を1回呼びます。回避を終える条件は <a href="#update-avoid-flow">図13</a> を参照してください。</p><div class="diagram"><pre class="mermaid">flowchart TD
+<h4 id="loop-flow">図7　メインループ loop()</h4><p class="cap">実際のコードでは loop() が checkSensorsAndObstacles() を毎回呼びます。回避中かどうかの分岐と update_Avoid() の呼び出しは、その関数内にあります。詳細は <a href="#update-avoid-flow">図13</a> を参照してください。</p><div class="diagram"><pre class="mermaid">flowchart TD
     S([電源ON]) --&gt; B[setup]
     B --&gt; L[do_IR_Tick]
-    L --&gt; A{回避中？}
-    A --&gt;|はい| U[update_Avoid]
-    A --&gt;|いいえ| N[checkSensorsAndObstacles]
+    L --&gt; C[checkSensorsAndObstacles]
+    C --&gt; A{回避中？}
+    A --&gt;|はい| U["update_Avoid を1回実行"]
+    A --&gt;|いいえ| N["必要なとき障害物を確認 / 回避開始"]
     U --&gt; D[do_Drive_Tick]
     N --&gt; D
     D --&gt; M[do_Music_Tick]
-    M --&gt; W[IS_IR に応じて100または20 μs待つ]
+    M --&gt; W["IS_IR に応じて100または20 μs待つ"]
     W --&gt; L</pre></div>
-    <h3>フローチャート：関数別</h3>
+<h3>フローチャート：関数別</h3>
 <h4>図8　関数 setup</h4><p class="cap">初期化の関数を順に呼びます。</p><div class="diagram"><pre class="mermaid">flowchart TD
     S([setup]) --&gt; A[&quot;init_MotorPins&lt;br/&gt;ピン出力設定 / go_Stop&quot;]
     A --&gt; B[&quot;init_BuzzerPin&lt;br/&gt;出力設定 / HIGH で停止&quot;]
@@ -678,19 +679,19 @@ pre{max-width:100%;overflow:auto}
     G --&gt;|はい| H[&quot;start_Avoid&quot;]
     G --&gt;|いいえ| Z
     H --&gt; Z</pre></div>
-<h4 id="update-avoid-flow">図13　関数 update_Avoid</h4><p class="cap">1回の呼び出しで回避の終了条件を調べ、loop() に戻ります。経過時間は回避開始時刻 avoidStartMs から測ります。</p><div class="diagram"><pre class="mermaid">flowchart TD
-    S([update_Avoid 開始]) --&gt; A{&quot;millis() - avoidStartMs が AVOID_MS 以上？&quot;}
-    A --&gt;|はい| X[&quot;end_Avoid() で回避を終了し停止&quot;]
-    A --&gt;|いいえ| B{現在の回避方向は？}
-    B --&gt;|後退| R[&quot;後方を測り、結果を blocked に入れる&quot;]
-    B --&gt;|前進| F[&quot;前方を測り、結果を blocked に入れる&quot;]
-    B --&gt;|旋回| Q[&quot;センサー測定なし、blocked は false&quot;]
-    R --&gt; C{&quot;blocked が true、または回避開始から500 ms以上？&quot;}
+<h4 id="update-avoid-flow">図13　関数 update_Avoid</h4><p class="cap">この関数は1回の呼び出しで終了条件を判定して戻ります。500 ms待つループは関数内に置きません。メインの loop() が checkSensorsAndObstacles() を繰り返し呼び、その中から回避中に update_Avoid() が再実行されます。センサー測定による時間経過も再確認します。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    S([update_Avoid 開始]) --&gt; A{"回避開始から500 ms以上経過？"}
+    A --&gt;|はい| X["end_Avoid() / 回避終了・モーター停止"]
+    A --&gt;|いいえ| B{"現在の回避動作は？"}
+    B --&gt;|後退| R["is_BackBlocked() を調べる"]
+    B --&gt;|前進| F["is_FrontBlocked() を調べる"]
+    B --&gt;|旋回など| Q["障害物判定なし / blocked = false"]
+    R --&gt; C{"障害物あり、または測定後に500 ms以上経過？"}
     F --&gt; C
     Q --&gt; C
     C --&gt;|はい| X
-    C --&gt;|いいえ| Z([回避状態を維持して loop に戻る])
-    X --&gt; Y([停止状態で loop に戻る])</pre></div>
+    C --&gt;|いいえ| Z([回避状態のまま関数を終了])
+    X --&gt; Y([停止状態で関数を終了])</pre></div><p class="cap">「そのまま続ける」は無限ループではありません。図7の loop() に戻り、次回の周期で再判定します。OKボタンを受信した場合は do_IR_Tick() が回避状態を取り消します。</p>
 <h4>図14　関数 is_CheckTime</h4><p class="cap">いま障害物を調べるかどうかを返します。</p><div class="diagram"><pre class="mermaid">flowchart TD
     S([is_CheckTime]) --&gt; A{&quot;前進中または後退中?&quot;}
     A --&gt;|いいえ| F([&quot;false を返す&quot;])
