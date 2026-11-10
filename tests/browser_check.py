@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Browser interaction and Mermaid rendering checks. Requires Playwright + Chromium."""
 from pathlib import Path
-import http.server, threading, functools, json, urllib.request
+import http.server, threading, functools, json, urllib.request, io, openpyxl
 from playwright.sync_api import sync_playwright
 root=Path(__file__).resolve().parents[1]
 server=http.server.ThreadingHTTPServer(('127.0.0.1',0),functools.partial(http.server.SimpleHTTPRequestHandler,directory=str(root)))
@@ -24,6 +24,16 @@ try:
   page.locator('#function-search').fill('存在しない関数XYZ')
   assert page.locator('#function-empty').is_visible()
   page.locator('#function-search').fill('')
+  page.locator('#fn-setup').evaluate('(e) => e.open = true')
+  assert page.locator('#fn-setup .function-form').count()==1
+  assert page.locator('#fn-setup .function-form').inner_text().count('機能概要')==1
+  with page.expect_download() as info: page.locator('.fn-download').click()
+  download=info.value
+  assert download.suggested_filename=='関数設計書.xlsx'
+  book=openpyxl.load_workbook(io.BytesIO(Path(download.path()).read_bytes()))
+  assert len(book.worksheets)==57 and book['setup']['C5'].value=='void setup();'
+  page.locator('#fn-setup').scroll_into_view_if_needed()
+  page.screenshot(path=str(root.parent/'function-excel-form.png'),full_page=False)
   for anchor in ['overview','requirements','design','functions','figures','code']:
    page.locator(f'nav a[href="#{anchor}"]').click();assert page.locator('#'+anchor).count()==1
   page.locator('#openAll').click();assert page.locator('details:not([open])').count()==0
