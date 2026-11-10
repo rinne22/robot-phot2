@@ -63,6 +63,21 @@ int pendingSongNum = 0;             // 再生を依頼された曲番号（0=依
 unsigned long pendingSongMs = 0;     // 曲を依頼された時刻
 bool isCheckRequested = false;         // 新しい指示の直後はすぐ判断する
 
+// 音楽と警告音は delay で待たず、loop から定期的に更新する
+bool isMusicPlaying = false;
+const int16_t* currentNotePtr = nullptr;
+unsigned long noteStartMs = 0;
+unsigned long noteDurationMs = 0;
+unsigned long toneDurationMs = 0;
+unsigned long halfPeriodUs = 0;
+unsigned long lastToneToggleUs = 0;
+bool isToneLow = false;
+bool isWarningPlaying = false;
+unsigned long warningStartMs = 0;
+unsigned long warningPhaseMs = 0;
+unsigned long lastWarnMs = 0;
+uint8_t warningPhase = 0;
+
 // ---------- 音階 ----------
 #define NC4 262
 #define ND4 294
@@ -183,76 +198,124 @@ void do_Drive_Tick() {         // Drive_Num に従ってモーターを動かす
 // =====================================================
 // ブザー
 // =====================================================
-void warning() {               // 警告音（50ms鳴動・50ms停止を2回、1秒に1回まで）
-  static unsigned long lastWarnMs = 0;
-  if (lastWarnMs != 0 && millis() - lastWarnMs < WARN_INTERVAL_MS) return;
-  lastWarnMs = millis();
-  for (int i = 0; i < 2; i++) {
-    digitalWrite(BUZZ_PIN, LOW);    // 鳴動
-    delay(50);
-    digitalWrite(BUZZ_PIN, HIGH);   // 停止
-    delay(50);
-  }
+// 警告音は音楽より優先。4フェーズ (LOW/HIGH/LOW/HIGH) を各50ms。
+void warning() {
+  unsigned long now = millis();
+  if (isWarningPlaying || (lastWarnMs != 0 && now - lastWarnMs < WARN_INTERVAL_MS)) return;
+  lastWarnMs = now;
+  warningStartMs = now;
+  warningPhaseMs = now;
+  warningPhase = 0;
+  isWarningPlaying = true;
+  digitalWrite(BUZZ_PIN, LOW);
 }
 
-// 音楽用：周波数に合わせてON/OFFを繰り返す（パッシブブザー用・タイマー不使用）
-void play_Tone(int freq, int ms) {
-  if (freq <= 0) { delay(ms); return; }
-  unsigned long halfPeriodUs = 500000UL / freq;
-  unsigned long cycleCount = (unsigned long)freq * ms / 1000UL;
-  for (unsigned long i = 0; i < cycleCount; i++) {
-    digitalWrite(BUZZ_PIN, LOW);
-    delayMicroseconds(halfPeriodUs);
+void do_Warning_Tick() {
+  if (!isWarningPlaying) return;
+  unsigned long now = millis();
+  if (now - warningPhaseMs < 50) return;
+  warningPhaseMs = now;
+  warningPhase++;
+  if (warningPhase >= 4) {
+    isWarningPlaying = false;
     digitalWrite(BUZZ_PIN, HIGH);
-    delayMicroseconds(halfPeriodUs);
+    // 警告中の経過時間は音符の長さに数えない
+    if (isMusicPlaying) noteStartMs += now - warningStartMs;
+    lastToneToggleUs = micros();
+    isToneLow = false;
+    return;
   }
-  digitalWrite(BUZZ_PIN, HIGH);
+  digitalWrite(BUZZ_PIN, (warningPhase % 2 == 0) ? LOW : HIGH);
 }
 
-int get_SongNote(const int16_t* notePtr) {     // 次の1音の高さ
+// 指定した1音の発音を開始する。実際のLOW/HIGH切替はdo_Music_Tickで行う。
+void play_Tone(int freq, int ms) {
+  toneDurationMs = ms > 0 ? (unsigned long)ms : 0;
+  halfPeriodUs = freq > 0 ? 500000UL / (unsigned long)freq : 0;
+  lastToneToggleUs = micros();
+  isToneLow = false;
+  if (!isWarningPlaying) digitalWrite(BUZZ_PIN, HIGH);
+}
+
+int get_SongNote(const int16_t* notePtr) {
   return (int16_t)pgm_read_word(notePtr);
 }
 
-int get_SongLength(const int16_t* notePtr) {   // 次の1音の長さ
+int get_SongLength(const int16_t* notePtr) {
   return (int16_t)pgm_read_word(notePtr + 1);
 }
 
-void play_Note(const int16_t* notePtr) {       // 1音を鳴らし、短い無音を入れる
-  play_Tone(get_SongNote(notePtr), get_SongLength(notePtr) * TEMPO_MS - 20);
-  delay(20);
+// 1音 + 20msの休止をスケジュールする
+void play_Note(const int16_t* notePtr) {
+  noteDurationMs = (unsigned long)get_SongLength(notePtr) * TEMPO_MS;
+  noteStartMs = millis();
+  int soundMs = noteDurationMs > 20 ? (int)(noteDurationMs - 20) : 0;
+  play_Tone(get_SongNote(notePtr), soundMs);
 }
 
-bool is_MusicStopPressed() {                   // 再生中にOKが押されたか
-  if (!IrReceiver.decode()) return false;
-  int command = IrReceiver.decodedIRData.command;
-  IrReceiver.resume();
-  return command == IR_STOP;
-}
-
-void play_Music(int songNum) {                 // 曲を最後まで再生。OKで中止
-  if (songNum < 1 || songNum > SONG_COUNT) return;
-
-  go_Stop();                                   // 再生前にモーターを止める
-  Drive_Num = GO_STOP;
-
-  const int16_t* notePtr = (const int16_t*)pgm_read_word(&SONG_TABLE[songNum - 1]);
-  while (get_SongNote(notePtr) != END_MARK) {
-    play_Note(notePtr);
-    if (is_MusicStopPressed()) break;
-    notePtr += 2;
-  }
+void stop_Music() {
+  isMusicPlaying = false;
+  currentNotePtr = nullptr;
+  pendingSongNum = 0;
+  isWarningPlaying = false;
+  halfPeriodUs = 0;
   digitalWrite(BUZZ_PIN, HIGH);
 }
 
-bool is_MusicDue() {           // 依頼があり、0.3秒たったか
+// 再生を開始するが、走行状態は変更しない
+void play_Music(int songNum) {
+  if (songNum < 1 || songNum > SONG_COUNT) return;
+  currentNotePtr = (const int16_t*)pgm_read_word(&SONG_TABLE[songNum - 1]);
+  isMusicPlaying = true;
+  play_Note(currentNotePtr);
+}
+
+bool is_MusicDue() {
   return pendingSongNum != 0 && millis() - pendingSongMs >= CONFLICT_MS;
 }
 
-void do_Music_Tick() {         // 依頼から0.3秒たったら曲を再生する
-  if (isAvoiding || !is_MusicDue()) return;
-  int songNum = pendingSongNum;
-  pendingSongNum = 0;
-  play_Music(songNum);
+void do_Music_Tick() {
+  do_Warning_Tick();
+  if (isWarningPlaying) return;  // 同じブザーなので警告音を優先
+
+  // 走行中・停止中を問わず曲を開始 / 切替
+  if (is_MusicDue()) {
+    int songNum = pendingSongNum;
+    pendingSongNum = 0;
+    play_Music(songNum);
+  }
+  if (!isMusicPlaying || currentNotePtr == nullptr) return;
+
+  unsigned long nowMs = millis();
+  if (nowMs - noteStartMs >= noteDurationMs) {
+    currentNotePtr += 2;  // 周波数と長さの次の組
+    if (get_SongNote(currentNotePtr) == END_MARK) {
+      isMusicPlaying = false;
+      currentNotePtr = nullptr;
+      halfPeriodUs = 0;
+      digitalWrite(BUZZ_PIN, HIGH);
+      return;
+    }
+    play_Note(currentNotePtr);
+    nowMs = millis();
+  }
+
+  // 休符 / 音符末尾の20ms無音
+  if (halfPeriodUs == 0 || nowMs - noteStartMs >= toneDurationMs) {
+    if (isToneLow) {
+      isToneLow = false;
+      digitalWrite(BUZZ_PIN, HIGH);
+    }
+    return;
+  }
+
+  // 1ループにつき1回だけ波形を進め、他の制御をブロックしない
+  unsigned long nowUs = micros();
+  if (nowUs - lastToneToggleUs >= halfPeriodUs) {
+    lastToneToggleUs = nowUs;
+    isToneLow = !isToneLow;
+    digitalWrite(BUZZ_PIN, isToneLow ? LOW : HIGH);
+  }
 }
 
 // =====================================================
@@ -298,7 +361,6 @@ void start_Avoid(DriveState act) {     // 回避動作を始める
   do_Drive_Tick();             // 先にモーターを動かし
   isAvoiding = true;
   avoidStartMs = millis();     // 駆動開始直後から回避時間を測る
-  pendingSongNum = 0;          // 回避を音楽予約が中断しないように解除
   warning();                   // 動かしながら警告音を鳴らす
 }
 
@@ -408,7 +470,7 @@ int read_IR_Command() {        // 受信コードを返す。受信なし・リ�
 
 void handle_StopButton() {     // OK：停止状態にする
   isAvoiding = false;
-  pendingSongNum = 0;          // 音楽の依頼も取り消す
+  stop_Music();               // OKで走行と音楽を一緒に止める
   Drive_Num = GO_STOP;
   lastDriveCmd = GO_STOP;      // モーターは出力層 do_Drive_Tick が止める
 }
@@ -485,7 +547,7 @@ void loop() {
   do_IR_Tick();                 // ① 入力：リモコンの入力受付
   checkSensorsAndObstacles();   // ② 判断：センサーの優先度判断（必要なら状態を上書き）
   do_Drive_Tick();              // ③ 出力：状態に基づいてモーターを実行
-  do_Music_Tick();              // ④ 出力：音楽の依頼があれば再生
+  do_Music_Tick();              // ④ 出力：走行を止めず音楽・警告音を更新
 
   if (IS_IR) delayMicroseconds(100);
   else       delayMicroseconds(20);
