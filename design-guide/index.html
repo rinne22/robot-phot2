@@ -623,28 +623,26 @@ pre{max-width:100%;overflow:auto}
     Note over IN,MU: 0.3秒待つ
     MU-&gt;&gt;B: play_Music で曲3を再生</pre></div>
     <h3>フローチャート：全体の流れ</h3>
-<h4>図7　全体の流れ</h4><p class="cap">電源ONから、入力・判断・出力を繰り返す流れです。各処理の中身は、次の関数別フローチャートで説明します。</p><div class="diagram"><pre class="mermaid">flowchart TD
-    A([電源ON]) --&gt; B[&quot;setup 初期化&lt;br/&gt;モーター停止 / ブザー停止 / センサーと受信機の準備&quot;]
-    B --&gt; L[&quot;loop 開始&quot;]
-    L --&gt; I[&quot;① 入力 do_IR_Tick&quot;]
-    I --&gt; K{&quot;受信したボタンは?&quot;}
-    K --&gt;|OK| K1[&quot;停止状態にする&quot;]
-    K --&gt;|&quot;↑ ↓ ← →&quot;| K2[&quot;走行の指示を Drive_Num に入れる&quot;]
-    K --&gt;|&quot;1 〜 9&quot;| K3[&quot;曲の再生を依頼する（0.3秒待つ）&quot;]
-    K --&gt;|&quot;なし / その他&quot;| J
-    K1 --&gt; J
-    K2 --&gt; J
-    K3 --&gt; J
-    J{&quot;② 回避中？&quot;} --&gt;|はい| UA[&quot;update_Avoid&quot;]
-    UA --&gt; O
-    J --&gt;|いいえ| CS[&quot;checkSensorsAndObstacles&quot;]
-    CS --&gt; Q{&quot;前進中・後退中で&lt;br/&gt;障害物がある?&quot;}
-    Q --&gt;|はい| Q1[&quot;向きを逆にする または 回転&lt;br/&gt;警告音 / 0.5秒後に停止&quot;]
-    Q --&gt;|いいえ| O
-    Q1 --&gt; O[&quot;③ 出力 do_Drive_Tick&lt;br/&gt;Drive_Num に合わせてモーターを動かす&quot;]
-    O --&gt; M4[&quot;④ 音楽 do_Music_Tick&lt;br/&gt;依頼から0.3秒たったら再生&quot;]
-    M4 --&gt; D[&quot;⑤ 遅延&quot;]
-    D --&gt; L</pre></div>
+<h4 id="loop-flow">図7　メインループ loop()</h4><p class="cap">回避開始時に記録した時刻を基準にします。500 msは待ち時間ではなく、各ループで確認する終了条件です。進行方向に障害物があれば、500 msを待たずに停止します。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    S([電源ON]) --&gt; B[setup]
+    B --&gt; L[do_IR_Tick で入力を処理]
+    L --&gt; A{回避中？}
+    A --&gt;|いいえ| N[checkSensorsAndObstacles]
+    A --&gt;|はい| T{回避開始から500 ms以上？}
+    T --&gt;|はい| X[end_Avoid で停止]
+    T --&gt;|いいえ| Q{回避方向は？}
+    Q --&gt;|後退| R[後方を測定]
+    Q --&gt;|前進| F[前方を測定]
+    Q --&gt;|旋回| C
+    R --&gt; C{障害物を検知 または 回避開始から500 ms以上？}
+    F --&gt; C
+    C --&gt;|はい| X
+    C --&gt;|いいえ| D
+    N --&gt; D[do_Drive_Tick]
+    X --&gt; D
+    D --&gt; M[do_Music_Tick]
+    M --&gt; W[IS_IR に応じて100または20 μs待つ]
+    W --&gt; L</pre></div>
     <h3>フローチャート：関数別</h3>
 <h4>図8　関数 setup</h4><p class="cap">初期化の関数を順に呼びます。</p><div class="diagram"><pre class="mermaid">flowchart TD
     S([setup]) --&gt; A[&quot;init_MotorPins&lt;br/&gt;ピン出力設定 / go_Stop&quot;]
@@ -675,8 +673,8 @@ pre{max-width:100%;overflow:auto}
     S([&quot;set_Drive cmd&quot;]) --&gt; A{&quot;is_OppositeDrive&lt;br/&gt;直前の指示と逆向き?&quot;}
     A --&gt;|いいえ| D
     A --&gt;|はい| B{&quot;前の指示から&lt;br/&gt;0.3秒以内?&quot;}
-    B --&gt;|はい| C[&quot;Drive_Num = GO_STOP&lt;br/&gt;lastDriveCmd = GO_STOP&quot;]
-    B --&gt;|いいえ| D[&quot;Drive_Num = cmd&lt;br/&gt;lastDriveCmd = cmd&lt;br/&gt;isCheckRequested = true&quot;]
+    B --&gt;|はい| C[&quot;Drive_Num = GO_STOP&lt;br/&gt;lastDriveCmd = GO_STOP&lt;br/&gt;lastDriveCmdMs = now&quot;]
+    B --&gt;|いいえ| D[&quot;Drive_Num = cmd&lt;br/&gt;lastDriveCmd = cmd&lt;br/&gt;lastDriveCmdMs = now&lt;br/&gt;isCheckRequested = true&quot;]
     C --&gt; Z([終了])
     D --&gt; Z</pre></div>
 <h4>図12　関数 checkSensorsAndObstacles</h4><p class="cap">判断の手順を順に呼ぶだけの関数です。</p><div class="diagram"><pre class="mermaid">flowchart TD
@@ -689,15 +687,7 @@ pre{max-width:100%;overflow:auto}
     G --&gt;|はい| H[&quot;start_Avoid&quot;]
     G --&gt;|いいえ| Z
     H --&gt; Z</pre></div>
-<h4>図13　関数 update_Avoid</h4><p class="cap">回避動作中に、終わらせるかどうかを調べます。</p><div class="diagram"><pre class="mermaid">flowchart TD
-    S([update_Avoid]) --&gt; A{&quot;0.5秒たった?&quot;}
-    A --&gt;|はい| E[&quot;end_Avoid&quot;]
-    A --&gt;|いいえ| B{&quot;後退中で&lt;br/&gt;is_BackBlocked ?&quot;}
-    B --&gt;|はい| E
-    B --&gt;|いいえ| C{&quot;前進中で&lt;br/&gt;is_FrontBlocked ?&quot;}
-    C --&gt;|はい| E
-    C --&gt;|いいえ| Z([そのまま続ける])
-    E --&gt; Y([終了])</pre></div>
+<h4>図13　回避更新の参照先</h4><p class="cap"><code>update_Avoid()</code> の終了判定は <a href="#loop-flow">図7 メインループ</a> にまとめています。</p>
 <h4>図14　関数 is_CheckTime</h4><p class="cap">いま障害物を調べるかどうかを返します。</p><div class="diagram"><pre class="mermaid">flowchart TD
     S([is_CheckTime]) --&gt; A{&quot;前進中または後退中?&quot;}
     A --&gt;|いいえ| F([&quot;false を返す&quot;])
@@ -714,9 +704,9 @@ pre{max-width:100%;overflow:auto}
     C --&gt;|いいえ| R4([&quot;DEF を返す&quot;])</pre></div>
 <h4>図16　関数 start_Avoid と end_Avoid</h4><p class="cap">回避を始める関数と、終える関数です。</p><div class="diagram"><pre class="mermaid">flowchart TD
     subgraph start_Avoid
-        A1[&quot;Drive_Num = 回避動作&quot;] --&gt; A2[&quot;do_Drive_Tick&lt;br/&gt;先にモーターを動かす&quot;]
-        A2 --&gt; A3[&quot;warning 警告音&quot;]
-        A3 --&gt; A4[&quot;isAvoiding = true&lt;br/&gt;avoidStartMs = 現在時刻&quot;]
+        A1[&quot;Drive_Num = 回避動作&lt;br/&gt;lastDriveCmd = GO_STOP&quot;] --&gt; A2[&quot;do_Drive_Tick&lt;br/&gt;先にモーターを動かす&quot;]
+        A2 --&gt; A4[&quot;isAvoiding = true&lt;br/&gt;avoidStartMs = 現在時刻&lt;br/&gt;pendingSongNum = 0&quot;]
+        A4 --&gt; A3[&quot;warning 警告音&quot;]
     end
     subgraph end_Avoid
         B1[&quot;isAvoiding = false&quot;] --&gt; B2[&quot;Drive_Num = GO_STOP&quot;]
@@ -750,6 +740,8 @@ pre{max-width:100%;overflow:auto}
     A --&gt;|GO_LEFT| D[&quot;go_Left&quot;]
     A --&gt;|GO_RIGHT| E[&quot;go_Right&quot;]
     A --&gt;|GO_STOP| F[&quot;go_Stop&quot;]
+    A --&gt;|定義外| U[&quot;Drive_Num = GO_STOP&quot;]
+    U --&gt; F
     B --&gt; G[&quot;set_RightMotor と set_LeftMotor で方向&lt;br/&gt;set_MotorSpeed で速度&quot;]
     C --&gt; G
     D --&gt; G
@@ -768,9 +760,11 @@ pre{max-width:100%;overflow:auto}
     D --&gt; Z
     F --&gt; Z</pre></div>
 <h4>図21　関数 do_Music_Tick</h4><p class="cap">依頼から0.3秒たったら、曲を再生します。</p><div class="diagram"><pre class="mermaid">flowchart TD
-    S([do_Music_Tick]) --&gt; A{&quot;is_MusicDue&lt;br/&gt;依頼があり 0.3秒たった?&quot;}
+    S([do_Music_Tick]) --&gt; V{&quot;回避中？&quot;}
+    V --&gt;|はい| Z
+    V --&gt;|いいえ| A{&quot;is_MusicDue&lt;br/&gt;依頼があり 0.3秒たった?&quot;}
     A --&gt;|いいえ| Z([終了])
-    A --&gt;|はい| B[&quot;依頼を取り消す&lt;br/&gt;pendingSongNum = 0&quot;]
+    A --&gt;|はい| B[&quot;曲番号を退避してから&lt;br/&gt;pendingSongNum = 0&quot;]
     B --&gt; C[&quot;play_Music 曲番号&quot;]
     C --&gt; Z</pre></div>
     <h4>図22　関数 play_Music</h4><p class="cap">曲番号の曲を、最後まで（またはOKが押されるまで）再生します。</p><div class="diagram"><pre class="mermaid">flowchart TD
@@ -787,19 +781,23 @@ pre{max-width:100%;overflow:auto}
     H --&gt; D
     G --&gt; Z</pre></div>
 <h4>図23　関数 warning</h4><p class="cap">警告音を鳴らします。1秒に1回までです。</p><div class="diagram"><pre class="mermaid">flowchart TD
-    S([warning]) --&gt; A{&quot;前回の警告から&lt;br/&gt;1秒未満?&quot;}
+    S([warning]) --&gt; A{&quot;前回の記録があり、そこから1秒未満？&quot;}
     A --&gt;|はい| Z([何もせず終了])
     A --&gt;|いいえ| B[&quot;lastWarnMs = 現在時刻&quot;]
     B --&gt; C[&quot;2回くり返す&lt;br/&gt;LOW 50ms で鳴動 / HIGH 50ms で停止&quot;]
     C --&gt; Y([終了])</pre></div>
-<h4>図24　関数 play_Tone</h4><p class="cap">指定した周波数と長さで、1音を鳴らします。</p><div class="diagram"><pre class="mermaid">flowchart TD
-    S([&quot;play_Tone 周波数 長さ&quot;]) --&gt; A{&quot;周波数が 0 以下?&quot;}
-    A --&gt;|はい| B[&quot;休符中は約1 msごとにOKを確認&quot;]
-    B --&gt; Z([終了])
-    A --&gt;|いいえ| C[&quot;半周期とくり返し回数を求める&quot;]
-    C --&gt; D[&quot;LOW と HIGH を切り替え、周期ごとにOKを確認&quot;]
-    D --&gt; E[&quot;最後に HIGH にして停止&quot;]
-    E --&gt; Z</pre></div>
+<h4>図24　関数 play_Tone</h4><p class="cap">発音中・休符中にOKを確認し、受信結果を呼び出し元に返します。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    S([play_Tone]) --&gt; A{長さが0以下？}
+    A --&gt;|はい| E[最後にOKを確認]
+    A --&gt;|いいえ| B{周波数が0以下？}
+    B --&gt;|はい| R[休符の間、約1 msごとにOKを確認]
+    B --&gt;|いいえ| P[周期数を求め、各周期の前にOKを確認]
+    R --&gt;|OKを受信| T([true])
+    P --&gt;|OKを受信| T
+    P --&gt;|全周期を完了| H[ブザーをHIGHにする]
+    H --&gt; E
+    R --&gt;|休符終了| E
+    E --&gt; U([受信結果を返す])</pre></div>
   </section>
 
   <section class="env">
