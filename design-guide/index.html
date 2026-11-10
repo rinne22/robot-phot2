@@ -640,8 +640,8 @@ pre{max-width:100%;overflow:auto}
 <p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
 <p><strong>呼び出し関数</strong> millis()、digitalWrite()、delay()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-play_Tone">
 <summary><code>play_Tone()</code> <span>周波数と時間を指定して発音</span></summary>
-<div class="body dbody"><p><strong>処理内容</strong> 発音中は周期ごと、休符中は約1 ms間隔でOKを確認する。</p>
-<p><strong>関数形式</strong> <code>bool play_Tone(int freq, int ms);</code></p>
+<div class="body dbody"><p><strong>処理内容</strong> 半周期と発音時間だけを設定する。実際の発音・休符とOK処理はdo_Music_Tick / do_IR_Tickが分担する。</p>
+<p><strong>関数形式</strong> <code>void play_Tone(int freq, int ms);</code></p>
 <div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>int<br>int</td><td>freq：周波数（Hz）。0以下は休符<br>ms：鳴動または休符の長さ（ms）</td></tr><tr><th scope="row">戻り値</th><td>bool</td><td>OKを受信した場合は true</td></tr><tr><th scope="row">入力</th><td>—</td><td>—</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>D13に波形出力、または休符の待機</td></tr></tbody></table></div>
 <p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
 <p><strong>呼び出し関数</strong> is_MusicStopPressed()、millis()、delay()、digitalWrite()、delayMicroseconds()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-get_SongNote">
@@ -682,7 +682,7 @@ pre{max-width:100%;overflow:auto}
 <p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
 <p><strong>呼び出し関数</strong> millis()</p><p><strong>備考</strong> —</p></div></details><details class="function-card" id="fn-do_Music_Tick">
 <summary><code>do_Music_Tick()</code> <span>予約した曲を再生</span></summary>
-<div class="body dbody"><p><strong>処理内容</strong> 回避中は再生しない。再生時刻に達したら曲番号を退避して予約を解除し、曲を再生する。</p>
+<div class="body dbody"><p><strong>処理内容</strong> 警告音の間は音楽を一時中断する。再生予約の時刻に達したら曲を開始し、音符とブザーの波形を1回ずつ更新する。</p>
 <p><strong>関数形式</strong> <code>void do_Music_Tick();</code></p>
 <div class="tw"><table><caption>入出力</caption><thead><tr><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr></thead><tbody><tr><th scope="row">引数</th><td>—</td><td>—</td></tr><tr><th scope="row">戻り値</th><td>void</td><td>—</td></tr><tr><th scope="row">入力</th><td>状態・信号</td><td>pendingSongNum・再生時刻判定</td></tr><tr><th scope="row">出力</th><td>状態・信号</td><td>pendingSongNum=0・曲の再生</td></tr></tbody></table></div>
 <p><strong>ソースファイル</strong> <a href="#code">robot_final.ino</a></p>
@@ -788,7 +788,7 @@ pre{max-width:100%;overflow:auto}
         OUT-&gt;&gt;M: 後退
     end
     Note over JD,M: 回避は0.5秒だけ行い GO_STOP で停止</pre></div>
-<h4>図4　数字ボタンで音楽を再生（OKで中止）</h4><p class="cap">再生の前にモーターを止めます。発音中・休符中・音符間にOKを確認し、受信したら曲を中止します。</p><div class="diagram"><pre class="mermaid">sequenceDiagram
+<h4>図4　数字ボタンで走行しながら音楽を再生（OKで中止）</h4><p class="cap">数字ボタン入力後に走行状態を維持したまま音楽を開始します。do_Music_Tickで音符を更新し、do_IR_Tickで受信したOKで走行と音楽を停止します。</p><div class="diagram"><pre class="mermaid">sequenceDiagram
     autonumber
     actor U as ユーザー
     participant IN as 入力 do_IR_Tick
@@ -844,7 +844,7 @@ pre{max-width:100%;overflow:auto}
     <section class="overview" id="drive-music"><h2>走行しながら音楽を再生</h2>
 <p>数字ボタン1〜9で曲を選ぶと、0.3秒後に演奏が始まります。走行中でも止まらずに演奏し、再生中も↑↓←→や斜め走行が操作できます。OKボタンではモーターと音楽を同時に停止します。</p>
 <p>ブザーD13はソフトウェア方式で、<code>micros()</code> を使ってLOW/HIGHを短く切り替えます。障害物を検知した場合は回避を優先し、警告音（約200ms）の間は音楽を一時中断します。<code>tone()</code> は使用しません。</p>
-<p><strong>実機での注意：</strong>超音波測定の <code>pulseIn()</code> やセンサー待機によって音の波形が一時的に乱れ、音程や音質に影響することがあります。Arduino UnoとIRremoteの組み合わせではタイマーの競合にも注意が必要です。実機で音と走行・緊急停止を確認してください。</p></section><section class="overview" id="diagonal-driving">
+<p><strong>実機での注意：</strong>超音波測定の <code>pulseIn()</code> やセンサー待機によって音の波形が一時的に乱れ、音程や音質に影響することがあります。Arduino UnoとIRremoteの組み合わせではタイマーの競合にも注意が必要です。実機で音と走行・緊急停止を確認してください。</p><p class="cap">注意：以下の旧版テスト仕様・旧版設計の記録には、音楽再生時に停止する方式の記述が残っている場合があります。現在有効な仕様はこの節、図21〜24、および掲載Arduinoコードです。変更後の実機確認は未実施です。</p></section><section class="overview" id="diagonal-driving">
 <h2>斜め走行（上下＋左右の連続入力）</h2>
 <p>0.3秒以内に方向ボタンを2つ続けて受信すると、進行しながら曲がります。赤外線リモコンは物理的な同時押しを個別に送信できない機種もあるため、送信された2つのコードを短時間の組み合わせとして解釈します。各組合せは入力順序を問いません。</p>
 <div class="tw"><table><thead><tr><th>入力</th><th>走行</th><th>右モーター</th><th>左モーター</th></tr></thead><tbody>
@@ -1679,7 +1679,7 @@ var reqs = [
  {id:"2-4",c:"音を鳴らす関数 <code>play_Tone()</code> を作成する",r:"指定した高さと長さで音を出すため",
   items:["ピンのHIGH/LOWを周波数に合わせて切り替え、音を出す","周波数が0のときは休符にする","IRremoteとタイマーが衝突しないよう、<code>tone()</code> は使わない"]},
  {id:"2-5",c:"曲を再生する関数 <code>play_Music(番号)</code> を作成する",r:"ボタンに対応した曲を最後まで流すため",
-  items:["曲データを順に読み、終わりの印まで再生する","再生前に <code>go_Stop()</code> でモーターを止める（走ったまま鳴らさないため）","再生中にOKボタンが押されたら中止する"]},
+  items:["曲データを順に読み、終わりの印まで再生する","再生前にモーターを停止せず、音符の開始時刻だけ設定する","再生中にOKボタンが押されたら中止する"]},
  {id:"2-6",c:"数字ボタンと曲を対応させる",r:"ボタンを押したときに曲を流すため",
   items:["受信コードが <code>IR_1</code>〜<code>IR_9</code> のとき <code>play_Music()</code> を呼ぶ","押しっぱなしの連続信号は無視する"],
   note:"曲の対応：1 ドレミファソラシド／2 きらきら星／3 かえるの合唱／4 ちょうちょう／5 ハッピーバースデー／6 メリーさんの羊／7 ジングルベル／8 歓喜の歌／9 ファンファーレ"},
@@ -1720,11 +1720,11 @@ var reqs = [
  {id:"5-2",c:"警告音 <code>warning()</code> を作成する",r:"障害物で動きが自動的に変わったことを知らせるため",
   items:["50ms鳴動、50ms停止を2回繰り返す","回避動作の開始と同時に鳴らす（先にモーターを動かしてから鳴らす）","鳴りっぱなしを防ぐため、警告音は1秒に1回までとする"]},
  {id:"5-3",c:"音の優先順位を決める",r:"音が重ならないようにするため",
-  items:["音楽再生中は、モーターを止めているため、警告音は鳴らさない","電源投入時は、何も鳴らさない"],
+  items:["音楽再生中もモーターは動作し、障害物の警告音は音楽より優先する","電源投入時は、何も鳴らさない"],
   note:"Arduino Unoは電源投入直後に、ブートローダーがD13を数回点滅させるため、ブザーが短く鳴ることがあります。プログラムでは防げないので、気になる場合はブザーを別のピンにつなぎ替えます。"},
  {head:{t:"要求6",c:"複数の条件が重なったときの優先順位と、処理の順番を決める",r:"状況が重なっても動作が1つに決まり、安全側に動くようにするため"},
   id:"6-1",c:"動作の優先順位を決める",r:"矛盾する指示が同時に来ても迷わないため",
-  items:["優先度1：OKボタンによる停止","優先度2：センサー判断による回避（前方→後退、後方→前進、前後両方→回転）","優先度3：走行ボタン（↑↓←→）によるユーザーの指示","優先度4：音楽ボタン（1〜9）。再生前にモーターを止める"]},
+  items:["優先度1：OKボタンによる停止","優先度2：センサー判断による回避（前方→後退、後方→前進、前後両方→回転）","優先度3：走行ボタン（↑↓←→）によるユーザーの指示","優先度4：音楽ボタン（1〜9）。走行を継続しながら再生を開始する"]},
  {id:"6-2",c:"メインループの処理順を決める",r:"毎回同じ順で処理し、動作を安定させるため",
   items:["①入力：リモコン入力受付 <code>do_IR_Tick()</code>","②判断：回避中は <code>update_Avoid()</code>、通常時は <code>checkSensorsAndObstacles()</code>","③出力：モーターの実行 <code>do_Drive_Tick()</code>","④遅延（<code>IS_IR</code> により100μsまたは20μs）"]},
  {head:{t:"要求7",c:"要求どおりに動くかを確認する",r:"組み立て後に、安全に動くことを確かめるため"},
@@ -1733,7 +1733,7 @@ var reqs = [
  {id:"7-2",c:"センサーによる回避を確認する",r:"障害物があるときの優先度どおりに動くことを確かめるため",
   items:["前進中に前方の壁を検知すると、後退して警告音が鳴り、0.5秒後に停止する","前方に壁がある状態で↑を押すと、前進せずに後退する","後方センサーが反応している状態で↓を押すと、前進して警告音が鳴り、0.5秒後に停止する","前後の両方が反応している状態で↑または↓を押すと、回転して警告音が鳴る","回避中にOKを押すと、すぐに停止する"]},
  {id:"7-3",c:"音楽を確認する",r:"ブザーの種類に合った音が出るかを確かめるため",
-  items:["1〜9のボタンで、約0.3秒後に対応する曲が鳴る（パッシブブザーの場合）","数字ボタンを2つ同時に押すと、どちらの曲も鳴らない","曲の再生中は、モーターが止まっている","再生中にOKを押すと、曲が止まる"],
+  items:["1〜9のボタンで、約0.3秒後に対応する曲が鳴る（パッシブブザーの場合）","数字ボタンを2つ同時に押すと、どちらの曲も鳴らない","曲の再生中も走行・方向転換できる","再生中にOKを押すと、曲が止まる"],
   note:"7-1と7-2のうち、リモコン・センサー・停止の判断の動きは、パソコン上の模擬テストで確認済みです。実機のモーターの向きやセンサーの感度は、組み立て後に確認してください。"},
  {id:"7-4",c:"テストを単体テストと結合テストに分けて行う",r:"関数ごとの間違いと、組み合わせたときの間違いを、それぞれ見つけるため",
   items:["単体テスト：関数を1つずつ、他の部品を擬似品に置き換えて確認する","結合テスト：入力・判断・出力・音楽を組み合わせ、loop() から動かして確認する（7-1〜7-3の内容）","どちらも、コードを変えるたびにすべてやり直す","実機では、結合テストの続きとして、組み立て後に確認する"],
