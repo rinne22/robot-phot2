@@ -62,3 +62,12 @@ arduino-cli compile --fqbn arduino:avr:uno --warnings all work/robot_final
 ```
 
 `index.html`、`design-guide/index.html`、`design-guide/robot_final.ino`、`design-guide/functions.csv` は生成後もコミットする。ユーザーのローカルメモの保存キーは既存のものを保持している。
+
+
+## 関数設計書のExcel帳票対応（2026年11月10日）
+
+添付「関数設計書.xlsx」の項目と表構成に合わせ、全56関数を機能概要・処理内容・関数形式・入出力（種類/形式/内容）・ソースファイル・呼び出し関数・備考で記載した。サイト上も同じ帳票の形で表示する。ExcelダウンロードはCSVから本来のXLSXに戻し、関数一覧1シートと関数ごとの56シート、一覧へのリンク、A4印刷設定を用意した。実装コードの変更はない。
+
+生成には `python3 -m pip install -r scripts/requirements.txt` が必要。添付ファイルそのものは公開しない。確認した項目と表の構成をもとに、`scripts/function_excel.py` が新しい書式と内容を生成する。生成されたXLSXはHTMLのダウンロードリンクに埋め込むため、公開リポジトリにバイナリファイルを別途置く必要はない。
+
+`python3 tests/check_excel.py` で全56帳票の項目・必須セル・形式・印刷設定と、両ページの埋め込みXLSXの一致を確認。ChromiumでExcelダウンロードを実行し、保存されたファイルが57シートの正常なXLSXであること、サイトの帳票表示・関数検索・スマホ幅の表示を確認した。
