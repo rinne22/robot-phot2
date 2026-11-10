@@ -128,29 +128,118 @@ pre{max-width:100%;overflow:auto}
 <nav class="tocnav" aria-label="ページ内の移動"><a href="#overview">概要</a><a href="#requirements">要件定義</a><a href="#design">開発設計</a><a href="#functions">関数設計</a><a href="#figures">設計図</a><a href="#code">Arduinoコード</a><a href="#memo">メモ</a></nav>
 <section class="overview" id="memo" aria-labelledby="memo-title">
 <h2 id="memo-title">作業メモ</h2>
-<p id="memo-hint">入力した内容はこのブラウザに自動保存されます。</p>
+<p id="memo-hint">入力するとこのブラウザ内に自動保存されます。「保存する」でも確実に保存できます。別のPC・スマホへ移す場合はバックアップを使用してください（自動同期ではありません）。</p>
 <label for="memo-text">メモ内容</label>
-<textarea id="memo-text" rows="6" aria-describedby="memo-hint" style="display:block;width:100%;box-sizing:border-box;padding:.65rem;font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:6px" placeholder="実機で確認すること、配線の変更など"></textarea>
-<p id="memo-status" role="status"></p>
+<textarea id="memo-text" rows="9" aria-describedby="memo-hint memo-status" style="display:block;width:100%;box-sizing:border-box;padding:.65rem;font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:6px" placeholder="実機で確認すること、配線の変更など"></textarea>
+<div style="display:flex;flex-wrap:wrap;gap:.5rem;margin:.7rem 0">
+<button type="button" id="memo-save" style="padding:.55rem .9rem;cursor:pointer">保存する</button>
+<button type="button" id="memo-export" style="padding:.55rem .9rem;cursor:pointer">バックアップをダウンロード</button>
+<label for="memo-import" style="padding:.55rem .9rem;border:1px solid var(--line);border-radius:5px;cursor:pointer">バックアップを読み込む</label>
+<input type="file" id="memo-import" accept=".txt,.json,text/plain,application/json" style="position:absolute;width:1px;height:1px;opacity:0" aria-label="バックアップファイルを選択">
+</div>
+<p id="memo-status" role="status" aria-live="polite">保存状態を確認中…</p>
+<p style="font-size:.9em">注意：ブラウザの履歴・サイトデータを削除すると、端末内のメモも消える場合があります。大切な内容はバックアップをダウンロードしてください。</p>
 </section>
 <script>
 (() => {
   const field = document.getElementById('memo-text');
   const status = document.getElementById('memo-status');
+  const saveButton = document.getElementById('memo-save');
+  const exportButton = document.getElementById('memo-export');
+  const importInput = document.getElementById('memo-import');
   const key = 'osoyoo-robot-design-guide.memo.v1';
+  const timeKey = key + '.savedAt';
+  let dirty = false;
+  let writable = false;
+  let saveTimer;
+
+  const timeLabel = (time) => {
+    if (!time) return '';
+    const d = new Date(Number(time));
+    return Number.isNaN(d.getTime()) ? '' : d.toLocaleString('ja-JP');
+  };
+  const show = (message) => { status.textContent = message; };
+  function save() {
+    clearTimeout(saveTimer);
+    try {
+      const now = Date.now();
+      localStorage.setItem(key, field.value);
+      localStorage.setItem(timeKey, String(now));
+      if (localStorage.getItem(key) !== field.value) throw Error('保存した内容を確認できません');
+      dirty = false;
+      writable = true;
+      show('保存済み（このブラウザ）: ' + timeLabel(now));
+      return true;
+    } catch (e) {
+      writable = false;
+      show('保存できませんでした。バックアップをダウンロードしてください。');
+      return false;
+    }
+  }
   try {
-    field.value = localStorage.getItem(key) ?? '';
-  } catch {
-    status.textContent = 'このブラウザではメモを読み込めません。';
+    const previous = localStorage.getItem(key);
+    field.value = previous === null ? '' : previous;
+    const savedAt = localStorage.getItem(timeKey);
+    const probe = key + '.probe';
+    localStorage.setItem(probe, 'ok');
+    writable = localStorage.getItem(probe) === 'ok';
+    localStorage.removeItem(probe);
+    show(previous === null ? '未保存（メモを入力すると自動保存します）' :
+      '読み込み完了（このブラウザ）' + (savedAt ? ': ' + timeLabel(savedAt) : ''));
+  } catch (e) {
+    writable = false;
+    show('ブラウザの保存領域を利用できません。バックアップ機能をご利用ください。');
   }
   field.addEventListener('input', () => {
-    try {
-      localStorage.setItem(key, field.value);
-      status.textContent = '保存済み';
-    } catch {
-      status.textContent = 'メモを保存できませんでした。';
-    }
+    dirty = true;
+    show('編集中…自動保存します');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(save, 350);
   });
+  field.addEventListener('blur', () => { if (dirty) save(); });
+  saveButton.addEventListener('click', save);
+  exportButton.addEventListener('click', () => {
+    if (dirty) save();
+    const blob = new Blob([field.value], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const date = new Date().toISOString().slice(0,10);
+    a.href = url;
+    a.download = 'robot-design-memo-' + date + '.txt';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    show('バックアップをダウンロードしました。内容はこのブラウザにも保存されています（保存できない場合は上記の保存状態を確認してください）。');
+  });
+  importInput.addEventListener('change', async () => {
+    const file = importInput.files && importInput.files[0];
+    if (!file) return;
+    try {
+      if (file.size > 2 * 1024 * 1024) throw Error('2 MB以下のファイルを選んでください');
+      const raw = await file.text();
+      let content = raw;
+      if (file.name.toLowerCase().endsWith('.json')) {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed === 'string') content = parsed;
+        else if (parsed && typeof parsed.memo === 'string') content = parsed.memo;
+        else if (parsed && typeof parsed.text === 'string') content = parsed.text;
+        else throw Error('メモデータがありません');
+      }
+      if (field.value.trim() && !confirm('現在のメモをバックアップの内容で上書きしますか？')) return;
+      field.value = content;
+      dirty = true;
+      if (save()) show('バックアップを読み込み、ブラウザ内に保存しました。');
+      else show('バックアップを読み込みましたが、ブラウザへの保存は失敗しました。内容を再度バックアップしてください。');
+    } catch (e) { show('読み込み失敗: ' + e.message); }
+    finally { importInput.value = ''; }
+  });
+  window.addEventListener('storage', (event) => {
+    if (event.key !== key || dirty) return;
+    field.value = event.newValue ?? '';
+    show('別のタブで更新されたメモを反映しました。');
+  });
+  window.addEventListener('pagehide', () => { if (dirty && writable) save(); });
 })();
 </script>
 <section class="overview" id="revision"><h2>修正記録・版1.5</h2><p>音楽の途中でもOKで中断できるようにし、回避中はセンサー測定の直後にも500 msの経過を確認します。</p><p>回避中の更新は loop() が直接呼び出します。回避中と通常時の障害物判定は、1周につきどちらか一方だけを実行します。</p><p><a href="robot_final.ino" download>修正版Arduinoコードをダウンロード</a></p><p>要件・設計・図・コードの共通仕様を以下に補足しました。</p><ul><li>回避開始時に音楽の予約を取り消し、回避中は曲を開始しません。回避後に数字ボタンで再予約します。</li><li>回避の500 msは駆動開始直後から計測します。警告音の約200 msを回避時間に含めます。停止判定は周期処理で行うため、実測時間には処理遅延が加わります。</li><li>不正な走行状態は停止に倒します。</li><li>停止出力はPWM 0・方向LOW/LOWです。空転停止のため、車輪の静止までの時間は実機で確認します。</li><li>OKの応答時間は実機未測定です。警告音・センサー測定は処理完了後、音楽は発音中・休符中・音符間にも受信を確認します。0.3秒以内は検証対象の目標値です。</li></ul><p>掲載済みの「OK」は版1.2の疑似環境での実施記録です。版1.5のArduino全体ビルドと実機試験は未実施です。版1.3の変更箇所4項目は抽出したC++関数の疑似試験で確認しました。Arduino全体のビルド・全体再試験・実機試験は未実施です。</p></section><section class="overview" id="overview" aria-labelledby="overview-title">
