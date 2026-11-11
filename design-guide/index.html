@@ -372,11 +372,16 @@ pre{max-width:100%;overflow:auto}
   });
 })();
 </script>
-<section class="overview" id="revision"><h2>レビュー改訂1.6</h2><p>要件・開発設計・全56関数・図25枚・掲載コードとダウンロードを統一しました。数字入力の時間判定、パッシブブザー警告波形、初期化時の出力を修正しました。</p><p><a href="robot_final.ino" download>Arduinoコードをダウンロード</a> ／ <a href="https://github.com/rinne22/robot-phot2/blob/main/REVIEW.md">レビュー結果・検証記録</a></p><p>PC模擬試験38項目・Arduino Unoビルド成功。実機の音質・停止応答・停止距離は未確認です。</p></section><section class="overview" id="dance-speed-update"><h2>速度とダンスの最新設定（2026年11月11日）</h2>
-<p>基本走行速度は <strong>PWM 80 / 255</strong> に設定しました。通常の前進・後退・その場旋回を低速で行い、斜め走行の内側モーターは40です。80で始動しづらいモーターの場合は実機に合わせた調整が必要です。</p>
-<p><strong>0ボタンでダンス開始。</strong>ダンス中は前進・後退・斜め移動を一切使わず、左右の車輪を逆方向に回してその場で旋回します。8ステップ（左900ms → 右900ms → 左450ms → 右450ms → 停止300ms → 左1200ms → 右1200ms → 停止350ms）の約5.75秒を繰り返します。</p>
-<p><strong>OKボタンを押すまでダンスをループ</strong>し、0を再び押すと最初からやり直します。安全のため、前後センサーが障害物を検知した場合はダンスを中止して停止します。すでに音楽を再生中ならダンスと並行して再生しますが、0ボタンだけでは曲は自動再生しません。</p>
-<p class="cap">この改訂内容はArduinoコードとフローチャートに反映済みです。旧版のテスト実績は今回のPWM 80・旋回専用ダンスには適用できません。まず車輪を浮かせて動作とOK停止を確認してください。</p></section><section class="overview" id="overview" aria-labelledby="overview-title">
+<section class="overview" id="revision"><h2>レビュー改訂1.6</h2><p>要件・開発設計・全56関数・図25枚・掲載コードとダウンロードを統一しました。数字入力の時間判定、パッシブブザー警告波形、初期化時の出力を修正しました。</p><p><a href="robot_final.ino" download>Arduinoコードをダウンロード</a> ／ <a href="https://github.com/rinne22/robot-phot2/blob/main/REVIEW.md">レビュー結果・検証記録</a></p><p>PC模擬試験38項目・Arduino Unoビルド成功。実機の音質・停止応答・停止距離は未確認です。</p></section><section class="overview" id="dance-speed-update"><h2>最新設定：通常PWM100／ダンスPWM180／斜め走行入力の改善（2026年11月11日）</h2>
+<p>通常走行は <strong>SPEED=100</strong>。その場旋回ダンスは通常走行とは別の <strong>DANCE_SPEED=180</strong> でモーターを回します。ダンスは前進・後退せず左右に旋回し、0で開始してOKまたは障害物検知まで8ステップ（約5.75秒／周）を繰り返します。</p>
+<p>斜め走行の左右車輪PWMは外側130／内側75に設定しました。上下矢印と左右矢印の組み合わせを <strong>900ms以内</strong> に2件受信すると斜め走行にします。順番は問いません。斜め走行中は構成するキーの再受信で直ちに単独方向へ戻さないようにしました。↑↓や←→の矛盾入力は300ms以内なら停止します。</p>
+<div class="tw"><table><thead><tr><th>リモコン入力（どちらが先でも可）</th><th>動作</th><th>右PWM</th><th>左PWM</th></tr></thead><tbody>
+<tr><td>←＋↑</td><td>前進しながら左</td><td>前進130</td><td>前進75</td></tr>
+<tr><td>↑＋→</td><td>前進しながら右</td><td>前進75</td><td>前進130</td></tr>
+<tr><td>←＋↓</td><td>後退しながら左</td><td>後退75</td><td>後退130</td></tr>
+<tr><td>↓＋→</td><td>後退しながら右</td><td>後退130</td><td>後退75</td></tr></tbody></table></div>
+<p><strong>赤外線リモコンの制約：</strong>物理的な同時押しで2つの異なるコードが送られない場合、ソフトウェアでは真の同時押しを認識できません。まず「↑を押してから0.9秒以内に←」のように素早く続けて押して確認してください。受信コードが1件しか届かない場合はリモコン側の制限です。</p>
+<p class="cap">Arduino Unoでの今回の改訂版のビルド・実機試験は未実施です。PWMや障害物検出の応答は実機で確認してください。旧版1.6の検証記録は今回の変更の確認結果ではありません。</p></section><section class="overview" id="overview" aria-labelledby="overview-title">
 <h2 id="overview-title">ロボットの主な動作</h2>
 <div class="tiles">
 <article><h3>01　リモコン操作</h3><p>矢印ボタンで前後移動・旋回・斜め走行。0ボタンでダンス、OKボタンで停止します。</p></article>
@@ -592,20 +597,21 @@ b</td></tr><tr><th scope="row">戻り値</th><td>DriveState</td><td>上下と左
     A --&gt;|はい| B[&quot;command と isRepeat を読む&lt;br/&gt;resume で次の受信へ&quot;]
     B --&gt; C{&quot;isRepeat ?&quot;}
     C --&gt;|はい| N
-    C --&gt;|いいえ| R([&quot;command を返す&quot;])</pre></div><h4 id="diagonal-drive-flow">図11　関数 set_Drive と get_DiagonalDrive</h4><p class="cap">0.3秒以内に上下と左右の入力を受信した場合は、順番に関係なく前左・前右・後左・後右の斜め走行にします。↑↓・←→の矛盾は従来どおり停止します。0.3秒を超えたときは最後に受けた単独方向になります。</p><div class="diagram"><pre class="mermaid">flowchart TD
- S([set_Drive cmd]) --&gt; A[&quot;now = millis()&quot;]
- A --&gt; B{&quot;直前の入力から300ms以内?&quot;}
- B --&gt;|いいえ| N[&quot;Drive_Num = cmd&quot;]
- B --&gt;|はい| C{&quot;is_OppositeDrive ?&quot;}
- C --&gt;|はい| X[&quot;Drive_Num = GO_STOP / lastDriveCmd = GO_STOP&quot;]
- X --&gt; Z([終了])
- C --&gt;|いいえ| D[&quot;get_DiagonalDrive / 上下と左右の組合せ判定&quot;]
- D --&gt; E{&quot;対応する斜め走行あり?&quot;}
- E --&gt;|はい| F[&quot;Drive_Num = GO_FORWARD_LEFT / RIGHT / GO_BACK_LEFT / RIGHT&quot;]
- E --&gt;|いいえ| N
- F --&gt; G[&quot;lastDriveCmd = cmd / lastDriveCmdMs = now / isCheckRequested = true&quot;]
- N --&gt; G
- G --&gt; Z</pre></div><h4>図12　関数 checkSensorsAndObstacles</h4><p class="cap">回避中・ダンス中・通常走行を切り替え、同じ周回で通常判定と回避判定を重複実行しません。</p><div class="diagram"><pre class="mermaid">flowchart TD
+    C --&gt;|いいえ| R([&quot;command を返す&quot;])</pre></div><h4 id="diagonal-drive-flow">図11　関数 set_Drive / get_DiagonalDrive / is_DiagonalComponent</h4><p class="cap">上下＋左右の指示が900ms以内に続くと、押した順番に関係なく斜め走行にします。斜め走行中の構成キー再受信を維持し、上下・左右の矛盾は300ms以内なら停止します。</p><div class="diagram"><pre class="mermaid">flowchart TD
+ S([set_Drive cmd]) --&gt; A["now = millis() / elapsed を算出"]
+ A --&gt; B{"前回入力あり、300ms以内で逆向き？"}
+ B --&gt;|はい| X["Drive_Num = GO_STOP / lastDriveCmd = GO_STOP"] --&gt; Z([終了])
+ B --&gt;|いいえ| C{"900ms以内で現在の斜め走行を構成するキー？"}
+ C --&gt;|はい| K["lastDriveCmd / lastDriveCmdMs 更新"] --&gt; Z
+ C --&gt;|いいえ| D{"前回入力から900ms以内？"}
+ D --&gt;|はい| E["get_DiagonalDrive(lastDriveCmd,cmd)"]
+ D --&gt;|いいえ| F["Drive_Num = cmd"]
+ E --&gt; G{"対応する斜め走行あり？"}
+ G --&gt;|はい| H["Drive_Num = 斜め走行状態"]
+ G --&gt;|いいえ| F
+ H --&gt; I["前回入力・時刻を更新 / センサー確認を要求"]
+ F --&gt; I
+ I --&gt; Z</pre></div><h4>図12　関数 checkSensorsAndObstacles</h4><p class="cap">回避中・ダンス中・通常走行を切り替え、同じ周回で通常判定と回避判定を重複実行しません。</p><div class="diagram"><pre class="mermaid">flowchart TD
  S([checkSensorsAndObstacles]) --&gt; A{&quot;回避中？&quot;}
  A --&gt;|はい| U[&quot;update_Avoid&quot;] --&gt; Z([終了])
  A --&gt;|いいえ| B{&quot;ダンス中？&quot;}
@@ -812,7 +818,11 @@ end</pre></div><h4>図17　関数 is_FrontBlocked と is_BackBlocked</h4><p clas
 
 // ---------- 設定値 ----------
 #define DISTANCE_LIMIT    20   // 前方の障害物とみなす距離（cm）
-#define SPEED            80   // 通常走行・ダンスの基本速度（0〜255）
+#define SPEED            100  // 通常走行の基本PWM（0〜255）
+#define DANCE_SPEED      180  // ダンス中のその場旋回PWM（通常走行とは独立）
+#define DIAGONAL_OUTER_SPEED 130 // 斜め走行の外側車輪PWM
+#define DIAGONAL_INNER_SPEED  75 // 斜め走行の内側車輪PWM
+#define DIAGONAL_WINDOW_MS 900   // 上下＋左右の2信号を組み合わせる最大間隔
 #define CHECK_INTERVAL_MS   100  // センサー確認の間隔（ms）
 #define CONFLICT_MS      300  // 逆向きのコードを矛盾とみなす時間（ms）
 #define AVOID_MS         500  // 回避動作を続ける時間（ms）
@@ -943,33 +953,33 @@ void go_Back() {               // 後退
 
 void go_Left() {               // 左折（その場旋回：右前進・左後退）
   set_RightMotor(HIGH, LOW);  set_LeftMotor(LOW, HIGH);
-  set_MotorSpeed(SPEED, SPEED);
+  set_MotorSpeed(isDancing ? DANCE_SPEED : SPEED, isDancing ? DANCE_SPEED : SPEED);
 }
 
 void go_Right() {              // 右折（その場旋回：右後退・左前進）
   set_RightMotor(LOW, HIGH);  set_LeftMotor(HIGH, LOW);
-  set_MotorSpeed(SPEED, SPEED);
+  set_MotorSpeed(isDancing ? DANCE_SPEED : SPEED, isDancing ? DANCE_SPEED : SPEED);
 }
 
 // 左右の回転速度を変え、進みながら曲がる（内側は半速）
 void go_ForwardLeft() {
   set_RightMotor(HIGH, LOW); set_LeftMotor(HIGH, LOW);
-  set_MotorSpeed(SPEED, SPEED / 2);
+  set_MotorSpeed(DIAGONAL_OUTER_SPEED, DIAGONAL_INNER_SPEED);
 }
 
 void go_ForwardRight() {
   set_RightMotor(HIGH, LOW); set_LeftMotor(HIGH, LOW);
-  set_MotorSpeed(SPEED / 2, SPEED);
+  set_MotorSpeed(DIAGONAL_INNER_SPEED, DIAGONAL_OUTER_SPEED);
 }
 
 void go_BackLeft() {
   set_RightMotor(LOW, HIGH); set_LeftMotor(LOW, HIGH);
-  set_MotorSpeed(SPEED / 2, SPEED);
+  set_MotorSpeed(DIAGONAL_INNER_SPEED, DIAGONAL_OUTER_SPEED);
 }
 
 void go_BackRight() {
   set_RightMotor(LOW, HIGH); set_LeftMotor(LOW, HIGH);
-  set_MotorSpeed(SPEED, SPEED / 2);
+  set_MotorSpeed(DIAGONAL_OUTER_SPEED, DIAGONAL_INNER_SPEED);
 }
 
 void go_Stop() {               // 完全停止（PWM0・方向LOW/LOW）
@@ -1318,21 +1328,42 @@ DriveState get_DiagonalDrive(DriveState a, DriveState b) {
   return DEF;
 }
 
+// 現在の斜め走行に含まれる方向かを判定（リモコンの繰り返し信号対策）
+bool is_DiagonalComponent(DriveState diagonal, DriveState cmd) {
+  switch (diagonal) {
+    case GO_FORWARD_LEFT:  return cmd == GO_ADVANCE || cmd == GO_LEFT;
+    case GO_FORWARD_RIGHT: return cmd == GO_ADVANCE || cmd == GO_RIGHT;
+    case GO_BACK_LEFT:     return cmd == GO_BACK || cmd == GO_LEFT;
+    case GO_BACK_RIGHT:    return cmd == GO_BACK || cmd == GO_RIGHT;
+    default: return false;
+  }
+}
+
 void set_Drive(DriveState cmd) {
   unsigned long now = millis();
-  bool withinWindow = lastDriveCmd != GO_STOP &amp;&amp; (now - lastDriveCmdMs &lt;= CONFLICT_MS);
+  unsigned long elapsed = now - lastDriveCmdMs;
+  bool hasPrevious = lastDriveCmd != GO_STOP;
 
-  // 前後や左右の反対入力が0.3秒以内に続いた場合は従来どおり停止
-  if (withinWindow &amp;&amp; is_OppositeDrive(lastDriveCmd, cmd)) {
+  // 上下や左右の正反対が0.3秒以内に続いた場合は従来どおり停止
+  if (hasPrevious &amp;&amp; elapsed &lt;= CONFLICT_MS &amp;&amp; is_OppositeDrive(lastDriveCmd, cmd)) {
     Drive_Num = GO_STOP;
     lastDriveCmd = GO_STOP;
+    lastDriveCmdMs = now;
+    isCheckRequested = true;
+    return;
+  }
+
+  // 斜め走行中に構成要素のキーがもう一度来ても、すぐ直進や旋回へ戻さない
+  if (elapsed &lt;= DIAGONAL_WINDOW_MS &amp;&amp; is_DiagonalComponent(Drive_Num, cmd)) {
+    lastDriveCmd = cmd;
     lastDriveCmdMs = now;
     return;
   }
 
-  // 斜め入力は到着順に依存しない（物理同時押しの専用IRコードには非対応）
-  DriveState diagonal = withinWindow ? get_DiagonalDrive(lastDriveCmd, cmd) : DEF;
-  Drive_Num = (diagonal != DEF) ? diagonal : cmd;
+  // ↑←/←↑、↑→/→↑、↓←/←↓、↓→/→↓の順序を問わない
+  DriveState diagonal = (hasPrevious &amp;&amp; elapsed &lt;= DIAGONAL_WINDOW_MS)
+                          ? get_DiagonalDrive(lastDriveCmd, cmd) : DEF;
+  Drive_Num = diagonal != DEF ? diagonal : cmd;
   lastDriveCmd = cmd;
   lastDriveCmdMs = now;
   isCheckRequested = true;
