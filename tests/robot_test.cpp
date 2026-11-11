@@ -42,9 +42,16 @@ int main(){
  TEST("music allows direction",play_Music(1);input(IR_LEFT);assert(isMusicPlaying&&Drive_Num==GO_LEFT));
  TEST("music switches via new request",play_Music(1);handle_NumberButton(70);delay(300);do_Music_Tick();assert(currentNotePtr==SONG_2));
  TEST("OK cancels everything",play_Music(1);start_Avoid(GO_BACK);isDancing=true;pendingSongNum=2;input(IR_STOP);assert(!isAvoiding&&!isDancing&&!isMusicPlaying&&!isWarningPlaying&&pendingSongNum==0&&Drive_Num==GO_STOP&&pwm[9]==0&&pins[13]==HIGH));
+#ifdef FRONT_STOP_VARIANT
+ TEST("front obstacle stops instead of reversing",for(auto cmd:{IR_ADVANCE,IR_ADVANCE,IR_ADVANCE}){echoPulse=580;input(cmd);assert(!isAvoiding&&Drive_Num==GO_STOP&&lastDriveCmd==GO_STOP&&pwm[9]==0&&pwm[6]==0);});
+ TEST("both obstacles during forward stop",echoPulse=580;pins[0]=LOW;input(IR_ADVANCE);assert(!isAvoiding&&Drive_Num==GO_STOP&&pwm[9]==0&&pwm[6]==0));
+ TEST("front stop preserves music and manual reverse",play_Music(1);echoPulse=580;input(IR_ADVANCE);assert(isMusicPlaying&&isWarningPlaying);delay(1000);input(IR_BACK);assert(Drive_Num==GO_BACK&&pwm[9]==100));
+ TEST("front stop diagonal directions",for(auto dir:{GO_FORWARD_LEFT,GO_FORWARD_RIGHT}){clearState();Drive_Num=dir;isCheckRequested=true;echoPulse=580;checkSensorsAndObstacles();assert(Drive_Num==GO_STOP&&pwm[9]==0&&pwm[6]==0);});
+#else
  TEST("front obstacle overrides drive",echoPulse=580;input(IR_ADVANCE);assert(isAvoiding&&Drive_Num==GO_BACK));
- TEST("back obstacle overrides drive",pins[0]=LOW;input(IR_BACK);assert(isAvoiding&&Drive_Num==GO_ADVANCE));
  TEST("both obstacles rotate",echoPulse=580;pins[0]=LOW;input(IR_ADVANCE);assert(isAvoiding&&Drive_Num==GO_RIGHT));
+#endif
+ TEST("back obstacle overrides drive",pins[0]=LOW;input(IR_BACK);assert(isAvoiding&&Drive_Num==GO_ADVANCE));
  TEST("avoid 500ms",start_Avoid(GO_BACK);delay(500);update_Avoid();assert(!isAvoiding&&Drive_Num==GO_STOP&&pwm[9]==0));
  TEST("avoid detects blocked escape",start_Avoid(GO_BACK);pins[0]=LOW;update_Avoid();assert(!isAvoiding&&Drive_Num==GO_STOP));
  TEST("avoid preserves music",play_Music(1);start_Avoid(GO_BACK);assert(isMusicPlaying&&isWarningPlaying));

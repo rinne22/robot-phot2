@@ -3,6 +3,7 @@
 from pathlib import Path
 import re, json, html, csv, io, base64
 from function_excel import build_xlsx, form_html
+from stop_on_front import build_variant
 ROOT=Path(__file__).resolve().parents[1]
 esc=html.escape
 DESCRIPTIONS={
@@ -70,6 +71,7 @@ def detail(n,title,body):
  return f'<details><summary><span class="id">{n}</span><span>{title}</span></summary><div class="body dbody">{body}</div></details>'
 
 def main():
+ build_variant(ROOT)
  code=(ROOT/'robot_final.ino').read_text()
  page=(ROOT/'design-guide/index.html').read_text()
  funcs=[]
@@ -234,7 +236,7 @@ def main():
  page=re.sub(r'<b>\d+</b> 関数の設計',f'<b>{count}</b> 関数の設計',page)
  page=page.replace('<b>45</b> 関数の設計',f'<b>{count}</b> 関数の設計').replace('<b>24</b> 結合テスト項目','<b>50</b> PC模擬試験項目')
  page=page.replace('結合テストはPC上の疑似環境で実施。実機確認項目は開発設計に記載しています。','最新設定の検証結果は開発設計とREVIEW.mdを参照。実機試験は未実施です。')
- rev=f'<section class="overview" id="revision"><h2>最新設定統一版（2026年11月11日）</h2><p>通常PWM100、ダンスPWM180、斜め外側130／内側75、斜め入力は時間制限なし、逆方向入力300ms、8ステップ反復ダンスを基準に、要件・開発設計・全{count}関数・図25枚・掲載コード・ダウンロード・Excelを統一しました。</p><p><a href="robot_final.ino" download>Arduinoコードをダウンロード</a> ／ <a href="https://github.com/rinne22/robot-phot2/blob/main/REVIEW.md">検証記録</a></p><p>検証の対象版と結果はREVIEW.mdを参照。実機の音質・停止応答・停止距離は未確認です。</p></section>'
+ rev=f'<section class="overview" id="revision"><h2>最新設定統一版（2026年11月11日）</h2><p>通常PWM100、ダンスPWM180、斜め外側130／内側75、斜め入力は時間制限なし、逆方向入力300ms、8ステップ反復ダンスを基準に、要件・開発設計・全{count}関数・図25枚・掲載コード・ダウンロード・Excelを統一しました。</p><p><a href="robot_final.ino" download>通常版コードをダウンロード</a> ／ <a href="robot_front_stop.ino" download>前方障害物で後退せず停止する別版</a> ／ <a href="https://github.com/rinne22/robot-phot2/blob/main/REVIEW.md">検証記録</a></p><p>別版は前進・前左・前右で前方障害物を検知したら停止して警告します。手動の後退や他の機能は利用できます。設計書と掲載コードは通常版が対象です。</p><p>検証の対象版と結果はREVIEW.mdを参照。実機の音質・停止応答・停止距離は未確認です。</p></section>'
  page=re.sub(r'<section class="overview" id="revision">.*?</section>',lambda m:rev,page,count=1,flags=re.S)
  page=page.replace('Arduino Unoでの今回の改訂版のビルド・実機試験は未実施です。PWMや障害物検出の応答は実機で確認してください。旧版1.6の検証記録は今回の変更の確認結果ではありません。','最新設定のビルド結果はREVIEW.mdを参照。実機試験は未実施です。')
  page=re.sub(r'改訂1\.6はPC模擬試験\d+項目とUnoビルドを確認。実機試験は未実施です。','最新設定のPC模擬試験50項目とUnoビルドを確認。実機試験は未実施です。',page)
@@ -244,7 +246,7 @@ def main():
  overview='<section class="overview" id="overview" aria-labelledby="overview-title"><h2 id="overview-title">ロボットの主な動作</h2><p class="cap">かんたん斜め走行対応版／2026年11月11日更新。概要・要件定義・開発設計・関数設計・設計図を同じ操作仕様で統一しています。</p><div class="tiles"><article><h3>01　順に押して斜め走行</h3><p>矢印は1つずつ押して離します。上下と左右を順に押すだけで斜め走行。速押し・同時押しは不要で、入力間隔の時間制限もありません。</p></article><article><h3>02　障害物回避と停止</h3><p>前進・後退と斜め走行では前後センサーを確認し、障害物があれば回避を優先します。OKは走行・音楽・ダンス・回避をまとめて停止します。</p></article><article><h3>03　音楽とダンス</h3><p>1〜9で走行しながら曲を再生。0でその場旋回と停止の8ステップを繰り返します。ダンス中も前後を確認し、障害物で中止します。</p></article></div>'+table(['1つ目のボタン','2つ目のボタン','動作'],[['↑','←','前進しながら左へ'],['↑','→','前進しながら右へ'],['↓','←','後退しながら左へ'],['↓','→','後退しながら右へ']])+'<p>上下と左右は逆の順番でも同じです。斜め走行中に方向ボタンを押し直すと、その単独方向へ戻ります。例：↑、←で前左、↑をもう一度押すと直進。直前の単独入力と反対の方向が300ms以内に届くと停止します。</p><p>通常PWM100／ダンスPWM180／斜め外側130・内側75。新しい操作を使うには<a href="robot_final.ino" download>最新コード</a>をArduinoに書き込んでください。</p><p class="cap">PC模擬試験50項目・Unoビルド成功。実機試験は未実施です。</p><p><a href="https://osoyoo.com/2020/05/12/v2-1-robot-car-kit-for-arduino-tutorial-introduction/">OSOYOO公式組み立てガイド ↗</a></p></section>'
  page=re.sub(r'<section[^>]*id="overview".*?</section>',lambda m:overview,page,count=1,flags=re.S)
  for path in ['design-guide/index.html','index.html']:
-  out=page if path.startswith('design-guide/') else page.replace('href="functions.csv"','href="design-guide/functions.csv"')
+  out=page if path.startswith('design-guide/') else page.replace('href="functions.csv"','href="design-guide/functions.csv"').replace('href="robot_front_stop.ino"','href="design-guide/robot_front_stop.ino"')
   (ROOT/path).write_text(out)
  (ROOT/'design-guide/robot_final.ino').write_text(code)
  print(f'Synchronized {count} functions, {len(figs)} diagrams and {len(reqs)} requirements')
