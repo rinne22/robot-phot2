@@ -49,7 +49,7 @@ DESCRIPTIONS={
 'is_OppositeDrive':'上下・左右の逆向きの組合せを、順序を問わずtrueとする。斜め状態は引数に渡さず単独指示どうしを比較する。',
 'get_DiagonalDrive':'上下と左右の組合せを順序に関係なく前左・前右・後左・後右へ変換し、該当なしはDEFを返す。',
 'is_DiagonalComponent':'斜め走行に含まれる上下または左右の単独方向ならtrue、それ以外はfalseを返す。',
-'set_Drive':'直前の単独入力と300ms以内で逆向きなら停止。900ms以内の上下＋左右は斜めにし、斜めの構成キー再受信では走行状態を保持する。入力と時刻を記録しセンサー確認を要求する。',
+'set_Drive':'直前の単独入力と300ms以内で逆向きなら停止。現在の単独走行と上下＋左右の組合せなら時間制限なく斜めにする。斜めの構成キーを押し直すと単独方向へ戻る。入力と時刻を記録しセンサー確認を要求する。',
 'read_IR_Command':'IR受信がなければNO_COMMAND。受信時はコードとリピートフラグを取得しresumeする。リピートはNO_COMMAND、それ以外はcommandを返す。',
 'handle_StopButton':'回避・ダンスを解除し、stop_Musicで曲と警告を消音する。現在と直前の走行状態をGO_STOPにする。モーターは同じ周回の出力で止める。',
 'handle_DriveButton':'24/82/8/90を前進/後退/左/右の単独指示に変換しset_Driveへ渡す。他のコードは何もしない。',
@@ -93,8 +93,8 @@ def main():
  page=re.sub(r'var reqs = \[.*?\n\];', 'var reqs = '+json.dumps(reqs,ensure_ascii=False,indent=2)+';',page,count=1,flags=re.S)
  # Current validation is deliberately separate from unverified historical claims.
  results=table(['確認','環境・結果'],[
- ['PC模擬試験','実コード全体をArduino/IR模擬環境でコンパイル。47項目成功。最新コードの試験はREVIEW.mdに記録。複数入力の境界、音楽との並行処理、回避、ダンス、警告波形を含む。'],
- ['Unoビルド','Arduino AVR Boards 1.8.8 / IRremote 4.4.1 / arduino:avr:uno で最新コードのビルド成功。Flash 11,728 / 32,256 bytes、SRAM 641 / 2,048 bytes。Arduinoコア由来の未使用引数警告あり。'],
+ ['PC模擬試験','実コード全体をArduino/IR模擬環境でコンパイル。50項目成功。最新コードの試験はREVIEW.mdに記録。複数入力の境界、音楽との並行処理、回避、ダンス、警告波形を含む。'],
+ ['Unoビルド','Arduino AVR Boards 1.8.8 / IRremote 4.4.1 / arduino:avr:uno で最新コードのビルド成功。Flash 11,606 / 32,256 bytes、SRAM 641 / 2,048 bytes。Arduinoコア由来の未使用引数警告あり。'],
  ['Web確認','図25枚の描画、関数検索、6つの移動先、コードとダウンロードの一致を自動チェックする。実施結果はREVIEW.mdに記録。'],
  ['実機試験','未実施。モーターの向き、音質、センサー感度、OKの応答、停止距離、タイマー動作を実機で確認する。'],
  ['旧版の85件/24件','対応する試験コードがリポジトリになく、最新版の成功証拠として使わない。改訂1.6は同梱の再現可能な試験を検証記録とする。']])
@@ -103,7 +103,7 @@ def main():
  design+=detail(2,'命名と関数規模',f'<p>定数は大文字、単語間は_。変数はlowerCamelCase。関数は動詞_対象、boolはisを原則とする。Arduino標準のsetup/loop、既存のDrive_Num・IS_IR・watch・warningとdance_Action/dance_Durationは例外として列挙する。既存のAdvance/Forwardは今回の動作修正では改名しない。</p><p>全{count}関数、スケッチ{len(code.splitlines())}行。最大は{max(funcs,key=lambda f:f["lines"])["name"]}の{max(f["lines"] for f in funcs)}行。行数は先頭行から閉じ括弧まで。関数別の形式と行数は下の関数設計書に掲載する。</p>')
  design+=detail(3,'ハードウェア構成',table(['部品','ピン','備考'],[['IR受信','D4','IRremote 4.x、D13受信LED無効'],['右モーター','PWM D9／方向D12・D11','PWM0〜255'],['左モーター','PWM D6／方向D7・D8','PWM0〜255'],['ブザー','D13','パッシブ。矩形波で音楽/警告、無音はHIGH。駆動回路に合う配線を確認'],['前方超音波','Trig D10／Echo D3','最大25ms/測定'],['後方赤外線','左D0／右D2','LOWで検知。書き込み時はD0配線を外す。Serialと共用しない']]))
  design+=detail(4,'状態と処理の順番','<p>loop() → do_IR_Tick → do_Dance_Tick → checkSensorsAndObstacles → do_Drive_Tick → do_Music_Tick → 100/20μs待機。checkSensorsAndObstacles内で、回避中はupdate_Avoidだけを実行し、ダンス中は通常の判定を省く。</p>'+table(['状態','用途'],[['Drive_Num / lastDriveCmd / lastDriveCmdMs','現在の走行・直前の単独入力・入力時刻'],['isAvoiding / avoidStartMs','回避状態と駆動開始直後の時刻'],['front / back / isCheckRequested / lastCheckMs','通常走行の障害物と測定要求/時刻'],['isDancing / danceStep / danceStepStartMs / lastDanceCheckMs','8ステップを繰り返すダンスと測定時刻'],['pendingSongNum / pendingSongMs','曲予約と300ms窓の開始'],['isMusicPlaying / currentNotePtr / noteStartMs / noteDurationMs','非ブロッキング音楽再生'],['isWarningPlaying / warningStartMs / isWarningIssued / lastWarnMs','警告再生と再開始制限']])+ '<p>基本は入力が状態を更新し出力が駆動する。ただしOKのstop_Musicは即消音、start_Avoidは回避駆動と警告開始、end_Avoid/stop_Danceは直接停止する。これらを明示的な例外とする。</p>')
- design+=detail(5,'境界条件と優先順位','<p>OK停止が最優先。次に障害物判断、その後にユーザー走行。音楽は走行と独立し、音の出力は警告が優先する。回避中はOKのみ、ダンス中はOKと0のみを受け付ける。</p>'+table(['条件','動作'],[['逆方向入力の間隔 ≤ 300ms','直前の単独入力と逆方向なら停止'],['上下＋左右の間隔 ≤ 900ms','順番を問わず斜め走行。斜めの構成キー再受信では状態を保持し、900ms窓を更新'],['方向入力の間隔 > 900ms','新しい単独方向へ変更'],['曲予約から < 300ms','別番号で取消、同番号は最初の時刻を維持'],['曲予約から ≥ 300ms後の数字入力','新規予約で置換し、新たに300ms待つ'],['通常の曲開始','予約から300ms以上、かつ警告中でない周期で開始/切替'],['回避開始から ≥ 500ms','停止。センサー測定後も時間を再確認。処理遅延による超過あり'],['警告','2kHz音50ms/無音50msを2回。開始から200ms以上で終了。前回開始から1000ms以上あける'],['ダンス','その場旋回・停止のみの8ステップを繰り返す。1周5750msが設定値。通常PWM100、ダンスPWM180、斜め外側130／内側75。実測は処理遅延分延びる']]))
+ design+=detail(5,'境界条件と優先順位','<p>OK停止が最優先。次に障害物判断、その後にユーザー走行。音楽は走行と独立し、音の出力は警告が優先する。回避中はOKのみ、ダンス中はOKと0のみを受け付ける。</p>'+table(['条件','動作'],[['逆方向入力の間隔 ≤ 300ms','直前の単独入力と逆方向なら停止'],['上下＋左右を順に押す','時間制限なし、順番を問わず斜め走行。例：↑、その後←'],['斜め走行中に方向ボタン','構成キーの再入力でその単独方向に戻る。その他の方向も単独指示とする'],['曲予約から < 300ms','別番号で取消、同番号は最初の時刻を維持'],['曲予約から ≥ 300ms後の数字入力','新規予約で置換し、新たに300ms待つ'],['通常の曲開始','予約から300ms以上、かつ警告中でない周期で開始/切替'],['回避開始から ≥ 500ms','停止。センサー測定後も時間を再確認。処理遅延による超過あり'],['警告','2kHz音50ms/無音50msを2回。開始から200ms以上で終了。前回開始から1000ms以上あける'],['ダンス','その場旋回・停止のみの8ステップを繰り返す。1周5750msが設定値。通常PWM100、ダンスPWM180、斜め外側130／内側75。実測は処理遅延分延びる']]))
  design+=detail(6,'検証記録（最新設定）',results+'<p><a href="https://github.com/rinne22/robot-phot2/blob/main/REVIEW.md">レビュー結果と再現手順</a></p><pre class="cmd">python3 tests/run_tests.py\npython3 tests/check_guide.py</pre>')
  design+=detail(7,'限界と実機で確認すること','<ul><li>超音波タイムアウトは999cm扱い。センサー故障と障害物なしを区別しない。</li><li>通常のその場旋回中は障害物判定をしない。側方センサーもなく、旋回の安全を保証しない。</li><li>センサー測定や30ms/20ms待機はIR応答と音の波形更新を遅らせる。停止出力300ms以内は目標であり実測値ではない。</li><li>停止は空転停止。車輪の静止時間・停止距離・20cm閾値の妥当性は未測定。</li><li>D13は起動時にブートローダーが駆動する場合がある。音程・音量・波形品質とI/O駆動能力を実機で確認する。</li></ul>')
  design+='</section>'
@@ -184,6 +184,18 @@ def main():
   if n==20:
    cap='300ms未満の予約だけを競合判定に使います。期限以降の数字は新規予約です。'
    src=src.replace('依頼中の曲と別の数字?','300ms未満の予約で別の数字?').replace('同じ数字を依頼中?','300ms未満の予約で同じ数字?')
+  if n==11:
+   cap='速押し不要。現在の単独走行と直交する方向で斜め走行、斜めからは方向ボタンで単独方向へ戻る。300ms以内の逆方向は停止。'
+   src='''flowchart TD
+ S([set_Drive]) --> A{直前入力と300ms以内で逆方向?}
+ A -->|はい| STOP[GO_STOPに更新] --> Z([終了])
+ A -->|いいえ| B[現在の走行と新入力を組み合わせる]
+ B --> C{上下と左右の組合せ?}
+ C -->|はい| D[斜め走行にする]
+ C -->|いいえ| E[新しい単独方向にする]
+ D --> F[入力と時刻を更新・センサー確認要求]
+ E --> F
+ F --> Z'''
   if n==25:cap='その場旋回と停止の8ステップを繰り返します。1周の設定時間は5750ms。開始直後は最初の出力前に前後を確認し、障害物またはOKで停止、0で先頭から再開します。'
   fig_html+=heading+'<p class="cap">'+cap+'</p><div class="diagram"><pre class="mermaid">'+esc(src)+'</pre></div>'
  fig_html+='</section>\n'
@@ -193,14 +205,16 @@ def main():
  page=page.replace('</head>', '<style id="function-form-style">.function-form{min-width:640px;table-layout:fixed}.function-form th{background:#ddd;color:#18262b;vertical-align:middle;text-align:center}.function-form td{white-space:pre-wrap;overflow-wrap:anywhere}.function-form td,.function-form th{border:1px solid #8a949a;padding:10px}.function-form tr:first-child td{font-weight:700}</style>'+'</head>')
  page=page.replace('使用言語：C言語（Arduino言語）','使用言語：C++（Arduinoスケッチ）')
  page=page.replace('IRremote</code>（4.x系）','IRremote</code>（検証版4.4.1／4.x系）')
- page=re.sub(r'<b>\d+</b> PC模擬試験項目','<b>47</b> PC模擬試験項目',page)
+ page=re.sub(r'<b>\d+</b> PC模擬試験項目','<b>50</b> PC模擬試験項目',page)
  page=re.sub(r'<b>\d+</b> 関数の設計',f'<b>{count}</b> 関数の設計',page)
- page=page.replace('<b>45</b> 関数の設計',f'<b>{count}</b> 関数の設計').replace('<b>24</b> 結合テスト項目','<b>47</b> PC模擬試験項目')
+ page=page.replace('<b>45</b> 関数の設計',f'<b>{count}</b> 関数の設計').replace('<b>24</b> 結合テスト項目','<b>50</b> PC模擬試験項目')
  page=page.replace('結合テストはPC上の疑似環境で実施。実機確認項目は開発設計に記載しています。','最新設定の検証結果は開発設計とREVIEW.mdを参照。実機試験は未実施です。')
- rev=f'<section class="overview" id="revision"><h2>最新設定統一版（2026年11月11日）</h2><p>通常PWM100、ダンスPWM180、斜め外側130／内側75、斜め入力900ms、逆方向入力300ms、8ステップ反復ダンスを基準に、要件・開発設計・全{count}関数・図25枚・掲載コード・ダウンロード・Excelを統一しました。</p><p><a href="robot_final.ino" download>Arduinoコードをダウンロード</a> ／ <a href="https://github.com/rinne22/robot-phot2/blob/main/REVIEW.md">検証記録</a></p><p>検証の対象版と結果はREVIEW.mdを参照。実機の音質・停止応答・停止距離は未確認です。</p></section>'
+ rev=f'<section class="overview" id="revision"><h2>最新設定統一版（2026年11月11日）</h2><p>通常PWM100、ダンスPWM180、斜め外側130／内側75、斜め入力は時間制限なし、逆方向入力300ms、8ステップ反復ダンスを基準に、要件・開発設計・全{count}関数・図25枚・掲載コード・ダウンロード・Excelを統一しました。</p><p><a href="robot_final.ino" download>Arduinoコードをダウンロード</a> ／ <a href="https://github.com/rinne22/robot-phot2/blob/main/REVIEW.md">検証記録</a></p><p>検証の対象版と結果はREVIEW.mdを参照。実機の音質・停止応答・停止距離は未確認です。</p></section>'
  page=re.sub(r'<section class="overview" id="revision">.*?</section>',lambda m:rev,page,count=1,flags=re.S)
  page=page.replace('Arduino Unoでの今回の改訂版のビルド・実機試験は未実施です。PWMや障害物検出の応答は実機で確認してください。旧版1.6の検証記録は今回の変更の確認結果ではありません。','最新設定のビルド結果はREVIEW.mdを参照。実機試験は未実施です。')
- page=re.sub(r'改訂1\.6はPC模擬試験\d+項目とUnoビルドを確認。実機試験は未実施です。','最新設定のPC模擬試験47項目とUnoビルドを確認。実機試験は未実施です。',page)
+ page=re.sub(r'改訂1\.6はPC模擬試験\d+項目とUnoビルドを確認。実機試験は未実施です。','最新設定のPC模擬試験50項目とUnoビルドを確認。実機試験は未実施です。',page)
+ page=re.sub(r'<section[^>]*id="dance-speed-update".*?</section>', '<section class="overview" id="dance-speed-update"><h2>かんたん斜め走行</h2><p>ボタンは1つずつ押して離してください。速押し・同時押しは不要です。</p><ul><li>「↑」の後に「←」：前進しながら左へ（逆の順番でも可）</li><li>「↑」の後に「→」：前進しながら右へ（逆の順番でも可）</li><li>「↓」の後に「←」：後退しながら左へ（逆の順番でも可）</li><li>「↓」の後に「→」：後退しながら右へ（逆の順番でも可）</li></ul><p>斜め走行中に構成する方向をもう一度押すとその単独方向へ戻り、OKで停止します。上下・左右の反対入力が300ms以内なら停止します。通常PWM100、ダンスPWM180、斜め外側130／内側75。</p><p>実機に新しいスケッチを書き込んでから操作してください。旧スケッチでは操作は変わりません。</p></section>',page,count=1,flags=re.S)
+ page=page.replace('最新設定のPC模擬試験47項目','最新設定のPC模擬試験50項目')
  for path in ['design-guide/index.html','index.html']:
   out=page if path.startswith('design-guide/') else page.replace('href="functions.csv"','href="design-guide/functions.csv"')
   (ROOT/path).write_text(out)

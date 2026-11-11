@@ -32,7 +32,6 @@
 #define DANCE_SPEED      180  // ダンス中のその場旋回PWM（通常走行とは独立）
 #define DIAGONAL_OUTER_SPEED 130 // 斜め走行の外側車輪PWM
 #define DIAGONAL_INNER_SPEED  75 // 斜め走行の内側車輪PWM
-#define DIAGONAL_WINDOW_MS 900   // 上下＋左右の2信号を組み合わせる最大間隔
 #define CHECK_INTERVAL_MS   100  // センサー確認の間隔（ms）
 #define CONFLICT_MS      300  // 逆向きのコードを矛盾とみなす時間（ms）
 #define AVOID_MS         500  // 回避動作を続ける時間（ms）
@@ -525,7 +524,7 @@ bool is_OppositeDrive(DriveState a, DriveState b) {
          (a == GO_LEFT && b == GO_RIGHT)   || (a == GO_RIGHT && b == GO_LEFT);
 }
 
-// 一方向（↑↓）と左右（←→）が短時間で続いた場合に斜め走行へ変更
+// 一方向（↑↓）と左右（←→）を順に押すと斜め走行へ変更
 DriveState get_DiagonalDrive(DriveState a, DriveState b) {
   if ((a == GO_ADVANCE && b == GO_LEFT) || (a == GO_LEFT && b == GO_ADVANCE))
     return GO_FORWARD_LEFT;
@@ -563,18 +562,11 @@ void set_Drive(DriveState cmd) {
     return;
   }
 
-  // 斜め走行中に構成要素のキーがもう一度来ても、すぐ直進や旋回へ戻さない
-  if (elapsed <= DIAGONAL_WINDOW_MS && is_DiagonalComponent(Drive_Num, cmd)) {
-    lastDriveCmd = cmd;
-    lastDriveCmdMs = now;
-    isCheckRequested = true;
-    return;
-  }
-
-  // ↑←/←↑、↑→/→↑、↓←/←↓、↓→/→↓の順序を問わない
-  DriveState diagonal = (hasPrevious && elapsed <= DIAGONAL_WINDOW_MS)
-                          ? get_DiagonalDrive(lastDriveCmd, cmd) : DEF;
-  Drive_Num = diagonal != DEF ? diagonal : cmd;
+  // 速押し不要。現在の単独走行と直交する方向を押すと斜めになる。
+  // 斜め走行中に構成キーを押し直すと、その単独方向へ戻る。
+  DriveState diagonal = get_DiagonalDrive(Drive_Num, cmd);
+  Drive_Num = is_DiagonalComponent(Drive_Num, cmd) || diagonal == DEF
+                ? cmd : diagonal;
   lastDriveCmd = cmd;
   lastDriveCmdMs = now;
   isCheckRequested = true;

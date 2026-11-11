@@ -45,7 +45,7 @@ IO={
 'start_Dance':('isAvoiding、millis()','ダンス状態・ステップ・開始時刻・測定要求、曲予約解除、Drive_Num'),
 'do_Dance_Tick':('ダンス状態・ステップ・時刻、前後センサー、millis()','ステップ/時刻/Drive_Num更新。8ステップ後は先頭へ戻る。障害物時はダンス解除とモーター停止'),
 'is_DiagonalComponent':('—','—'), 'is_OppositeDrive':('—','—'), 'get_DiagonalDrive':('—','—'),
-'set_Drive':('Drive_Num、lastDriveCmd、lastDriveCmdMs、CONFLICT_MS、DIAGONAL_WINDOW_MS、millis()','Drive_Num、直前指示と時刻、通常入力時isCheckRequested=true'),
+'set_Drive':('Drive_Num、lastDriveCmd、lastDriveCmdMs、CONFLICT_MS、millis()','Drive_Num、直前指示と時刻、通常入力時isCheckRequested=true'),
 'read_IR_Command':('IR受信データ・リピートフラグ','resume()で次の受信を許可'),
 'handle_StopButton':('—','回避・ダンス・音楽・警告・曲予約解除、D13=HIGH、Drive_NumとlastDriveCmd=GO_STOP'),
 'handle_DriveButton':('millis()、直前の走行指示と時刻','set_Drive経由で走行指示・時刻・確認要求を更新'),
