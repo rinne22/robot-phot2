@@ -27,7 +27,7 @@ try:
   page.locator('#fn-setup').evaluate('(e) => e.open = true')
   assert page.locator('#fn-setup .function-form').count()==1
   assert page.locator('#fn-setup .function-form').inner_text().count('機能概要')==1
-  with page.expect_download() as info: page.locator('.fn-download').click()
+  with page.expect_download() as info: page.locator('.fn-download[download="関数設計書.xlsx"]').click()
   download=info.value
   assert download.suggested_filename=='関数設計書.xlsx'
   book=openpyxl.load_workbook(io.BytesIO(Path(download.path()).read_bytes()))
@@ -38,6 +38,9 @@ try:
    page.locator(f'nav a[href="#{anchor}"]').click();assert page.locator('#'+anchor).count()==1
   page.locator('#openAll').click();assert page.locator('details:not([open])').count()==0
   page.locator('#closeAll').click();assert page.locator('details[open]').count()==0
+  with page.expect_download() as front_info: page.locator('#front-stop-code-download').click()
+  assert Path(front_info.value.path()).read_text()==(root/'design-guide/robot_front_stop.ino').read_text()
+  assert page.locator('#front-stop-code-text').text_content()==(root/'design-guide/robot_front_stop.ino').read_text()
   response=page.request.get(url+'robot_final.ino');assert response.text()==(root/'robot_final.ino').read_text()
   page.locator('#memo-text').fill('レビュー確認用メモ');page.locator('#memo-save').click();page.reload(wait_until='networkidle')
   assert page.locator('#memo-text').input_value()=='レビュー確認用メモ'

@@ -372,7 +372,7 @@ pre{max-width:100%;overflow:auto}
   });
 })();
 </script>
-<section class="overview" id="revision"><h2>最新設定統一版（2026年11月11日）</h2><p>通常PWM100、ダンスPWM180、斜め外側130／内側75、斜め入力は時間制限なし、逆方向入力300ms、8ステップ反復ダンスを基準に、要件・開発設計・全57関数・図25枚・掲載コード・ダウンロード・Excelを統一しました。</p><p><a href="robot_final.ino" download>通常版コードをダウンロード</a> ／ <a href="robot_front_stop.ino" download>前方障害物で後退せず停止する別版</a> ／ <a href="https://github.com/rinne22/robot-phot2/blob/main/REVIEW.md">検証記録</a></p><p>別版は前進・前左・前右で前方障害物を検知したら停止して警告します。手動の後退や他の機能は利用できます。設計書と掲載コードは通常版が対象です。</p><p>検証の対象版と結果はREVIEW.mdを参照。実機の音質・停止応答・停止距離は未確認です。</p></section><section class="overview" id="dance-speed-update"><h2>かんたん斜め走行</h2><p>ボタンは1つずつ押して離してください。速押し・同時押しは不要です。</p><ul><li>「↑」の後に「←」：前進しながら左へ（逆の順番でも可）</li><li>「↑」の後に「→」：前進しながら右へ（逆の順番でも可）</li><li>「↓」の後に「←」：後退しながら左へ（逆の順番でも可）</li><li>「↓」の後に「→」：後退しながら右へ（逆の順番でも可）</li></ul><p>斜め走行中に構成する方向をもう一度押すとその単独方向へ戻り、OKで停止します。上下・左右の反対入力が300ms以内なら停止します。通常PWM100、ダンスPWM180、斜め外側130／内側75。</p><p>実機に新しいスケッチを書き込んでから操作してください。旧スケッチでは操作は変わりません。</p></section><section class="overview" id="overview" aria-labelledby="overview-title"><h2 id="overview-title">ロボットの主な動作</h2><p class="cap">かんたん斜め走行対応版／2026年11月11日更新。概要・要件定義・開発設計・関数設計・設計図を同じ操作仕様で統一しています。</p><div class="tiles"><article><h3>01　順に押して斜め走行</h3><p>矢印は1つずつ押して離します。上下と左右を順に押すだけで斜め走行。速押し・同時押しは不要で、入力間隔の時間制限もありません。</p></article><article><h3>02　障害物回避と停止</h3><p>前進・後退と斜め走行では前後センサーを確認し、障害物があれば回避を優先します。OKは走行・音楽・ダンス・回避をまとめて停止します。</p></article><article><h3>03　音楽とダンス</h3><p>1〜9で走行しながら曲を再生。0でその場旋回と停止の8ステップを繰り返します。ダンス中も前後を確認し、障害物で中止します。</p></article></div><div class="tw"><table><thead><tr><th scope="col">1つ目のボタン</th><th scope="col">2つ目のボタン</th><th scope="col">動作</th></tr></thead><tbody><tr><td>↑</td><td>←</td><td>前進しながら左へ</td></tr><tr><td>↑</td><td>→</td><td>前進しながら右へ</td></tr><tr><td>↓</td><td>←</td><td>後退しながら左へ</td></tr><tr><td>↓</td><td>→</td><td>後退しながら右へ</td></tr></tbody></table></div><p>上下と左右は逆の順番でも同じです。斜め走行中に方向ボタンを押し直すと、その単独方向へ戻ります。例：↑、←で前左、↑をもう一度押すと直進。直前の単独入力と反対の方向が300ms以内に届くと停止します。</p><p>通常PWM100／ダンスPWM180／斜め外側130・内側75。新しい操作を使うには<a href="robot_final.ino" download>最新コード</a>をArduinoに書き込んでください。</p><p class="cap">PC模擬試験50項目・Unoビルド成功。実機試験は未実施です。</p><p><a href="https://osoyoo.com/2020/05/12/v2-1-robot-car-kit-for-arduino-tutorial-introduction/">OSOYOO公式組み立てガイド ↗</a></p></section>
+<section class="overview" id="revision"><h2>最新設定統一版（2026年11月11日）</h2><p>通常PWM100、ダンスPWM180、斜め外側130／内側75、斜め入力は時間制限なし、逆方向入力300ms、8ステップ反復ダンスを基準に、要件・開発設計・全57関数・図25枚・掲載コード・ダウンロード・Excelを統一しました。</p><p><a href="robot_final.ino" download>通常版コードをダウンロード</a> ／ <a href="robot_front_stop.ino" download>前方障害物で後退せず停止する別版</a> ／ <a href="https://github.com/rinne22/robot-phot2/blob/main/REVIEW.md">検証記録</a></p><p>別版は前進・前左・前右で前方障害物を検知したら停止して警告します。手動の後退や他の機能は利用できます。設計書と掲載コードは通常版が対象です。</p><p>検証の対象版と結果はREVIEW.mdを参照。実機の音質・停止応答・停止距離は未確認です。</p></section><section class="overview" id="dance-speed-update"><h2>かんたん斜め走行</h2><p>ボタンは1つずつ押して離してください。速押し・同時押しは不要です。</p><ul><li>「↑」の後に「←」：前進しながら左へ（逆の順番でも可）</li><li>「↑」の後に「→」：前進しながら右へ（逆の順番でも可）</li><li>「↓」の後に「←」：後退しながら左へ（逆の順番でも可）</li><li>「↓」の後に「→」：後退しながら右へ（逆の順番でも可）</li></ul><p>斜め走行中に構成する方向をもう一度押すとその単独方向へ戻り、OKで停止します。上下・左右の反対入力が300ms以内なら停止します。通常PWM100、ダンスPWM180、斜め外側130／内側75。</p><p>実機に新しいスケッチを書き込んでから操作してください。旧スケッチでは操作は変わりません。</p></section><section class="overview" id="overview" aria-labelledby="overview-title"><h2 id="overview-title">ロボットの主な動作</h2><p class="cap">かんたん斜め走行対応版／2026年11月11日更新。概要・要件定義・開発設計・関数設計・設計図を同じ操作仕様で統一しています。</p><div class="tiles"><article><h3>01　順に押して斜め走行</h3><p>矢印は1つずつ押して離します。上下と左右を順に押すだけで斜め走行。速押し・同時押しは不要で、入力間隔の時間制限もありません。</p></article><article><h3>02　障害物回避と停止</h3><p>前進・後退と斜め走行では前後センサーを確認し、障害物があれば回避を優先します。OKは走行・音楽・ダンス・回避をまとめて停止します。</p></article><article><h3>03　音楽とダンス</h3><p>1〜9で走行しながら曲を再生。0でその場旋回と停止の8ステップを繰り返します。ダンス中も前後を確認し、障害物で中止します。</p></article></div><div class="tw"><table><thead><tr><th scope="col">1つ目のボタン</th><th scope="col">2つ目のボタン</th><th scope="col">動作</th></tr></thead><tbody><tr><td>↑</td><td>←</td><td>前進しながら左へ</td></tr><tr><td>↑</td><td>→</td><td>前進しながら右へ</td></tr><tr><td>↓</td><td>←</td><td>後退しながら左へ</td></tr><tr><td>↓</td><td>→</td><td>後退しながら右へ</td></tr></tbody></table></div><p>上下と左右は逆の順番でも同じです。斜め走行中に方向ボタンを押し直すと、その単独方向へ戻ります。例：↑、←で前左、↑をもう一度押すと直進。直前の単独入力と反対の方向が300ms以内に届くと停止します。</p><p>通常PWM100／ダンスPWM180／斜め外側130・内側75。新しい操作を使うには<a href="robot_final.ino" download>最新コード</a>をArduinoに書き込んでください。</p><p class="cap">PC模擬試験50項目・Unoビルド成功。実機試験は未実施です。</p><p><a href="https://osoyoo.com/2020/05/12/v2-1-robot-car-kit-for-arduino-tutorial-introduction/">OSOYOO公式組み立てガイド ↗</a></p><div id="front-stop-download"><h3>追加コード：障害物を検知しても自動後退しない版</h3><p>前進・前左・前右で前方の障害物を検知すると、その場で停止して警告します。手動の後退、斜め走行、音楽、ダンスは使えます。</p><p><a class="fn-download" href="robot_front_stop.ino" download="robot_front_stop.ino">自動後退しない版をダウンロード</a>　<a href="#code">2つのコードを比較・表示</a></p></div></section>
   <section class="top" id="requirements"><h2>要件定義</h2><p class="cap">かんたん斜め走行対応版／2026年11月11日更新。操作例は要求1-13、確認項目は要求7-1に掲載しています。</p><h3>要求1　リモコンで走行を制御する</h3><p><span class="tag">内容</span>矢印を1つずつ順に押して、前進・後退・旋回・斜め走行を指示する。上下と左右の組合せに時間制限は設けず、OKを最優先の停止とする。</p><p><span class="tag">理由</span>速押しや同時押しに頼らず、リモコンから目的の走行を選べるようにするため。</p></section>
 
   <div class="tools">
@@ -762,7 +762,688 @@ end</pre></div><h4>図17　関数 is_FrontBlocked と is_BackBlocked</h4><p clas
     <p>使用言語：C++（Arduinoスケッチ）</p>
   </section>
 
-  <section class="code-sec" id="code">
+  <section class="code-sec" id="code"><div id="code-options"><h2>Arduinoコードを選ぶ</h2><p>使いたい版を1つ選び、Arduinoに書き込んでください。</p><div class="tw"><table><thead><tr><th scope="col">コード</th><th scope="col">前進中に前方障害物を検知したとき</th><th scope="col">ダウンロード</th></tr></thead><tbody><tr><td>通常版</td><td>前方のみなら自動後退して回避</td><td><a href="robot_final.ino" download>通常版をダウンロード</a></td></tr><tr><td>自動後退しない版</td><td>前後同時検知も含めて停止し警告</td><td><a id="front-stop-code-download" class="fn-download" href="robot_front_stop.ino" download="robot_front_stop.ino">自動後退しない版をダウンロード</a></td></tr></tbody></table></div><p>別版はファイルを robot_front_stop フォルダ内に robot_front_stop.ino として保存してください。通常版と別版を同じスケッチに入れず、選んだ版だけを書き込みます。模擬試験52項目・Unoビルド成功、実機試験は未実施です。</p><details id="front-stop-code"><summary><span class="id">追加コード</span><span>自動後退しない版の全文（robot_front_stop.ino）</span></summary><div class="body" style="padding-left:16px"><pre><code id="front-stop-code-text">// 前方障害物で自動後退しない別版（2026-11-11）
+// 前進・前左・前右で前方を検知したら停止し警告。再発進は次のリモコン入力。
+// 手動の後退、後方障害物時の従来回避、斜め走行、音楽、ダンスは利用できます。
+// Arduino IDEでは robot_front_stop フォルダの robot_front_stop.ino として保存してください。
+// リモコン操作ロボット（走行・音楽・超音波センサー・後方赤外線センサー・ブザー）
+// 処理の流れ： 入力(do_IR_Tick) → 判断(checkSensorsAndObstacles) → 出力(do_Drive_Tick)
+// Arduino Uno / IRremote 4.x / 最新設定統一版 (2026-11-11)
+//
+// 【配線の注意】
+//  ・D0（左後方センサー）をつないだままだとUSB書き込みに失敗することがあります。
+//    書き込み中だけ配線を外してください。（そのためSerialは使っていません）
+//  ・サーボ(D5)は使っていません。Servoをattachすると D9/D10 のPWMが使えなくなります。
+
+#include &lt;IRremote.hpp&gt;
+#include &lt;avr/pgmspace.h&gt;
+
+// ---------- ピン定義 ----------
+#define IR_RECEIVE_PIN   4    // リモコン受信機
+
+#define SPEED_PIN_R        9    // 右モーター PWM
+#define RIGHT_DIR_PIN1  12   // 右モーター 方向1
+#define RIGHT_DIR_PIN2  11   // 右モーター 方向2
+#define SPEED_PIN_L        6    // 左モーター PWM
+#define LEFT_DIR_PIN1   7    // 左モーター 方向1
+#define LEFT_DIR_PIN2   8    // 左モーター 方向2
+
+#define BUZZ_PIN         13   // ブザー（LOWで鳴動、HIGHで停止）
+#define BACK_IR_L_PIN      0    // 左後方 赤外線センサー（障害物でLOW）
+#define BACK_IR_R_PIN      2    // 右後方 赤外線センサー（障害物でLOW）
+#define ECHO_PIN         3    // 超音波 Echo
+#define TRIG_PIN         10   // 超音波 Trig
+
+// ---------- 設定値 ----------
+#define DISTANCE_LIMIT    20   // 前方の障害物とみなす距離（cm）
+#define SPEED            100  // 通常走行の基本PWM（0〜255）
+#define DANCE_SPEED      180  // ダンス中のその場旋回PWM（通常走行とは独立）
+#define DIAGONAL_OUTER_SPEED 130 // 斜め走行の外側車輪PWM
+#define DIAGONAL_INNER_SPEED  75 // 斜め走行の内側車輪PWM
+#define CHECK_INTERVAL_MS   100  // センサー確認の間隔（ms）
+#define CONFLICT_MS      300  // 逆向きのコードを矛盾とみなす時間（ms）
+#define AVOID_MS         500  // 回避動作を続ける時間（ms）
+#define WARN_TONE_HZ     2000 // パッシブブザーの警告周波数（Hz）
+#define WARN_PHASE_MS    50   // 警告の各フェーズ（ms）
+#define WARN_INTERVAL_MS    1000 // 警告音の最短間隔（ms）
+#define TEMPO_MS         150  // 8分音符1つの長さ（ms）
+#define SONG_COUNT       9    // 曲の数（ボタン1〜9）
+#define NO_COMMAND      -1    // 受信なし
+
+// ---------- リモコンのボタンコード ----------
+#define IR_ADVANCE 24   // ↑
+#define IR_BACK    82   // ↓
+#define IR_RIGHT   90   // →
+#define IR_LEFT    8    // ←
+#define IR_STOP    28   // OK
+#define IR_DANCE   25   // 0ボタン (0x19) - ダンス開始
+const uint8_t NUM_CODES[SONG_COUNT] = { 69, 70, 71, 68, 64, 67, 7, 21, 9 };  // ボタン1〜9
+
+// ---------- 状態 ----------
+int front = 0;                   // 前方に障害物 1=あり
+int back  = 0;                   // 後方に障害物 1=あり
+
+enum DriveState { GO_ADVANCE, GO_LEFT, GO_RIGHT, GO_BACK, GO_STOP, DEF,
+                  GO_FORWARD_LEFT, GO_FORWARD_RIGHT, GO_BACK_LEFT, GO_BACK_RIGHT };  // DEF は「動作なし」
+DriveState Drive_Num = GO_STOP;          // 現在の動作状態（初期値は停止）
+DriveState lastDriveCmd = GO_STOP;            // 直前に受け付けた走行コマンド
+unsigned long lastDriveCmdMs = 0;
+bool IS_IR = true;               // ループ遅延の切替
+
+bool isAvoiding = false;           // 回避動作中か
+unsigned long avoidStartMs = 0;
+unsigned long lastCheckMs = 0;       // 最後に障害物を調べた時刻
+int pendingSongNum = 0;             // 再生を依頼された曲番号（0=依頼なし）
+unsigned long pendingSongMs = 0;     // 曲を依頼された時刻
+bool isCheckRequested = false;         // 新しい指示の直後はすぐ判断する
+
+// 0ボタンで開始するダンス（delayで待たずに進める）
+bool isDancing = false;
+uint8_t danceStep = 0;
+unsigned long danceStepStartMs = 0;
+unsigned long lastDanceCheckMs = 0;
+const uint8_t DANCE_STEPS = 8;
+
+// 音楽と警告音は delay で待たず、loop から定期的に更新する
+bool isMusicPlaying = false;
+const int16_t* currentNotePtr = nullptr;
+unsigned long noteStartMs = 0;
+unsigned long noteDurationMs = 0;
+unsigned long toneDurationMs = 0;
+unsigned long halfPeriodUs = 0;
+unsigned long lastToneToggleUs = 0;
+bool isToneLow = false;
+bool isWarningPlaying = false;
+unsigned long warningStartMs = 0;
+unsigned long warningPhaseMs = 0;
+unsigned long lastWarnMs = 0;
+bool isWarningIssued = false;
+unsigned long lastWarningToggleUs = 0;
+bool isWarningToneLow = false;
+uint8_t warningPhase = 0;
+
+// ---------- 音階 ----------
+#define NC4 262
+#define ND4 294
+#define NE4 330
+#define NF4 349
+#define NG4 392
+#define NA4 440
+#define NB4 494
+#define NC5 523
+#define ND5 587
+#define NE5 659
+#define NF5 698
+#define NG5 784
+#define END_MARK -1
+
+const int16_t SONG_1[] PROGMEM = { NC4,2, ND4,2, NE4,2, NF4,2, NG4,2, NA4,2, NB4,2, NC5,4, END_MARK,0 };
+const int16_t SONG_2[] PROGMEM = { NC4,2, NC4,2, NG4,2, NG4,2, NA4,2, NA4,2, NG4,4,
+                                  NF4,2, NF4,2, NE4,2, NE4,2, ND4,2, ND4,2, NC4,4, END_MARK,0 };
+const int16_t SONG_3[] PROGMEM = { NC4,2, ND4,2, NE4,2, NF4,2, NE4,2, ND4,2, NC4,4,
+                                  NE4,2, NF4,2, NG4,2, NA4,2, NG4,2, NF4,2, NE4,4,
+                                  NC4,4, NC4,4, NC4,4, NC4,4,
+                                  NC4,1, NC4,1, ND4,1, ND4,1, NE4,1, NE4,1, NF4,1, NF4,1, NE4,2, ND4,2, NC4,4, END_MARK,0 };
+const int16_t SONG_4[] PROGMEM = { NG4,2, NE4,2, NE4,4, NF4,2, ND4,2, ND4,4,
+                                  NC4,2, ND4,2, NE4,2, NF4,2, NG4,2, NG4,2, NG4,4, END_MARK,0 };
+const int16_t SONG_5[] PROGMEM = { NG4,1, NG4,1, NA4,2, NG4,2, NC5,2, NB4,4,
+                                  NG4,1, NG4,1, NA4,2, NG4,2, ND5,2, NC5,4,
+                                  NG4,1, NG4,1, NG5,2, NE5,2, NC5,2, NB4,2, NA4,2,
+                                  NF5,1, NF5,1, NE5,2, NC5,2, ND5,2, NC5,4, END_MARK,0 };
+const int16_t SONG_6[] PROGMEM = { NE4,2, ND4,2, NC4,2, ND4,2, NE4,2, NE4,2, NE4,4,
+                                  ND4,2, ND4,2, ND4,4, NE4,2, NG4,2, NG4,4, END_MARK,0 };
+const int16_t SONG_7[] PROGMEM = { NE4,2, NE4,2, NE4,4, NE4,2, NE4,2, NE4,4,
+                                  NE4,2, NG4,2, NC4,3, ND4,1, NE4,4, END_MARK,0 };
+const int16_t SONG_8[] PROGMEM = { NE4,2, NE4,2, NF4,2, NG4,2, NG4,2, NF4,2, NE4,2, ND4,2,
+                                  NC4,2, NC4,2, ND4,2, NE4,2, NE4,3, ND4,1, ND4,4, END_MARK,0 };
+const int16_t SONG_9[] PROGMEM = { NC4,2, NE4,2, NG4,2, NC5,4, NG4,2, NC5,6, END_MARK,0 };
+
+const int16_t* const SONG_TABLE[SONG_COUNT] PROGMEM = { SONG_1, SONG_2, SONG_3, SONG_4, SONG_5, SONG_6, SONG_7, SONG_8, SONG_9 };
+
+// =====================================================
+// 出力：モーター制御
+// =====================================================
+void set_RightMotor(bool isDir1High, bool isDir2High) {
+  digitalWrite(RIGHT_DIR_PIN1, isDir1High);
+  digitalWrite(RIGHT_DIR_PIN2, isDir2High);
+}
+
+void set_LeftMotor(bool isDir1High, bool isDir2High) {
+  digitalWrite(LEFT_DIR_PIN1, isDir1High);
+  digitalWrite(LEFT_DIR_PIN2, isDir2High);
+}
+
+void set_MotorSpeed(int rightSpeed, int leftSpeed) {   // 左右のPWMを設定
+  analogWrite(SPEED_PIN_R, rightSpeed);
+  analogWrite(SPEED_PIN_L, leftSpeed);
+}
+
+void go_Advance() {            // 前進
+  set_RightMotor(HIGH, LOW);  set_LeftMotor(HIGH, LOW);
+  set_MotorSpeed(SPEED, SPEED);
+}
+
+void go_Back() {               // 後退
+  set_RightMotor(LOW, HIGH);  set_LeftMotor(LOW, HIGH);
+  set_MotorSpeed(SPEED, SPEED);
+}
+
+void go_Left() {               // 左折（その場旋回：右前進・左後退）
+  set_RightMotor(HIGH, LOW);  set_LeftMotor(LOW, HIGH);
+  set_MotorSpeed(isDancing ? DANCE_SPEED : SPEED, isDancing ? DANCE_SPEED : SPEED);
+}
+
+void go_Right() {              // 右折（その場旋回：右後退・左前進）
+  set_RightMotor(LOW, HIGH);  set_LeftMotor(HIGH, LOW);
+  set_MotorSpeed(isDancing ? DANCE_SPEED : SPEED, isDancing ? DANCE_SPEED : SPEED);
+}
+
+// 左右の回転速度を変え、進みながら曲がる（外側130・内側75）
+void go_ForwardLeft() {
+  set_RightMotor(HIGH, LOW); set_LeftMotor(HIGH, LOW);
+  set_MotorSpeed(DIAGONAL_OUTER_SPEED, DIAGONAL_INNER_SPEED);
+}
+
+void go_ForwardRight() {
+  set_RightMotor(HIGH, LOW); set_LeftMotor(HIGH, LOW);
+  set_MotorSpeed(DIAGONAL_INNER_SPEED, DIAGONAL_OUTER_SPEED);
+}
+
+void go_BackLeft() {
+  set_RightMotor(LOW, HIGH); set_LeftMotor(LOW, HIGH);
+  set_MotorSpeed(DIAGONAL_INNER_SPEED, DIAGONAL_OUTER_SPEED);
+}
+
+void go_BackRight() {
+  set_RightMotor(LOW, HIGH); set_LeftMotor(LOW, HIGH);
+  set_MotorSpeed(DIAGONAL_OUTER_SPEED, DIAGONAL_INNER_SPEED);
+}
+
+void go_Stop() {               // 完全停止（PWM0・方向LOW/LOW）
+  set_MotorSpeed(0, 0);
+  set_RightMotor(LOW, LOW);  set_LeftMotor(LOW, LOW);
+}
+
+void do_Drive_Tick() {         // Drive_Num に従ってモーターを動かす
+  switch (Drive_Num) {
+    case GO_ADVANCE: go_Advance(); break;
+    case GO_BACK:    go_Back();    break;
+    case GO_LEFT:    go_Left();    break;
+    case GO_RIGHT:   go_Right();   break;
+    case GO_FORWARD_LEFT:  go_ForwardLeft();  break;
+    case GO_FORWARD_RIGHT: go_ForwardRight(); break;
+    case GO_BACK_LEFT:     go_BackLeft();     break;
+    case GO_BACK_RIGHT:    go_BackRight();    break;
+    case GO_STOP:    go_Stop();    break;
+    default: Drive_Num = GO_STOP; go_Stop(); break;
+  }
+}
+
+// =====================================================
+// ブザー
+// =====================================================
+// 警告音は音楽より優先。50msの2kHz音と50msの無音を2回。
+void warning() {
+  unsigned long now = millis();
+  if (isWarningPlaying || (isWarningIssued &amp;&amp; now - lastWarnMs &lt; WARN_INTERVAL_MS)) return;
+  isWarningIssued = true;
+  lastWarnMs = now;
+  warningStartMs = now;
+  warningPhaseMs = now;
+  warningPhase = 0;
+  isWarningPlaying = true;
+  lastWarningToggleUs = micros();
+  isWarningToneLow = false;
+  digitalWrite(BUZZ_PIN, HIGH);
+}
+
+void do_Warning_Tick() {
+  if (!isWarningPlaying) return;
+  unsigned long now = millis();
+  unsigned long elapsedMs = now - warningStartMs;
+  if (elapsedMs &gt;= 4UL * WARN_PHASE_MS) {
+    isWarningPlaying = false;
+    digitalWrite(BUZZ_PIN, HIGH);
+    if (isMusicPlaying) noteStartMs += elapsedMs;
+    lastToneToggleUs = micros();
+    isToneLow = false;
+    return;
+  }
+  warningPhase = elapsedMs / WARN_PHASE_MS;
+  if (warningPhase % 2 != 0) {
+    isWarningToneLow = false;
+    digitalWrite(BUZZ_PIN, HIGH);
+    return;
+  }
+  unsigned long nowUs = micros();
+  if (nowUs - lastWarningToggleUs &gt;= 500000UL / WARN_TONE_HZ) {
+    lastWarningToggleUs = nowUs;
+    isWarningToneLow = !isWarningToneLow;
+    digitalWrite(BUZZ_PIN, isWarningToneLow ? LOW : HIGH);
+  }
+}
+
+// 指定した1音の発音を開始する。実際のLOW/HIGH切替はdo_Music_Tickで行う。
+void play_Tone(int freq, int ms) {
+  toneDurationMs = ms &gt; 0 ? (unsigned long)ms : 0;
+  halfPeriodUs = freq &gt; 0 ? 500000UL / (unsigned long)freq : 0;
+  lastToneToggleUs = micros();
+  isToneLow = false;
+  if (!isWarningPlaying) digitalWrite(BUZZ_PIN, HIGH);
+}
+
+int get_SongNote(const int16_t* notePtr) {
+  return (int16_t)pgm_read_word(notePtr);
+}
+
+int get_SongLength(const int16_t* notePtr) {
+  return (int16_t)pgm_read_word(notePtr + 1);
+}
+
+// 1音 + 20msの休止をスケジュールする
+void play_Note(const int16_t* notePtr) {
+  noteDurationMs = (unsigned long)get_SongLength(notePtr) * TEMPO_MS;
+  noteStartMs = millis();
+  int soundMs = noteDurationMs &gt; 20 ? (int)(noteDurationMs - 20) : 0;
+  play_Tone(get_SongNote(notePtr), soundMs);
+}
+
+void stop_Music() {
+  isMusicPlaying = false;
+  currentNotePtr = nullptr;
+  pendingSongNum = 0;
+  isWarningPlaying = false;
+  halfPeriodUs = 0;
+  digitalWrite(BUZZ_PIN, HIGH);
+}
+
+// 再生を開始するが、走行状態は変更しない
+void play_Music(int songNum) {
+  if (songNum &lt; 1 || songNum &gt; SONG_COUNT) return;
+  currentNotePtr = (const int16_t*)pgm_read_ptr(&amp;SONG_TABLE[songNum - 1]);
+  isMusicPlaying = true;
+  play_Note(currentNotePtr);
+}
+
+bool is_MusicDue() {
+  return pendingSongNum != 0 &amp;&amp; millis() - pendingSongMs &gt;= CONFLICT_MS;
+}
+
+void do_Music_Tick() {
+  do_Warning_Tick();
+  if (isWarningPlaying) return;  // 同じブザーなので警告音を優先
+
+  // 走行中・停止中を問わず曲を開始 / 切替
+  if (is_MusicDue()) {
+    int songNum = pendingSongNum;
+    pendingSongNum = 0;
+    play_Music(songNum);
+  }
+  if (!isMusicPlaying || currentNotePtr == nullptr) return;
+
+  unsigned long nowMs = millis();
+  if (nowMs - noteStartMs &gt;= noteDurationMs) {
+    currentNotePtr += 2;  // 周波数と長さの次の組
+    if (get_SongNote(currentNotePtr) == END_MARK) {
+      isMusicPlaying = false;
+      currentNotePtr = nullptr;
+      halfPeriodUs = 0;
+      digitalWrite(BUZZ_PIN, HIGH);
+      return;
+    }
+    play_Note(currentNotePtr);
+    nowMs = millis();
+  }
+
+  // 休符 / 音符末尾の20ms無音
+  if (halfPeriodUs == 0 || nowMs - noteStartMs &gt;= toneDurationMs) {
+    if (isToneLow) {
+      isToneLow = false;
+      digitalWrite(BUZZ_PIN, HIGH);
+    }
+    return;
+  }
+
+  // 1ループにつき1回だけ波形を進め、他の制御をブロックしない
+  unsigned long nowUs = micros();
+  if (nowUs - lastToneToggleUs &gt;= halfPeriodUs) {
+    lastToneToggleUs = nowUs;
+    isToneLow = !isToneLow;
+    digitalWrite(BUZZ_PIN, isToneLow ? LOW : HIGH);
+  }
+}
+
+// =====================================================
+// センサー
+// =====================================================
+int watch() {                  // 超音波センサーで前方の距離(cm)を測る
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+  long echoUs = pulseIn(ECHO_PIN, HIGH, 25000);   // 最大25ms待つ
+  if (echoUs == 0) return 999;                    // 反応なし＝障害物なし
+  return (int)(echoUs / 58);
+}
+
+bool is_FrontBlocked() {         // 前方の障害物（2回続けて検知したら確定）
+  if (watch() &lt;= DISTANCE_LIMIT) {
+    delay(30);
+    return watch() &lt;= DISTANCE_LIMIT;
+  }
+  return false;
+}
+
+bool is_BackIrOn() {
+  return digitalRead(BACK_IR_L_PIN) == LOW || digitalRead(BACK_IR_R_PIN) == LOW;
+}
+
+bool is_BackBlocked() {          // 後方の障害物（2回続けて検知したら確定）
+  if (is_BackIrOn()) {
+    delay(20);
+    return is_BackIrOn();
+  }
+  return false;
+}
+
+// =====================================================
+// 判断：センサーの優先度判断（優先度2：ユーザー指示より優先）
+// =====================================================
+void start_Avoid(DriveState act) {     // 回避動作を始める
+  Drive_Num = act;             // 状態を自動的に上書き
+  lastDriveCmd = GO_STOP;
+  do_Drive_Tick();             // 先にモーターを動かし
+  isAvoiding = true;
+  avoidStartMs = millis();     // 駆動開始直後から回避時間を測る
+  warning();                   // 動かしながら警告音を鳴らす
+}
+
+void end_Avoid() {             // 回避動作を終えて停止
+  isAvoiding = false;
+  Drive_Num = GO_STOP;
+  go_Stop();
+}
+
+void update_Avoid() {          // 回避動作中：1回だけ終了条件を判定する
+  if (millis() - avoidStartMs &gt;= AVOID_MS) { end_Avoid(); return; }
+
+  // 行ったり来たりを防ぐため、進行先が塞がっていれば切り替えず停止
+  bool blocked = false;
+  if (Drive_Num == GO_BACK || Drive_Num == GO_BACK_LEFT || Drive_Num == GO_BACK_RIGHT)
+    blocked = is_BackBlocked();
+  else if (Drive_Num == GO_ADVANCE || Drive_Num == GO_FORWARD_LEFT || Drive_Num == GO_FORWARD_RIGHT)
+    blocked = is_FrontBlocked();
+
+  // センサー測定にも時間がかかるため、測定直後に500msを再確認する
+  if (blocked || millis() - avoidStartMs &gt;= AVOID_MS) end_Avoid();
+}
+
+bool is_CheckTime() {          // 障害物を調べる時刻か（前進中・後退中だけ）
+  if (Drive_Num != GO_ADVANCE &amp;&amp; Drive_Num != GO_BACK &amp;&amp;
+      Drive_Num != GO_FORWARD_LEFT &amp;&amp; Drive_Num != GO_FORWARD_RIGHT &amp;&amp;
+      Drive_Num != GO_BACK_LEFT &amp;&amp; Drive_Num != GO_BACK_RIGHT) return false;
+  return isCheckRequested || millis() - lastCheckMs &gt;= CHECK_INTERVAL_MS;
+}
+
+void mark_Checked() {          // 調べた時刻を記録する
+  isCheckRequested = false;
+  lastCheckMs = millis();
+}
+
+void update_ObstacleFlags() {  // front と back を更新する
+  front = is_FrontBlocked() ? 1 : 0;
+  back  = is_BackBlocked()  ? 1 : 0;
+}
+
+DriveState decide_AvoidAction() {   // 回避動作を決める（なければ DEF）
+  // 別版：前進系で前方を検知したら、後退せず停止する（前後同時も停止）。
+  if (front &amp;&amp; (Drive_Num == GO_ADVANCE || Drive_Num == GO_FORWARD_LEFT || Drive_Num == GO_FORWARD_RIGHT))
+    return GO_STOP;
+  if (front &amp;&amp; back)                    return GO_RIGHT;     // 前後両方：回転
+  if (back &amp;&amp; (Drive_Num == GO_BACK || Drive_Num == GO_BACK_LEFT || Drive_Num == GO_BACK_RIGHT))
+    return GO_ADVANCE;       // 後退系の方向で後方障害物：前進
+  return DEF;
+}
+
+void checkSensorsAndObstacles() {
+  if (isAvoiding) { update_Avoid(); return; }
+  if (isDancing) return;     // ダンス時は do_Dance_Tick が安全確認する
+  if (!is_CheckTime()) return;
+  mark_Checked();
+  update_ObstacleFlags();
+  DriveState action = decide_AvoidAction();
+  if (action == GO_STOP) {
+    end_Avoid();              // その場で停止。自動走行は開始しない。
+    lastDriveCmd = GO_STOP;   // 次の方向入力は新規の単独指示として扱う。
+    warning();               // 音楽を保持し、警告だけ優先する。
+  } else if (action != DEF) start_Avoid(action);
+}
+
+// =====================================================
+// ダンス：0ボタンで開始（方向はステップごとに変更）
+// =====================================================
+void stop_Dance() {
+  isDancing = false;
+  Drive_Num = GO_STOP;
+  go_Stop();
+}
+
+// ダンスはその場旋回と停止のみ。前進・後退・斜め走行をしない。
+DriveState dance_Action(uint8_t step) {
+  switch (step) {
+    case 0: return GO_LEFT;    // 左旋回
+    case 1: return GO_RIGHT;   // 右旋回
+    case 2: return GO_LEFT;    // 短い左旋回
+    case 3: return GO_RIGHT;   // 短い右旋回
+    case 4: return GO_STOP;    // 一拍停止
+    case 5: return GO_LEFT;    // 長い左旋回
+    case 6: return GO_RIGHT;   // 長い右旋回
+    default: return GO_STOP;   // 一拍停止して次の周回へ
+  }
+}
+
+unsigned int dance_Duration(uint8_t step) {
+  switch (step) {
+    case 0: case 1: return 900;
+    case 2: case 3: return 450;
+    case 4: return 300;
+    case 5: case 6: return 1200;
+    default: return 350;
+  }
+}
+
+void start_Dance() {
+  if (isAvoiding) return;
+  isDancing = true;
+  danceStep = 0;
+  danceStepStartMs = millis();
+  lastDanceCheckMs = 0;       // 開始直後にセンサー判定
+  lastDriveCmd = GO_STOP;
+  pendingSongNum = 0;         // 未開始の音楽予約だけ解除
+  Drive_Num = dance_Action(danceStep);
+  // 最初のモーター出力はloop内でセンサーを確認した後に行う
+}
+
+void do_Dance_Tick() {
+  if (!isDancing) return;
+  unsigned long now = millis();
+
+  // ダンス中は前後の安全確認を定期的に行い、障害物があれば直ちに中止
+  if (lastDanceCheckMs == 0 || now - lastDanceCheckMs &gt;= CHECK_INTERVAL_MS) {
+    lastDanceCheckMs = now;
+    if (is_FrontBlocked() || is_BackBlocked()) {
+      stop_Dance();
+      return;
+    }
+    now = millis();
+  }
+
+  // millis()に基づく非ブロッキングなステップ更新
+  if (now - danceStepStartMs &lt; dance_Duration(danceStep)) return;
+  danceStep++;
+  if (danceStep &gt;= DANCE_STEPS) {
+    danceStep = 0;               // 8ステップをOKまたは障害物停止まで繰り返す
+  }
+  danceStepStartMs = now;
+  Drive_Num = dance_Action(danceStep);
+}
+
+// =====================================================
+// 入力：リモコン入力受付（優先度3：ユーザーの指示）
+// =====================================================
+bool is_OppositeDrive(DriveState a, DriveState b) {
+  return (a == GO_ADVANCE &amp;&amp; b == GO_BACK) || (a == GO_BACK &amp;&amp; b == GO_ADVANCE) ||
+         (a == GO_LEFT &amp;&amp; b == GO_RIGHT)   || (a == GO_RIGHT &amp;&amp; b == GO_LEFT);
+}
+
+// 一方向（↑↓）と左右（←→）を順に押すと斜め走行へ変更
+DriveState get_DiagonalDrive(DriveState a, DriveState b) {
+  if ((a == GO_ADVANCE &amp;&amp; b == GO_LEFT) || (a == GO_LEFT &amp;&amp; b == GO_ADVANCE))
+    return GO_FORWARD_LEFT;
+  if ((a == GO_ADVANCE &amp;&amp; b == GO_RIGHT) || (a == GO_RIGHT &amp;&amp; b == GO_ADVANCE))
+    return GO_FORWARD_RIGHT;
+  if ((a == GO_BACK &amp;&amp; b == GO_LEFT) || (a == GO_LEFT &amp;&amp; b == GO_BACK))
+    return GO_BACK_LEFT;
+  if ((a == GO_BACK &amp;&amp; b == GO_RIGHT) || (a == GO_RIGHT &amp;&amp; b == GO_BACK))
+    return GO_BACK_RIGHT;
+  return DEF;
+}
+
+// 現在の斜め走行に含まれる方向かを判定（リモコンの繰り返し信号対策）
+bool is_DiagonalComponent(DriveState diagonal, DriveState cmd) {
+  switch (diagonal) {
+    case GO_FORWARD_LEFT:  return cmd == GO_ADVANCE || cmd == GO_LEFT;
+    case GO_FORWARD_RIGHT: return cmd == GO_ADVANCE || cmd == GO_RIGHT;
+    case GO_BACK_LEFT:     return cmd == GO_BACK || cmd == GO_LEFT;
+    case GO_BACK_RIGHT:    return cmd == GO_BACK || cmd == GO_RIGHT;
+    default: return false;
+  }
+}
+
+void set_Drive(DriveState cmd) {
+  unsigned long now = millis();
+  unsigned long elapsed = now - lastDriveCmdMs;
+  bool hasPrevious = lastDriveCmd != GO_STOP;
+
+  // 上下や左右の正反対が0.3秒以内に続いた場合は従来どおり停止
+  if (hasPrevious &amp;&amp; elapsed &lt;= CONFLICT_MS &amp;&amp; is_OppositeDrive(lastDriveCmd, cmd)) {
+    Drive_Num = GO_STOP;
+    lastDriveCmd = GO_STOP;
+    lastDriveCmdMs = now;
+    isCheckRequested = true;
+    return;
+  }
+
+  // 速押し不要。現在の単独走行と直交する方向を押すと斜めになる。
+  // 斜め走行中に構成キーを押し直すと、その単独方向へ戻る。
+  DriveState diagonal = get_DiagonalDrive(Drive_Num, cmd);
+  Drive_Num = is_DiagonalComponent(Drive_Num, cmd) || diagonal == DEF
+                ? cmd : diagonal;
+  lastDriveCmd = cmd;
+  lastDriveCmdMs = now;
+  isCheckRequested = true;
+}
+
+int read_IR_Command() {        // 受信コードを返す。受信なし・リピート信号は NO_COMMAND
+  if (!IrReceiver.decode()) return NO_COMMAND;
+  int command = IrReceiver.decodedIRData.command;
+  bool isRepeat = IrReceiver.decodedIRData.flags &amp; IRDATA_FLAGS_IS_REPEAT;
+  IrReceiver.resume();
+  return isRepeat ? NO_COMMAND : command;
+}
+
+void handle_StopButton() {     // OK：停止状態にする
+  isAvoiding = false;
+  isDancing = false;
+  stop_Music();               // OKで走行と音楽を一緒に止める
+  Drive_Num = GO_STOP;
+  lastDriveCmd = GO_STOP;      // モーターは出力層 do_Drive_Tick が止める
+}
+
+void handle_DriveButton(int command) {    // ↑↓←→：走行の指示
+  if      (command == IR_ADVANCE) set_Drive(GO_ADVANCE);
+  else if (command == IR_BACK)    set_Drive(GO_BACK);
+  else if (command == IR_LEFT)    set_Drive(GO_LEFT);
+  else if (command == IR_RIGHT)   set_Drive(GO_RIGHT);
+}
+
+int get_SongNum(int command) {            // ボタンのコードから曲番号(1〜9)を返す。数字ボタンでなければ0
+  for (int i = 0; i &lt; SONG_COUNT; i++) {
+    if (command == NUM_CODES[i]) return i + 1;
+  }
+  return 0;
+}
+
+bool is_NumberConflict(int songNum) {     // 依頼中の曲と別の数字か（同時押し）
+  return pendingSongNum != 0 &amp;&amp; pendingSongNum != songNum &amp;&amp;
+         millis() - pendingSongMs &lt; CONFLICT_MS;
+}
+
+void handle_NumberButton(int command) {   // 1〜9：曲を依頼する（0.3秒待ってから再生）
+  int songNum = get_SongNum(command);
+  if (songNum == 0) return;
+  if (is_NumberConflict(songNum)) { pendingSongNum = 0; return; }   // 同時押し：どの曲も鳴らさない
+  if (pendingSongNum == songNum &amp;&amp; millis() - pendingSongMs &lt; CONFLICT_MS) return;                            // 同じ数字は1回だけ
+  pendingSongNum = songNum;
+  pendingSongMs = millis();
+}
+
+void do_IR_Tick() {            // リモコン入力の受付
+  int command = read_IR_Command();
+  if (command == NO_COMMAND) return;
+  if (command == IR_STOP) { handle_StopButton(); return; }
+  if (isAvoiding) return;
+  if (command == IR_DANCE) { start_Dance(); return; }
+  if (isDancing) return;      // ダンス中はOKと0のみを受け付ける
+  handle_DriveButton(command);
+  handle_NumberButton(command);
+}
+
+// =====================================================
+// 初期設定とメインループ
+// =====================================================
+void init_MotorPins() {
+  pinMode(SPEED_PIN_R, OUTPUT);  pinMode(RIGHT_DIR_PIN1, OUTPUT);  pinMode(RIGHT_DIR_PIN2, OUTPUT);
+  pinMode(SPEED_PIN_L, OUTPUT);  pinMode(LEFT_DIR_PIN1, OUTPUT);   pinMode(LEFT_DIR_PIN2, OUTPUT);
+  go_Stop();                   // 電源投入直後は必ず停止から始める
+}
+
+void init_BuzzerPin() {
+  digitalWrite(BUZZ_PIN, HIGH);   // 出力へ切り替える前に停止値を用意
+  pinMode(BUZZ_PIN, OUTPUT);
+  digitalWrite(BUZZ_PIN, HIGH);   // ブザー停止（LOWで鳴るため）
+}
+
+void init_SensorPins() {
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+  pinMode(BACK_IR_L_PIN, INPUT);
+  pinMode(BACK_IR_R_PIN, INPUT);
+}
+
+void init_IrReceiver() {       // D13をブザーに使うため、受信時のLED点滅は無効にする
+  IrReceiver.begin(IR_RECEIVE_PIN, DISABLE_LED_FEEDBACK);
+}
+
+void setup() {
+  init_MotorPins();
+  init_BuzzerPin();
+  init_SensorPins();
+  init_IrReceiver();
+}
+
+void loop() {
+  do_IR_Tick();                 // ① 入力：リモコンの入力受付
+  do_Dance_Tick();             // ダンス中は時間と障害物を確認
+  checkSensorsAndObstacles();   // ② 判断：センサーの優先度判断（必要なら状態を上書き）
+  do_Drive_Tick();              // ③ 出力：状態に基づいてモーターを実行
+  do_Music_Tick();              // ④ 出力：走行を止めず音楽・警告音を更新
+
+  if (IS_IR) delayMicroseconds(100);
+  else       delayMicroseconds(20);
+}
+</code></pre></div></details></div>
     <details id="codeBox">
       <summary><span class="id">コード</span><span>スケッチ全文（robot_final.ino）</span></summary>
       <div class="body" style="padding-left:16px">
