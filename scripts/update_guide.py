@@ -49,7 +49,7 @@ DESCRIPTIONS={
 'is_OppositeDrive':'上下・左右の逆向きの組合せを、順序を問わずtrueとする。斜め状態は引数に渡さず単独指示どうしを比較する。',
 'get_DiagonalDrive':'上下と左右の組合せを順序に関係なく前左・前右・後左・後右へ変換し、該当なしはDEFを返す。',
 'is_DiagonalComponent':'斜め走行に含まれる上下または左右の単独方向ならtrue、それ以外はfalseを返す。',
-'set_Drive':'直前の単独入力と300ms以内で逆向きなら停止。現在の単独走行と上下＋左右の組合せなら時間制限なく斜めにする。斜めの構成キーを押し直すと単独方向へ戻る。入力と時刻を記録しセンサー確認を要求する。',
+'set_Drive':'直前の単独入力と300ms以内で逆向きなら停止。現在の単独走行と上下＋左右の組合せなら時間制限なく斜めにする。斜め走行中の方向入力は単独方向へ戻す（逆方向停止の条件を先に判定）。入力と時刻を記録しセンサー確認を要求する。',
 'read_IR_Command':'IR受信がなければNO_COMMAND。受信時はコードとリピートフラグを取得しresumeする。リピートはNO_COMMAND、それ以外はcommandを返す。',
 'handle_StopButton':'回避・ダンスを解除し、stop_Musicで曲と警告を消音する。現在と直前の走行状態をGO_STOPにする。モーターは同じ周回の出力で止める。',
 'handle_DriveButton':'24/82/8/90を前進/後退/左/右の単独指示に変換しset_Driveへ渡す。他のコードは何もしない。',
@@ -83,7 +83,7 @@ def main():
  states=set(re.findall(r'^(?:int|bool|DriveState|uint8_t|unsigned long|const int16_t\*) (\w+)',globals_part,re.M))
  for f in funcs:
   body=re.sub(r'//[^\n]*','',f['body'])
-  f['calls']=', '.join(dict.fromkeys(x for x in re.findall(r'\b(\w+)\s*\(',body) if x not in {'if','for','while','switch','sizeof'})) or '—'
+  f['calls']=', '.join(dict.fromkeys(x for x in re.findall(r'\b(\w+)\s*\(',body) if x not in {'if','for','while','switch','sizeof','return'})) or '—'
   f['states']=', '.join(sorted(states & set(re.findall(r'\b\w+\b',body)))) or '—'
   f['desc']=DESCRIPTIONS[f['name']]
  csv_io=io.StringIO();w=csv.writer(csv_io,lineterminator="\n");w.writerow(['関数','形式','処理内容','共有状態（参照・更新）','呼び出し','先頭行','行数'])
@@ -98,8 +98,9 @@ def main():
  ['Web確認','図25枚の描画、関数検索、6つの移動先、コードとダウンロードの一致を自動チェックする。実施結果はREVIEW.mdに記録。'],
  ['実機試験','未実施。モーターの向き、音質、センサー感度、OKの応答、停止距離、タイマー動作を実機で確認する。'],
  ['旧版の85件/24件','対応する試験コードがリポジトリになく、最新版の成功証拠として使わない。改訂1.6は同梱の再現可能な試験を検証記録とする。']])
- design='<section class="design" id="design"><h2>開発設計書</h2><p class="cap">最新設定統一版／2026年11月11日／Arduino Uno・OSOYOO V2.1／正本：robot_final.ino</p>'
+ design='<section class="design" id="design"><h2>開発設計書</h2><p class="cap">かんたん斜め走行対応版／2026年11月11日／Arduino Uno・OSOYOO V2.1／正本：robot_final.ino</p>'
  design+=detail(1,'目的と設計方針','<p>リモコン走行・斜め走行・ダンス・音楽・障害物回避を実装する。入力・判断・出力の役割を分け、短い周期処理で状態を更新する。センサー測定と再確認待機はブロッキング処理として残っている。</p><p>1関数1目的、固定値の集約、重複処理の共通化を原則とする。20行以内・ネスト3段・引数3個は目安であり、現状の全関数が満たすという意味ではない。</p>')
+ design+= '<p>操作仕様：ボタンを1つずつ押して離す。停止後の最初の方向は単独走行、単独走行中の上下＋左右は時間制限なく斜めに合成する。途中でOK・障害物回避・ダンスが入った場合は、その時点の走行状態から判断し直す。</p>'+table(['入力例（停止状態から）','状態の変化','右PWM / 左PWM'],[['↑の後に←／←の後に↑','GO_FORWARD_LEFT（前左）','前進130 / 前進75'],['↑の後に→／→の後に↑','GO_FORWARD_RIGHT（前右）','前進75 / 前進130'],['↓の後に←／←の後に↓','GO_BACK_LEFT（後左）','後退75 / 後退130'],['↓の後に→／→の後に↓','GO_BACK_RIGHT（後右）','後退130 / 後退75'],['前左走行中に↑をもう一度','GO_ADVANCE（直進へ復帰）','前進100 / 前進100'],['どの動作中でもOK','GO_STOP（走行・音・ダンス・回避を解除）','0 / 0']])
  design+=detail(2,'命名と関数規模',f'<p>定数は大文字、単語間は_。変数はlowerCamelCase。関数は動詞_対象、boolはisを原則とする。Arduino標準のsetup/loop、既存のDrive_Num・IS_IR・watch・warningとdance_Action/dance_Durationは例外として列挙する。既存のAdvance/Forwardは今回の動作修正では改名しない。</p><p>全{count}関数、スケッチ{len(code.splitlines())}行。最大は{max(funcs,key=lambda f:f["lines"])["name"]}の{max(f["lines"] for f in funcs)}行。行数は先頭行から閉じ括弧まで。関数別の形式と行数は下の関数設計書に掲載する。</p>')
  design+=detail(3,'ハードウェア構成',table(['部品','ピン','備考'],[['IR受信','D4','IRremote 4.x、D13受信LED無効'],['右モーター','PWM D9／方向D12・D11','PWM0〜255'],['左モーター','PWM D6／方向D7・D8','PWM0〜255'],['ブザー','D13','パッシブ。矩形波で音楽/警告、無音はHIGH。駆動回路に合う配線を確認'],['前方超音波','Trig D10／Echo D3','最大25ms/測定'],['後方赤外線','左D0／右D2','LOWで検知。書き込み時はD0配線を外す。Serialと共用しない']]))
  design+=detail(4,'状態と処理の順番','<p>loop() → do_IR_Tick → do_Dance_Tick → checkSensorsAndObstacles → do_Drive_Tick → do_Music_Tick → 100/20μs待機。checkSensorsAndObstacles内で、回避中はupdate_Avoidだけを実行し、ダンス中は通常の判定を省く。</p>'+table(['状態','用途'],[['Drive_Num / lastDriveCmd / lastDriveCmdMs','現在の走行・直前の単独入力・入力時刻'],['isAvoiding / avoidStartMs','回避状態と駆動開始直後の時刻'],['front / back / isCheckRequested / lastCheckMs','通常走行の障害物と測定要求/時刻'],['isDancing / danceStep / danceStepStartMs / lastDanceCheckMs','8ステップを繰り返すダンスと測定時刻'],['pendingSongNum / pendingSongMs','曲予約と300ms窓の開始'],['isMusicPlaying / currentNotePtr / noteStartMs / noteDurationMs','非ブロッキング音楽再生'],['isWarningPlaying / warningStartMs / isWarningIssued / lastWarnMs','警告再生と再開始制限']])+ '<p>基本は入力が状態を更新し出力が駆動する。ただしOKのstop_Musicは即消音、start_Avoidは回避駆動と警告開始、end_Avoid/stop_Danceは直接停止する。これらを明示的な例外とする。</p>')
@@ -112,7 +113,7 @@ def main():
  xlsx=build_xlsx(funcs)
  (ROOT/'design-guide/関数設計書.xlsx').write_bytes(xlsx)
  xlsx_b64=base64.b64encode(xlsx).decode()
- cards=f'<section class="design" id="functions" aria-labelledby="functions-title"><h2 id="functions-title">関数設計書</h2><p>最新設定の全{count}関数。添付Excelと同じ項目・表の構成でまとめています。</p><p><a class="fn-download" download="関数設計書.xlsx" href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{xlsx_b64}">関数設計書をダウンロード（Excel）</a></p><div class="fn-controls" hidden><label for="function-search">関数を検索</label><input id="function-search" type="search" placeholder="例：go_Stop、障害物、PWM" autocomplete="off"><span id="function-count" role="status">{count}件</span></div><p id="function-empty" hidden>該当する関数がありません。</p><div class="function-group"><h3>全関数（ソース順）</h3>'
+ cards=f'<section class="design" id="functions" aria-labelledby="functions-title"><h2 id="functions-title">関数設計書</h2><p>かんたん斜め走行対応版／2026年11月11日。実コードに対応する全{count}関数を掲載し、ダウンロード用Excelにも同じ内容を反映しています。</p><p><a class="fn-download" download="関数設計書.xlsx" href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{xlsx_b64}">関数設計書をダウンロード（Excel）</a></p><div class="fn-controls" hidden><label for="function-search">関数を検索</label><input id="function-search" type="search" placeholder="例：go_Stop、障害物、PWM" autocomplete="off"><span id="function-count" role="status">{count}件</span></div><p id="function-empty" hidden>該当する関数がありません。</p><p>斜め走行の処理：<a href="#fn-do_IR_Tick">入力受付</a> → <a href="#fn-set_Drive">走行状態の更新</a> → <a href="#fn-get_DiagonalDrive">上下と左右の組合せ</a> → <a href="#fn-do_Drive_Tick">モーター出力</a>。時間制限なしで順に押し、斜めからは方向ボタンで単独方向へ戻ります。OKと逆方向停止は優先して判定します。</p><div class="function-group"><h3>全関数（ソース順）</h3>'
  for f in funcs:
   cards+=f'<details class="function-card" id="fn-{f["name"]}"><summary><code>{f["name"]}()</code><span>{esc(f["desc"].split("。")[0])}</span></summary><div class="body dbody">'+form_html(f)+'</div></details>'
  cards+='</div></section>'
@@ -172,13 +173,37 @@ def main():
  H -->|いいえ| J{"前回切替から250μs以上？"}
  J -->|いいえ| E
  J -->|はい| K["LOWとHIGHを1回切替"] --> E''')}
- fig_html='<section class="figs" id="figures"><h2>設計図</h2><p class="cap">最新設定／図1〜6：操作シーケンス、図7〜25：処理フロー。矢印は呼び出し、状態の受け渡し、実行順を示します。</p>'
+ fig_html='<section class="figs" id="figures"><h2>設計図</h2><p class="cap">かんたん斜め走行対応版／2026年11月11日／図1〜6：操作シーケンス、図7〜25：処理フロー。矢印は呼び出し、状態の受け渡し、実行順を示します。</p>'
  for heading,num,cap,src in figs:
   n=int(num);src=html.unescape(src)
   if n in fixes:cap,src=fixes[n]
   src=src.replace('回避開始時刻を記録し、曲予約を解除','回避開始時刻を記録。曲予約と再生状態は保持')
   if n==2:src=src.replace('IN->>M: go_Stop 完全停止 最優先','IN->>IN: GO_STOPに更新・音楽と警告を消音\n    OUT->>M: 同じ周回の出力で停止')
-  if n==5:src=src.replace('SD->>M:','SD->>SD:')
+  if n==5:
+   heading='<h4>図5　斜め走行への切替・単独方向への復帰・逆方向停止</h4>'
+   cap='↑の後に←で前左へ。間隔に制限はありません。↑をもう一度押すと直進に戻り、OKで停止します。逆方向が300ms以内なら合成より先に停止します。'
+   src="""sequenceDiagram
+ actor U as ユーザー
+ participant IN as do_IR_Tick
+ participant SD as set_Drive
+ participant OUT as do_Drive_Tick
+ U->>IN: ↑を押して離す
+ IN->>SD: GO_ADVANCE
+ SD->>SD: 停止状態から前進へ
+ OUT->>OUT: 左右PWM100で前進
+ Note over U,SD: 次のボタンまでの時間制限なし
+ U->>IN: ←を押して離す
+ IN->>SD: GO_LEFT
+ SD->>SD: 現在の前進と左を合成してGO_FORWARD_LEFT
+ OUT->>OUT: 右PWM130・左PWM75で前左へ
+ U->>IN: ↑をもう一度押す
+ IN->>SD: GO_ADVANCE
+ SD->>SD: 斜めから単独の前進へ
+ U->>IN: OK
+ IN->>IN: 曲と警告を消音・GO_STOP
+ OUT->>OUT: 左右PWM0で停止
+ Note over U,SD: 逆方向の入力は直前の単独入力と300ms以内なら停止
+"""
   if n==6:cap='予約から300ms未満に別の数字が届くと予約を取り消します。300ms以上なら最新入力を新規予約として扱います。';src=src.replace('0.3秒以内','300ms未満')
   if n==13:src=src.replace('|後退|','|後退系|').replace('|前進|','|前進系|')
   if n==20:
@@ -215,6 +240,9 @@ def main():
  page=re.sub(r'改訂1\.6はPC模擬試験\d+項目とUnoビルドを確認。実機試験は未実施です。','最新設定のPC模擬試験50項目とUnoビルドを確認。実機試験は未実施です。',page)
  page=re.sub(r'<section[^>]*id="dance-speed-update".*?</section>', '<section class="overview" id="dance-speed-update"><h2>かんたん斜め走行</h2><p>ボタンは1つずつ押して離してください。速押し・同時押しは不要です。</p><ul><li>「↑」の後に「←」：前進しながら左へ（逆の順番でも可）</li><li>「↑」の後に「→」：前進しながら右へ（逆の順番でも可）</li><li>「↓」の後に「←」：後退しながら左へ（逆の順番でも可）</li><li>「↓」の後に「→」：後退しながら右へ（逆の順番でも可）</li></ul><p>斜め走行中に構成する方向をもう一度押すとその単独方向へ戻り、OKで停止します。上下・左右の反対入力が300ms以内なら停止します。通常PWM100、ダンスPWM180、斜め外側130／内側75。</p><p>実機に新しいスケッチを書き込んでから操作してください。旧スケッチでは操作は変わりません。</p></section>',page,count=1,flags=re.S)
  page=page.replace('最新設定のPC模擬試験47項目','最新設定のPC模擬試験50項目')
+ page=re.sub(r'<section[^>]*id="requirements".*?</section>', '<section class="top" id="requirements"><h2>要件定義</h2><p class="cap">かんたん斜め走行対応版／2026年11月11日更新。操作例は要求1-13、確認項目は要求7-1に掲載しています。</p><h3>要求1　リモコンで走行を制御する</h3><p><span class="tag">内容</span>矢印を1つずつ順に押して、前進・後退・旋回・斜め走行を指示する。上下と左右の組合せに時間制限は設けず、OKを最優先の停止とする。</p><p><span class="tag">理由</span>速押しや同時押しに頼らず、リモコンから目的の走行を選べるようにするため。</p></section>',page,count=1,flags=re.S)
+ overview='<section class="overview" id="overview" aria-labelledby="overview-title"><h2 id="overview-title">ロボットの主な動作</h2><p class="cap">かんたん斜め走行対応版／2026年11月11日更新。概要・要件定義・開発設計・関数設計・設計図を同じ操作仕様で統一しています。</p><div class="tiles"><article><h3>01　順に押して斜め走行</h3><p>矢印は1つずつ押して離します。上下と左右を順に押すだけで斜め走行。速押し・同時押しは不要で、入力間隔の時間制限もありません。</p></article><article><h3>02　障害物回避と停止</h3><p>前進・後退と斜め走行では前後センサーを確認し、障害物があれば回避を優先します。OKは走行・音楽・ダンス・回避をまとめて停止します。</p></article><article><h3>03　音楽とダンス</h3><p>1〜9で走行しながら曲を再生。0でその場旋回と停止の8ステップを繰り返します。ダンス中も前後を確認し、障害物で中止します。</p></article></div>'+table(['1つ目のボタン','2つ目のボタン','動作'],[['↑','←','前進しながら左へ'],['↑','→','前進しながら右へ'],['↓','←','後退しながら左へ'],['↓','→','後退しながら右へ']])+'<p>上下と左右は逆の順番でも同じです。斜め走行中に方向ボタンを押し直すと、その単独方向へ戻ります。例：↑、←で前左、↑をもう一度押すと直進。直前の単独入力と反対の方向が300ms以内に届くと停止します。</p><p>通常PWM100／ダンスPWM180／斜め外側130・内側75。新しい操作を使うには<a href="robot_final.ino" download>最新コード</a>をArduinoに書き込んでください。</p><p class="cap">PC模擬試験50項目・Unoビルド成功。実機試験は未実施です。</p><p><a href="https://osoyoo.com/2020/05/12/v2-1-robot-car-kit-for-arduino-tutorial-introduction/">OSOYOO公式組み立てガイド ↗</a></p></section>'
+ page=re.sub(r'<section[^>]*id="overview".*?</section>',lambda m:overview,page,count=1,flags=re.S)
  for path in ['design-guide/index.html','index.html']:
   out=page if path.startswith('design-guide/') else page.replace('href="functions.csv"','href="design-guide/functions.csv"')
   (ROOT/path).write_text(out)
