@@ -5,7 +5,7 @@ import openpyxl
 root=Path(__file__).resolve().parents[1]
 expected=(root/'design-guide/関数設計書.xlsx').read_bytes()
 w=openpyxl.load_workbook(io.BytesIO(expected))
-assert len(w.worksheets)==57
+assert len(w.worksheets)==58
 for s in list(w)[1:]:
  for cell,label in {'B2':'機能概要','B3':'処理内容','B5':'関数形式','B6':'入出力','C6':'種類','D6':'形式','E6':'内容','B15':'ソースファイル','B16':'呼び出し関数','B19':'備考'}.items():
   assert s[cell].value==label,(s.title,cell)
@@ -17,5 +17,5 @@ for path in ['index.html','design-guide/index.html']:
  html=(root/path).read_text()
  actual=base64.b64decode(re.search(r'spreadsheetml.sheet;base64,([^\"]+)',html)[1])
  assert actual==expected
- assert html.count('class="function-form"')==56
-print('PASS: 56 template forms, 57 worksheets, types/IO/call fields, A4 print setup and downloadable XLSX parity')
+ assert html.count('class="function-form"')==57
+print('PASS: 57 template forms, 58 worksheets, types/IO/call fields, A4 print setup and downloadable XLSX parity')

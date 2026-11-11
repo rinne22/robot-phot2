@@ -9,14 +9,14 @@ DESCRIPTIONS={
 'set_RightMotor':'右モーターの方向端子D12/D11へ引数を出力する。',
 'set_LeftMotor':'左モーターの方向端子D7/D8へ引数を出力する。',
 'set_MotorSpeed':'右D9・左D6にPWMを出力する。引数は0〜255を前提とする。',
-'go_Advance':'左右を前進方向、PWMを200/200にする。',
-'go_Back':'左右を後退方向、PWMを200/200にする。',
-'go_Left':'右前進・左後退、PWM200/200でその場左旋回する。',
-'go_Right':'右後退・左前進、PWM200/200でその場右旋回する。',
-'go_ForwardLeft':'左右とも前進、右PWM200・左100で前左へカーブする。',
-'go_ForwardRight':'左右とも前進、右PWM100・左200で前右へカーブする。',
-'go_BackLeft':'左右とも後退、右PWM100・左200で後左へカーブする。',
-'go_BackRight':'左右とも後退、右PWM200・左100で後右へカーブする。',
+'go_Advance':'左右を前進方向、PWMを100/100にする。',
+'go_Back':'左右を後退方向、PWMを100/100にする。',
+'go_Left':'右前進・左後退、通常PWM100/100、ダンス中PWM180/180でその場左旋回する。',
+'go_Right':'右後退・左前進、通常PWM100/100、ダンス中PWM180/180でその場右旋回する。',
+'go_ForwardLeft':'左右とも前進、右PWM130・左75で前左へカーブする。',
+'go_ForwardRight':'左右とも前進、右PWM75・左130で前右へカーブする。',
+'go_BackLeft':'左右とも後退、右PWM75・左130で後左へカーブする。',
+'go_BackRight':'左右とも後退、右PWM130・左75で後右へカーブする。',
 'go_Stop':'左右PWMを0、方向4端子をLOWにする。空転停止のため車輪の即時静止は保証しない。',
 'do_Drive_Tick':'走行状態に対応する出力関数を呼ぶ。不正な状態はGO_STOPに修正して停止する。',
 'warning':'警告の開始を記録する。再生中または前回開始から1000ms未満なら何もしない。時刻0での初回も許可する。',
@@ -42,13 +42,14 @@ DESCRIPTIONS={
 'decide_AvoidAction':'前後両方ならGO_RIGHT、前進系で前方のみならGO_BACK、後退系で後方のみならGO_ADVANCE、それ以外はDEFを返す。通常走行判定から呼ぶ。',
 'checkSensorsAndObstacles':'回避中はupdate_Avoidだけを呼んで戻る。ダンス中は戻る。通常時は測定要否を確認し、測定・回避判断・必要時の回避開始を行う。',
 'stop_Dance':'ダンスを解除しGO_STOPにしてモーターを停止する。曲再生は変更しない。',
-'dance_Action':'ステップ0〜7の走行状態を返す。8と範囲外はGO_STOPを返す。',
-'dance_Duration':'各ステップの設定時間msを返す。0/1は400、2/3は450、4は250、5/6は400、7は500、それ以外は200。',
+'dance_Action':'ステップ0〜6で左右のその場旋回または停止、7と範囲外はGO_STOPを返す。',
+'dance_Duration':'各ステップの設定時間msを返す。0/1は900、2/3は450、4は300、5/6は1200、7と範囲外は350。',
 'start_Dance':'回避中なら無視。それ以外は先頭ステップへ戻し、次周期の初回センサー確認を要求する。曲予約だけを解除し、モーター出力は安全確認後まで行わない。',
-'do_Dance_Tick':'ダンス中は初回または100ms経過時に前後を確認し、検知時は中止する。ステップ時間の経過で次に進み、9ステップ終了で停止する。',
+'do_Dance_Tick':'ダンス中は初回または100ms経過時に前後を確認し、検知時は中止する。ステップ時間の経過で次に進み、8ステップ終了で先頭へ戻り繰り返す。',
 'is_OppositeDrive':'上下・左右の逆向きの組合せを、順序を問わずtrueとする。斜め状態は引数に渡さず単独指示どうしを比較する。',
 'get_DiagonalDrive':'上下と左右の組合せを順序に関係なく前左・前右・後左・後右へ変換し、該当なしはDEFを返す。',
-'set_Drive':'直前の単独指示から300ms以内なら、逆向きは停止、上下＋左右は斜めにする。それ以外は新しい単独指示を記録し、センサー確認を要求する。',
+'is_DiagonalComponent':'斜め走行に含まれる上下または左右の単独方向ならtrue、それ以外はfalseを返す。',
+'set_Drive':'直前の単独入力と300ms以内で逆向きなら停止。900ms以内の上下＋左右は斜めにし、斜めの構成キー再受信では走行状態を保持する。入力と時刻を記録しセンサー確認を要求する。',
 'read_IR_Command':'IR受信がなければNO_COMMAND。受信時はコードとリピートフラグを取得しresumeする。リピートはNO_COMMAND、それ以外はcommandを返す。',
 'handle_StopButton':'回避・ダンスを解除し、stop_Musicで曲と警告を消音する。現在と直前の走行状態をGO_STOPにする。モーターは同じ周回の出力で止める。',
 'handle_DriveButton':'24/82/8/90を前進/後退/左/右の単独指示に変換しset_Driveへ渡す。他のコードは何もしない。',
@@ -85,25 +86,25 @@ def main():
   f['calls']=', '.join(dict.fromkeys(x for x in re.findall(r'\b(\w+)\s*\(',body) if x not in {'if','for','while','switch','sizeof'})) or '—'
   f['states']=', '.join(sorted(states & set(re.findall(r'\b\w+\b',body)))) or '—'
   f['desc']=DESCRIPTIONS[f['name']]
- csv_io=io.StringIO();w=csv.writer(csv_io);w.writerow(['関数','形式','処理内容','共有状態（参照・更新）','呼び出し','先頭行','行数'])
+ csv_io=io.StringIO();w=csv.writer(csv_io,lineterminator="\n");w.writerow(['関数','形式','処理内容','共有状態（参照・更新）','呼び出し','先頭行','行数'])
  for f in funcs:w.writerow([f['name'],f['sig'],f['desc'],f['states'],f['calls'],f['line'],f['lines']])
  (ROOT/'design-guide/functions.csv').write_text('\ufeff'+csv_io.getvalue())
  reqs=json.loads((ROOT/'scripts/requirements.json').read_text())
  page=re.sub(r'var reqs = \[.*?\n\];', 'var reqs = '+json.dumps(reqs,ensure_ascii=False,indent=2)+';',page,count=1,flags=re.S)
  # Current validation is deliberately separate from unverified historical claims.
  results=table(['確認','環境・結果'],[
- ['PC模擬試験','実コード全体をArduino/IR模擬環境でコンパイルし38項目成功。複数入力の境界、音楽との並行処理、回避、ダンス、警告波形を含む。'],
- ['Unoビルド','Arduino AVR Boards 1.8.8 / IRremote 4.4.1 / arduino:avr:uno で成功。Flash 11,552 / 32,256 bytes、SRAM 645 / 2,048 bytes。Arduinoコア由来の未使用引数警告あり。'],
+ ['PC模擬試験','実コード全体をArduino/IR模擬環境でコンパイル。47項目成功。最新コードの試験はREVIEW.mdに記録。複数入力の境界、音楽との並行処理、回避、ダンス、警告波形を含む。'],
+ ['Unoビルド','Arduino AVR Boards 1.8.8 / IRremote 4.4.1 / arduino:avr:uno で最新コードのビルド成功。Flash 11,728 / 32,256 bytes、SRAM 641 / 2,048 bytes。Arduinoコア由来の未使用引数警告あり。'],
  ['Web確認','図25枚の描画、関数検索、6つの移動先、コードとダウンロードの一致を自動チェックする。実施結果はREVIEW.mdに記録。'],
  ['実機試験','未実施。モーターの向き、音質、センサー感度、OKの応答、停止距離、タイマー動作を実機で確認する。'],
  ['旧版の85件/24件','対応する試験コードがリポジトリになく、最新版の成功証拠として使わない。改訂1.6は同梱の再現可能な試験を検証記録とする。']])
- design='<section class="design" id="design"><h2>開発設計書</h2><p class="cap">改訂1.6／2026年11月10日／Arduino Uno・OSOYOO V2.1／正本：robot_final.ino</p>'
+ design='<section class="design" id="design"><h2>開発設計書</h2><p class="cap">最新設定統一版／2026年11月11日／Arduino Uno・OSOYOO V2.1／正本：robot_final.ino</p>'
  design+=detail(1,'目的と設計方針','<p>リモコン走行・斜め走行・ダンス・音楽・障害物回避を実装する。入力・判断・出力の役割を分け、短い周期処理で状態を更新する。センサー測定と再確認待機はブロッキング処理として残っている。</p><p>1関数1目的、固定値の集約、重複処理の共通化を原則とする。20行以内・ネスト3段・引数3個は目安であり、現状の全関数が満たすという意味ではない。</p>')
  design+=detail(2,'命名と関数規模',f'<p>定数は大文字、単語間は_。変数はlowerCamelCase。関数は動詞_対象、boolはisを原則とする。Arduino標準のsetup/loop、既存のDrive_Num・IS_IR・watch・warningとdance_Action/dance_Durationは例外として列挙する。既存のAdvance/Forwardは今回の動作修正では改名しない。</p><p>全{count}関数、スケッチ{len(code.splitlines())}行。最大は{max(funcs,key=lambda f:f["lines"])["name"]}の{max(f["lines"] for f in funcs)}行。行数は先頭行から閉じ括弧まで。関数別の形式と行数は下の関数設計書に掲載する。</p>')
  design+=detail(3,'ハードウェア構成',table(['部品','ピン','備考'],[['IR受信','D4','IRremote 4.x、D13受信LED無効'],['右モーター','PWM D9／方向D12・D11','PWM0〜255'],['左モーター','PWM D6／方向D7・D8','PWM0〜255'],['ブザー','D13','パッシブ。矩形波で音楽/警告、無音はHIGH。駆動回路に合う配線を確認'],['前方超音波','Trig D10／Echo D3','最大25ms/測定'],['後方赤外線','左D0／右D2','LOWで検知。書き込み時はD0配線を外す。Serialと共用しない']]))
- design+=detail(4,'状態と処理の順番','<p>loop() → do_IR_Tick → do_Dance_Tick → checkSensorsAndObstacles → do_Drive_Tick → do_Music_Tick → 100/20μs待機。checkSensorsAndObstacles内で、回避中はupdate_Avoidだけを実行し、ダンス中は通常の判定を省く。</p>'+table(['状態','用途'],[['Drive_Num / lastDriveCmd / lastDriveCmdMs','現在の走行・直前の単独入力・入力時刻'],['isAvoiding / avoidStartMs','回避状態と駆動開始直後の時刻'],['front / back / isCheckRequested / lastCheckMs','通常走行の障害物と測定要求/時刻'],['isDancing / danceStep / danceStepStartMs / lastDanceCheckMs','9ステップのダンスと測定時刻'],['pendingSongNum / pendingSongMs','曲予約と300ms窓の開始'],['isMusicPlaying / currentNotePtr / noteStartMs / noteDurationMs','非ブロッキング音楽再生'],['isWarningPlaying / warningStartMs / isWarningIssued / lastWarnMs','警告再生と再開始制限']])+ '<p>基本は入力が状態を更新し出力が駆動する。ただしOKのstop_Musicは即消音、start_Avoidは回避駆動と警告開始、end_Avoid/stop_Danceは直接停止する。これらを明示的な例外とする。</p>')
- design+=detail(5,'境界条件と優先順位','<p>OK停止が最優先。次に障害物判断、その後にユーザー走行。音楽は走行と独立し、音の出力は警告が優先する。回避中はOKのみ、ダンス中はOKと0のみを受け付ける。</p>'+table(['条件','動作'],[['方向入力の間隔 ≤ 300ms','逆方向は停止。上下＋左右は斜め。直前の単独入力との組合せで判定'],['方向入力の間隔 > 300ms','最後の単独方向へ変更'],['曲予約から < 300ms','別番号で取消、同番号は最初の時刻を維持'],['曲予約から ≥ 300ms後の数字入力','新規予約で置換し、新たに300ms待つ'],['通常の曲開始','予約から300ms以上、かつ警告中でない周期で開始/切替'],['回避開始から ≥ 500ms','停止。センサー測定後も時間を再確認。処理遅延による超過あり'],['警告','2kHz音50ms/無音50msを2回。開始から200ms以上で終了。前回開始から1000ms以上あける'],['ダンス','9ステップ合計3450msが設定値。周期処理・測定による遅延分だけ実測は延びる']]))
- design+=detail(6,'検証記録（改訂1.6）',results+'<p><a href="https://github.com/rinne22/robot-phot2/blob/main/REVIEW.md">レビュー結果と再現手順</a></p><pre class="cmd">python3 tests/run_tests.py\npython3 tests/check_guide.py</pre>')
+ design+=detail(4,'状態と処理の順番','<p>loop() → do_IR_Tick → do_Dance_Tick → checkSensorsAndObstacles → do_Drive_Tick → do_Music_Tick → 100/20μs待機。checkSensorsAndObstacles内で、回避中はupdate_Avoidだけを実行し、ダンス中は通常の判定を省く。</p>'+table(['状態','用途'],[['Drive_Num / lastDriveCmd / lastDriveCmdMs','現在の走行・直前の単独入力・入力時刻'],['isAvoiding / avoidStartMs','回避状態と駆動開始直後の時刻'],['front / back / isCheckRequested / lastCheckMs','通常走行の障害物と測定要求/時刻'],['isDancing / danceStep / danceStepStartMs / lastDanceCheckMs','8ステップを繰り返すダンスと測定時刻'],['pendingSongNum / pendingSongMs','曲予約と300ms窓の開始'],['isMusicPlaying / currentNotePtr / noteStartMs / noteDurationMs','非ブロッキング音楽再生'],['isWarningPlaying / warningStartMs / isWarningIssued / lastWarnMs','警告再生と再開始制限']])+ '<p>基本は入力が状態を更新し出力が駆動する。ただしOKのstop_Musicは即消音、start_Avoidは回避駆動と警告開始、end_Avoid/stop_Danceは直接停止する。これらを明示的な例外とする。</p>')
+ design+=detail(5,'境界条件と優先順位','<p>OK停止が最優先。次に障害物判断、その後にユーザー走行。音楽は走行と独立し、音の出力は警告が優先する。回避中はOKのみ、ダンス中はOKと0のみを受け付ける。</p>'+table(['条件','動作'],[['逆方向入力の間隔 ≤ 300ms','直前の単独入力と逆方向なら停止'],['上下＋左右の間隔 ≤ 900ms','順番を問わず斜め走行。斜めの構成キー再受信では状態を保持し、900ms窓を更新'],['方向入力の間隔 > 900ms','新しい単独方向へ変更'],['曲予約から < 300ms','別番号で取消、同番号は最初の時刻を維持'],['曲予約から ≥ 300ms後の数字入力','新規予約で置換し、新たに300ms待つ'],['通常の曲開始','予約から300ms以上、かつ警告中でない周期で開始/切替'],['回避開始から ≥ 500ms','停止。センサー測定後も時間を再確認。処理遅延による超過あり'],['警告','2kHz音50ms/無音50msを2回。開始から200ms以上で終了。前回開始から1000ms以上あける'],['ダンス','その場旋回・停止のみの8ステップを繰り返す。1周5750msが設定値。通常PWM100、ダンスPWM180、斜め外側130／内側75。実測は処理遅延分延びる']]))
+ design+=detail(6,'検証記録（最新設定）',results+'<p><a href="https://github.com/rinne22/robot-phot2/blob/main/REVIEW.md">レビュー結果と再現手順</a></p><pre class="cmd">python3 tests/run_tests.py\npython3 tests/check_guide.py</pre>')
  design+=detail(7,'限界と実機で確認すること','<ul><li>超音波タイムアウトは999cm扱い。センサー故障と障害物なしを区別しない。</li><li>通常のその場旋回中は障害物判定をしない。側方センサーもなく、旋回の安全を保証しない。</li><li>センサー測定や30ms/20ms待機はIR応答と音の波形更新を遅らせる。停止出力300ms以内は目標であり実測値ではない。</li><li>停止は空転停止。車輪の静止時間・停止距離・20cm閾値の妥当性は未測定。</li><li>D13は起動時にブートローダーが駆動する場合がある。音程・音量・波形品質とI/O駆動能力を実機で確認する。</li></ul>')
  design+='</section>'
  start=page.index('<section class="design" id="design">');end=page.index('<section class="design" id="functions"',start)
@@ -111,7 +112,7 @@ def main():
  xlsx=build_xlsx(funcs)
  (ROOT/'design-guide/関数設計書.xlsx').write_bytes(xlsx)
  xlsx_b64=base64.b64encode(xlsx).decode()
- cards=f'<section class="design" id="functions" aria-labelledby="functions-title"><h2 id="functions-title">関数設計書</h2><p>改訂1.6の全{count}関数。添付Excelと同じ項目・表の構成でまとめています。</p><p><a class="fn-download" download="関数設計書.xlsx" href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{xlsx_b64}">関数設計書をダウンロード（Excel）</a></p><div class="fn-controls" hidden><label for="function-search">関数を検索</label><input id="function-search" type="search" placeholder="例：go_Stop、障害物、PWM" autocomplete="off"><span id="function-count" role="status">{count}件</span></div><p id="function-empty" hidden>該当する関数がありません。</p><div class="function-group"><h3>全関数（ソース順）</h3>'
+ cards=f'<section class="design" id="functions" aria-labelledby="functions-title"><h2 id="functions-title">関数設計書</h2><p>最新設定の全{count}関数。添付Excelと同じ項目・表の構成でまとめています。</p><p><a class="fn-download" download="関数設計書.xlsx" href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{xlsx_b64}">関数設計書をダウンロード（Excel）</a></p><div class="fn-controls" hidden><label for="function-search">関数を検索</label><input id="function-search" type="search" placeholder="例：go_Stop、障害物、PWM" autocomplete="off"><span id="function-count" role="status">{count}件</span></div><p id="function-empty" hidden>該当する関数がありません。</p><div class="function-group"><h3>全関数（ソース順）</h3>'
  for f in funcs:
   cards+=f'<details class="function-card" id="fn-{f["name"]}"><summary><code>{f["name"]}()</code><span>{esc(f["desc"].split("。")[0])}</span></summary><div class="body dbody">'+form_html(f)+'</div></details>'
  cards+='</div></section>'
@@ -171,7 +172,7 @@ def main():
  H -->|いいえ| J{"前回切替から250μs以上？"}
  J -->|いいえ| E
  J -->|はい| K["LOWとHIGHを1回切替"] --> E''')}
- fig_html='<section class="figs" id="figures"><h2>設計図</h2><p class="cap">改訂1.6／図1〜6：操作シーケンス、図7〜25：処理フロー。矢印は呼び出し、状態の受け渡し、実行順を示します。</p>'
+ fig_html='<section class="figs" id="figures"><h2>設計図</h2><p class="cap">最新設定／図1〜6：操作シーケンス、図7〜25：処理フロー。矢印は呼び出し、状態の受け渡し、実行順を示します。</p>'
  for heading,num,cap,src in figs:
   n=int(num);src=html.unescape(src)
   if n in fixes:cap,src=fixes[n]
@@ -183,7 +184,7 @@ def main():
   if n==20:
    cap='300ms未満の予約だけを競合判定に使います。期限以降の数字は新規予約です。'
    src=src.replace('依頼中の曲と別の数字?','300ms未満の予約で別の数字?').replace('同じ数字を依頼中?','300ms未満の予約で同じ数字?')
-  if n==25:cap='9ステップの設定時間は合計3450ms。開始直後は最初のモーター出力前に障害物を確認します。0で再開、OKで停止します。'
+  if n==25:cap='その場旋回と停止の8ステップを繰り返します。1周の設定時間は5750ms。開始直後は最初の出力前に前後を確認し、障害物またはOKで停止、0で先頭から再開します。'
   fig_html+=heading+'<p class="cap">'+cap+'</p><div class="diagram"><pre class="mermaid">'+esc(src)+'</pre></div>'
  fig_html+='</section>\n'
  page=page[:start]+fig_html+page[end:]
@@ -192,10 +193,14 @@ def main():
  page=page.replace('</head>', '<style id="function-form-style">.function-form{min-width:640px;table-layout:fixed}.function-form th{background:#ddd;color:#18262b;vertical-align:middle;text-align:center}.function-form td{white-space:pre-wrap;overflow-wrap:anywhere}.function-form td,.function-form th{border:1px solid #8a949a;padding:10px}.function-form tr:first-child td{font-weight:700}</style>'+'</head>')
  page=page.replace('使用言語：C言語（Arduino言語）','使用言語：C++（Arduinoスケッチ）')
  page=page.replace('IRremote</code>（4.x系）','IRremote</code>（検証版4.4.1／4.x系）')
- page=page.replace('<b>45</b> 関数の設計',f'<b>{count}</b> 関数の設計').replace('<b>24</b> 結合テスト項目','<b>38</b> PC模擬試験項目')
- page=page.replace('結合テストはPC上の疑似環境で実施。実機確認項目は開発設計に記載しています。','改訂1.6はPC模擬試験38項目とUnoビルドを確認。実機試験は未実施です。')
- rev='<section class="overview" id="revision"><h2>レビュー改訂1.6</h2><p>要件・開発設計・全56関数・図25枚・掲載コードとダウンロードを統一しました。数字入力の時間判定、パッシブブザー警告波形、初期化時の出力を修正しました。</p><p><a href="robot_final.ino" download>Arduinoコードをダウンロード</a> ／ <a href="https://github.com/rinne22/robot-phot2/blob/main/REVIEW.md">レビュー結果・検証記録</a></p><p>PC模擬試験38項目・Arduino Unoビルド成功。実機の音質・停止応答・停止距離は未確認です。</p></section>'
+ page=re.sub(r'<b>\d+</b> PC模擬試験項目','<b>47</b> PC模擬試験項目',page)
+ page=re.sub(r'<b>\d+</b> 関数の設計',f'<b>{count}</b> 関数の設計',page)
+ page=page.replace('<b>45</b> 関数の設計',f'<b>{count}</b> 関数の設計').replace('<b>24</b> 結合テスト項目','<b>47</b> PC模擬試験項目')
+ page=page.replace('結合テストはPC上の疑似環境で実施。実機確認項目は開発設計に記載しています。','最新設定の検証結果は開発設計とREVIEW.mdを参照。実機試験は未実施です。')
+ rev=f'<section class="overview" id="revision"><h2>最新設定統一版（2026年11月11日）</h2><p>通常PWM100、ダンスPWM180、斜め外側130／内側75、斜め入力900ms、逆方向入力300ms、8ステップ反復ダンスを基準に、要件・開発設計・全{count}関数・図25枚・掲載コード・ダウンロード・Excelを統一しました。</p><p><a href="robot_final.ino" download>Arduinoコードをダウンロード</a> ／ <a href="https://github.com/rinne22/robot-phot2/blob/main/REVIEW.md">検証記録</a></p><p>検証の対象版と結果はREVIEW.mdを参照。実機の音質・停止応答・停止距離は未確認です。</p></section>'
  page=re.sub(r'<section class="overview" id="revision">.*?</section>',lambda m:rev,page,count=1,flags=re.S)
+ page=page.replace('Arduino Unoでの今回の改訂版のビルド・実機試験は未実施です。PWMや障害物検出の応答は実機で確認してください。旧版1.6の検証記録は今回の変更の確認結果ではありません。','最新設定のビルド結果はREVIEW.mdを参照。実機試験は未実施です。')
+ page=re.sub(r'改訂1\.6はPC模擬試験\d+項目とUnoビルドを確認。実機試験は未実施です。','最新設定のPC模擬試験47項目とUnoビルドを確認。実機試験は未実施です。',page)
  for path in ['design-guide/index.html','index.html']:
   out=page if path.startswith('design-guide/') else page.replace('href="functions.csv"','href="design-guide/functions.csv"')
   (ROOT/path).write_text(out)

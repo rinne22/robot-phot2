@@ -18,7 +18,7 @@ try:
   page.route(cdn,lambda route: route.fulfill(body=mermaid_bytes,content_type='application/javascript'))
   page.goto(url,wait_until='networkidle')
   page.wait_for_function("document.querySelectorAll('.mermaid-diagram svg').length === 25",timeout=60000)
-  assert page.locator('.function-card').count()==56
+  assert page.locator('.function-card').count()==57
   page.locator('#function-search').fill('do_Warning_Tick')
   assert page.locator('#fn-do_Warning_Tick').is_visible()
   page.locator('#function-search').fill('存在しない関数XYZ')
@@ -31,7 +31,7 @@ try:
   download=info.value
   assert download.suggested_filename=='関数設計書.xlsx'
   book=openpyxl.load_workbook(io.BytesIO(Path(download.path()).read_bytes()))
-  assert len(book.worksheets)==57 and book['setup']['C5'].value=='void setup();'
+  assert len(book.worksheets)==58 and book['setup']['C5'].value=='void setup();'
   page.locator('#fn-setup').scroll_into_view_if_needed()
   page.screenshot(path=str(root.parent/'function-excel-form.png'),full_page=False)
   for anchor in ['overview','requirements','design','functions','figures','code']:
@@ -49,6 +49,6 @@ try:
   page.wait_for_function("document.querySelectorAll('.mermaid-diagram svg').length === 25",timeout=60000)
   page.screenshot(path=str(root.parent/'figures-review.png'),full_page=False)
   assert not errors,errors
-  print('PASS Chromium: 25 Mermaid diagrams, 56 functions, search, six anchors, open/close, downloads, memo persistence, mobile width, no page errors')
+  print('PASS Chromium: 25 Mermaid diagrams, 57 functions, search, six anchors, open/close, downloads, memo persistence, mobile width, no page errors')
   b.close()
 finally:server.shutdown()

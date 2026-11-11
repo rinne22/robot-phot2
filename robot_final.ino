@@ -1,6 +1,6 @@
 // リモコン操作ロボット（走行・音楽・超音波センサー・後方赤外線センサー・ブザー）
 // 処理の流れ： 入力(do_IR_Tick) → 判断(checkSensorsAndObstacles) → 出力(do_Drive_Tick)
-// Arduino Uno / IRremote 4.x / レビュー改訂 1.6 (2026-11-10)
+// Arduino Uno / IRremote 4.x / 最新設定統一版 (2026-11-11)
 //
 // 【配線の注意】
 //  ・D0（左後方センサー）をつないだままだとUSB書き込みに失敗することがあります。
@@ -171,7 +171,7 @@ void go_Right() {              // 右折（その場旋回：右後退・左前�
   set_MotorSpeed(isDancing ? DANCE_SPEED : SPEED, isDancing ? DANCE_SPEED : SPEED);
 }
 
-// 左右の回転速度を変え、進みながら曲がる（内側は半速）
+// 左右の回転速度を変え、進みながら曲がる（外側130・内側75）
 void go_ForwardLeft() {
   set_RightMotor(HIGH, LOW); set_LeftMotor(HIGH, LOW);
   set_MotorSpeed(DIAGONAL_OUTER_SPEED, DIAGONAL_INNER_SPEED);
@@ -567,6 +567,7 @@ void set_Drive(DriveState cmd) {
   if (elapsed <= DIAGONAL_WINDOW_MS && is_DiagonalComponent(Drive_Num, cmd)) {
     lastDriveCmd = cmd;
     lastDriveCmdMs = now;
+    isCheckRequested = true;
     return;
   }
 

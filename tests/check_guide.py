@@ -24,15 +24,18 @@ for path in [root/'index.html',root/'design-guide/index.html']:
   if link.startswith('#'):assert link[1:] in p.ids,link
   elif link and not re.match(r'[a-z]+:',link):assert (path.parent/link.split('#')[0]).exists(),link
  assert html.unescape(re.search(r'<code id="codeText">(.*?)</code>',s,re.S)[1])==code
- assert len(re.findall(r'class="function-card"',s))==56
+ assert len(re.findall(r'class="function-card"',s))==57
  assert len(re.findall(r'<pre class="mermaid">',s))==25
- assert '<b>56</b>' in s and '<b>38</b>' in s
+ assert '<b>57</b>' in s
+ for bad in ['PWM200', 'PWM80', '9ステップ', '3450ms', '38項目', '56関数', '900msを超えない300ms']:
+  assert bad not in html.unescape(s),bad
+ assert '900ms' in s and '5750ms' in s and 'is_DiagonalComponent' in s
  for bad in ['全45関数','音楽再生時に停止','斜め移動は仕様に含めない','再生中に別の数字を押しても、曲は切り替わらない']:
   assert bad not in s,bad
  for script in re.findall(r'<script[^>]*>(.*?)</script>',s,re.S):
   with tempfile.NamedTemporaryFile(suffix='.js',mode='w') as f:
    f.write(script);f.flush();subprocess.run(['node','--check',f.name],check=True,capture_output=True)
- print('PASS document parity, links, sections, 56 functions, 25 diagrams and JavaScript syntax:',path.relative_to(root))
+ print('PASS document parity, links, sections, 57 functions, 25 diagrams and JavaScript syntax:',path.relative_to(root))
 subprocess.run(['python3',str(root/'scripts/update_guide.py')],check=True)
 for path in ['index.html','design-guide/index.html']:
  # Running twice must not cause another diff.

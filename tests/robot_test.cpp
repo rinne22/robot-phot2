@@ -28,17 +28,17 @@ int cases=0;
 #define TEST(name, ...) do{clearState();__VA_ARGS__;cases++;std::cout<<"PASS "<<name<<"\n";}while(0)
 int main(){
  TEST("startup",setup();assert(Drive_Num==GO_STOP&&pwm[9]==0&&pwm[6]==0&&pins[13]==HIGH));
- TEST("four directions",for(auto pair: {std::pair<int,DriveState>{IR_ADVANCE,GO_ADVANCE},{IR_BACK,GO_BACK},{IR_LEFT,GO_LEFT},{IR_RIGHT,GO_RIGHT}}){delay(301);input(pair.first);assert(Drive_Num==pair.second&&pwm[9]==200&&pwm[6]==200);});
+ TEST("four directions",for(auto pair: {std::pair<int,DriveState>{IR_ADVANCE,GO_ADVANCE},{IR_BACK,GO_BACK},{IR_LEFT,GO_LEFT},{IR_RIGHT,GO_RIGHT}}){delay(901);input(pair.first);assert(Drive_Num==pair.second&&pwm[9]==100&&pwm[6]==100);});
  TEST("opposite boundary",set_Drive(GO_ADVANCE);delay(300);set_Drive(GO_BACK);assert(Drive_Num==GO_STOP));
  TEST("opposite after boundary",set_Drive(GO_ADVANCE);delay(301);set_Drive(GO_BACK);assert(Drive_Num==GO_BACK));
  TEST("all diagonal orders",for(auto a:{GO_ADVANCE,GO_BACK})for(auto b:{GO_LEFT,GO_RIGHT}){assert(get_DiagonalDrive(a,b)!=DEF);assert(get_DiagonalDrive(a,b)==get_DiagonalDrive(b,a));});
- TEST("diagonal outputs",set_Drive(GO_ADVANCE);delay(100);set_Drive(GO_LEFT);do_Drive_Tick();assert(Drive_Num==GO_FORWARD_LEFT&&pwm[9]==200&&pwm[6]==100));
+ TEST("diagonal outputs",set_Drive(GO_ADVANCE);delay(100);set_Drive(GO_LEFT);do_Drive_Tick();assert(Drive_Num==GO_FORWARD_LEFT&&pwm[9]==130&&pwm[6]==75));
  TEST("numeric conflict before boundary",handle_NumberButton(69);delay(299);handle_NumberButton(70);assert(pendingSongNum==0));
  TEST("numeric new request at boundary",handle_NumberButton(69);delay(300);handle_NumberButton(70);assert(pendingSongNum==2&&pendingSongMs==millis()));
  TEST("numeric request after delayed loop",handle_NumberButton(69);delay(400);handle_NumberButton(70);delay(300);do_Music_Tick();assert(isMusicPlaying&&currentNotePtr==SONG_2));
  TEST("duplicate number preserves deadline",handle_NumberButton(69);auto start=pendingSongMs;delay(100);handle_NumberButton(69);assert(pendingSongMs==start));
  TEST("music starts at 300ms",handle_NumberButton(69);delay(299);do_Music_Tick();assert(!isMusicPlaying);delay(1);do_Music_Tick();assert(isMusicPlaying));
- TEST("music preserves drive",input(IR_ADVANCE);handle_NumberButton(69);delay(300);do_Music_Tick();assert(Drive_Num==GO_ADVANCE&&pwm[9]==200));
+ TEST("music preserves drive",input(IR_ADVANCE);handle_NumberButton(69);delay(300);do_Music_Tick();assert(Drive_Num==GO_ADVANCE&&pwm[9]==100));
  TEST("music allows direction",play_Music(1);input(IR_LEFT);assert(isMusicPlaying&&Drive_Num==GO_LEFT));
  TEST("music switches via new request",play_Music(1);handle_NumberButton(70);delay(300);do_Music_Tick();assert(currentNotePtr==SONG_2));
  TEST("OK cancels everything",play_Music(1);start_Avoid(GO_BACK);isDancing=true;pendingSongNum=2;input(IR_STOP);assert(!isAvoiding&&!isDancing&&!isMusicPlaying&&!isWarningPlaying&&pendingSongNum==0&&Drive_Num==GO_STOP&&pwm[9]==0&&pins[13]==HIGH));
@@ -55,15 +55,24 @@ int main(){
  TEST("warning resumes same note",play_Music(1);delay(50);auto start=noteStartMs;auto ptr=currentNotePtr;warning();delay(200);do_Music_Tick();assert(!isWarningPlaying&&isMusicPlaying&&currentNotePtr==ptr&&noteStartMs==start+200));
  TEST("warning interval including time zero",clockUs=0;warning();delay(200);do_Warning_Tick();delay(1);warning();assert(!isWarningPlaying);delay(799);warning();assert(isWarningPlaying));
  TEST("dance first output blocked",echoPulse=580;input(IR_DANCE);assert(!isDancing&&Drive_Num==GO_STOP&&pwm[9]==0));
- TEST("dance step transitions",input(IR_DANCE);assert(isDancing&&Drive_Num==GO_LEFT);delay(400);do_Dance_Tick();assert(Drive_Num==GO_RIGHT));
+ TEST("dance step transitions",input(IR_DANCE);assert(isDancing&&Drive_Num==GO_LEFT);delay(900);do_Dance_Tick();assert(Drive_Num==GO_RIGHT));
  TEST("dance ignores direction",input(IR_DANCE);input(IR_ADVANCE);assert(isDancing&&Drive_Num==GO_LEFT));
  TEST("dance restarts",input(IR_DANCE);danceStep=3;input(IR_DANCE);assert(danceStep==0&&Drive_Num==GO_LEFT));
  TEST("dance obstacle stops",input(IR_DANCE);pins[2]=LOW;delay(100);do_Dance_Tick();assert(!isDancing&&pwm[9]==0));
- TEST("dance duration",unsigned total=0;for(int i=0;i<DANCE_STEPS;i++)total+=dance_Duration(i);assert(total==3450));
- TEST("dance completion",start_Dance();for(int i=0;i<DANCE_STEPS;i++){delay(dance_Duration(i));do_Dance_Tick();}assert(!isDancing&&Drive_Num==GO_STOP));
+ TEST("dance duration",unsigned total=0;for(int i=0;i<DANCE_STEPS;i++)total+=dance_Duration(i);assert(total==5750));
+ TEST("dance completion",start_Dance();for(int i=0;i<DANCE_STEPS;i++){delay(dance_Duration(i));do_Dance_Tick();}assert(isDancing&&danceStep==0&&Drive_Num==GO_LEFT));
  TEST("unknown and repeat ignored",input(IR_ADVANCE);input(255);IrReceiver.send(IR_BACK,IRDATA_FLAGS_IS_REPEAT);loop();assert(Drive_Num==GO_ADVANCE));
  TEST("invalid state stops",Drive_Num=static_cast<DriveState>(99);do_Drive_Tick();assert(Drive_Num==GO_STOP&&pwm[9]==0));
  TEST("song finishes",play_Music(9);for(int i=0;i<20&&isMusicPlaying;i++){delay(1000);do_Music_Tick();}assert(!isMusicPlaying&&pins[13]==HIGH));
  TEST("timeout existing policy",echoPulse=0;assert(watch()==999));
+ TEST("diagonal 900ms boundary all orders",for(auto a:{GO_ADVANCE,GO_BACK})for(auto b:{GO_LEFT,GO_RIGHT})for(bool reverse:{false,true}){clearState();set_Drive(reverse?b:a);delay(900);set_Drive(reverse?a:b);assert(Drive_Num==get_DiagonalDrive(a,b));});
+ TEST("diagonal expires at 901ms",set_Drive(GO_ADVANCE);delay(901);set_Drive(GO_LEFT);assert(Drive_Num==GO_LEFT));
+ TEST("all diagonal PWM outputs",for(auto state:{GO_FORWARD_LEFT,GO_FORWARD_RIGHT,GO_BACK_LEFT,GO_BACK_RIGHT}){Drive_Num=state;do_Drive_Tick();bool outerRight=state==GO_FORWARD_LEFT||state==GO_BACK_RIGHT;assert(pwm[9]==(outerRight?130:75)&&pwm[6]==(outerRight?75:130));assert(pins[12]==(state==GO_FORWARD_LEFT||state==GO_FORWARD_RIGHT?HIGH:LOW));});
+ TEST("diagonal component refresh requests sensors",set_Drive(GO_ADVANCE);delay(100);set_Drive(GO_LEFT);isCheckRequested=false;delay(900);set_Drive(GO_ADVANCE);assert(Drive_Num==GO_FORWARD_LEFT&&isCheckRequested);delay(900);set_Drive(GO_LEFT);assert(Drive_Num==GO_FORWARD_LEFT));
+ TEST("diagonal opposite last input stops",set_Drive(GO_ADVANCE);delay(100);set_Drive(GO_LEFT);delay(300);set_Drive(GO_RIGHT);assert(Drive_Num==GO_STOP));
+ TEST("diagonal component after timeout becomes single",set_Drive(GO_ADVANCE);delay(100);set_Drive(GO_LEFT);delay(901);set_Drive(GO_ADVANCE);assert(Drive_Num==GO_ADVANCE));
+ TEST("dance PWM independent of normal speed",input(IR_DANCE);assert(pwm[9]==180&&pwm[6]==180);input(IR_STOP);input(IR_LEFT);assert(pwm[9]==100&&pwm[6]==100));
+ TEST("dance only spins and stops over three cycles",start_Dance();for(int cycle=0;cycle<3;cycle++){for(int i=0;i<DANCE_STEPS;i++){assert(Drive_Num==GO_LEFT||Drive_Num==GO_RIGHT||Drive_Num==GO_STOP);delay(dance_Duration(i));do_Dance_Tick();}assert(isDancing&&danceStep==0);}input(IR_STOP);assert(!isDancing&&pwm[9]==0&&pwm[6]==0));
+ TEST("dance preserves active music cancels reservation",play_Music(1);handle_NumberButton(70);start_Dance();assert(isMusicPlaying&&pendingSongNum==0));
  std::cout<<cases<<" host simulation cases passed; hardware not tested.\n";
 }
