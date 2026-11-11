@@ -28,7 +28,7 @@
 
 // ---------- 設定値 ----------
 #define DISTANCE_LIMIT    20   // 前方の障害物とみなす距離（cm）
-#define SPEED            200  // モーター速度（0〜255）
+#define SPEED            140  // 通常走行・ダンスの基本速度（0〜255、従来200）
 #define CHECK_INTERVAL_MS   100  // センサー確認の間隔（ms）
 #define CONFLICT_MS      300  // 逆向きのコードを矛盾とみなす時間（ms）
 #define AVOID_MS         500  // 回避動作を続ける時間（ms）
@@ -469,12 +469,12 @@ DriveState dance_Action(uint8_t step) {
 
 unsigned int dance_Duration(uint8_t step) {
   switch (step) {
-    case 0: case 1: return 400;
-    case 2: case 3: return 450;
-    case 4: return 250;
-    case 5: case 6: return 400;
-    case 7: return 500;
-    default: return 200;
+    case 0: case 1: return 800;    // 左右旋回
+    case 2: case 3: return 900;    // 前進カーブ
+    case 4: return 450;            // 一拍休み
+    case 5: case 6: return 850;    // 後退カーブ
+    case 7: return 1000;           // 最後の旋回
+    default: return 400;           // ループ間の停止
   }
 }
 
@@ -508,8 +508,7 @@ void do_Dance_Tick() {
   if (now - danceStepStartMs < dance_Duration(danceStep)) return;
   danceStep++;
   if (danceStep >= DANCE_STEPS) {
-    stop_Dance();
-    return;
+    danceStep = 0;               // 0に戻してOKまでダンスを繰り返す
   }
   danceStepStartMs = now;
   Drive_Num = dance_Action(danceStep);
