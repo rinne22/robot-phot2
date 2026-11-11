@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self' https://*.supabase.co; frame-src blob:; object-src 'none'; base-uri 'none'; form-action 'self'">
+<title>Relay — PC間ファイル受け渡し</title>
+<meta name="description" content="自宅から、次のパソコンへ。Supabaseの非公開ストレージでファイルを受け渡すツール。">
+<link rel="stylesheet" href="style.css"><script src="config.js" defer></script><script src="app.js" defer></script>
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar">
+<a class="brand" href="./"><span class="brand-icon">↗</span> Relay<span class="beta">FREE</span></a>
+<p class="side-caption">あなたのファイルを、次のPCへ。</p>
+<nav aria-label="ファイルの表示"><button class="nav-item active" data-filter="all"><span>▦</span>すべてのファイル</button><button class="nav-item" data-filter="images"><span>▧</span>画像</button><button class="nav-item" data-filter="documents"><span>▤</span>ドキュメント</button><button class="nav-item" data-filter="others"><span>□</span>その他</button></nav>
+<div class="storage-card"><div class="storage-heading">クラウドストレージ <span>☁</span></div><progress id="storage-meter" max="800000000" value="0" aria-label="プロジェクト保存容量"></progress><strong id="storage-label">接続後に使用量を表示</strong><small id="own-storage">ファイルは非公開で保存されます</small><p>無料枠に余裕を残して、全ユーザー合計800 MBで停止。</p></div>
+<div class="side-bottom"><a href="setup.html">設定・無料運用ガイド ↗</a><a href="../design-guide/">ロボットカー設計ガイドへ</a><span class="status-dot">Supabase Free / GitHub Pages</span></div>
+</aside>
+<div class="workspace">
+<header class="topbar"><label class="search-wrap"><span>⌕</span><input id="search" type="search" placeholder="ファイル名で検索" aria-label="ファイル名で検索"></label><div class="account"><span id="account-email">未ログイン</span><button id="logout" class="subtle" hidden>ログアウト</button></div></header>
+<main>
+<div class="page-title"><div><p class="eyebrow">YOUR PERSONAL TRANSFER SPACE</p><h1>ファイルを、つなぐ。</h1><p>アップロードしたら、元のPCを閉じても大丈夫。<br class="mobile-break">別のPCから同じアカウントで開けます。</p></div><button id="upload-top" class="primary" disabled>＋ アップロード</button></div>
+<section id="setup-notice" class="notice" hidden><strong>初回設定が必要です</strong><p>Supabaseプロジェクトはまだ接続されていません。設定完了後にログイン・クラウド保存が利用できます。</p><a href="setup.html">無料で使い始める手順を見る →</a></section>
+<section id="auth-panel" class="auth-panel" aria-labelledby="auth-heading"><div><span class="tag">PRIVATE CLOUD</span><h2 id="auth-heading">自分のアカウントで、どのPCからも。</h2><p>メールアドレスとパスワードでログイン。<br>ファイルの中身はこのサイトやGitHubには保存されません。</p></div><form id="auth-form"><label>メールアドレス<input id="email" type="email" autocomplete="email" required maxlength="254" placeholder="you@example.com"></label><label>パスワード<input id="password" type="password" autocomplete="current-password" required minlength="12" placeholder="12文字以上"></label><div class="auth-actions"><button id="login" type="submit" class="primary">ログイン</button><button id="signup" type="button" class="secondary">新規登録</button><button id="recover" type="button" class="link-button">パスワードを忘れた方</button></div><p class="fine">ログイン情報はこのタブのsessionStorageに保存します。共有PCでは必ずログアウトしてください。</p></form></section>
+<section id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="ファイルを選択してアップロード" aria-disabled="true"><div class="upload-icon">↑</div><h2>ここにファイルをドロップ</h2><p>または <span>ファイルを選択</span>　·　複数選択できます</p><small>PDF · Word · Excel · 画像 · ZIP · HTML など / 1ファイル最大50 MB</small></section><input id="file-input" type="file" multiple hidden>
+<section id="uploads" class="upload-queue" aria-label="アップロードの進捗" hidden><h2>アップロード</h2><div id="queue-list"></div></section>
+<section class="files-section" aria-labelledby="files-heading"><div class="files-toolbar"><div><h2 id="files-heading">すべてのファイル <span id="file-count">0</span></h2><p id="file-caption">ログインすると保存済みファイルを表示します</p></div><div class="toolbar-actions"><button id="refresh" class="subtle" disabled>↻ 更新</button><select id="sort" aria-label="並び順"><option value="newest">新しい順</option><option value="oldest">古い順</option><option value="name">ファイル名順</option></select></div></div>
+<div id="bulk-bar" class="bulk-bar" hidden><span id="selected-count"></span><button id="delete-selected" class="danger">選択したファイルを削除</button></div>
+<div class="table-wrap"><table><thead><tr><th class="check-cell"><input id="select-all" type="checkbox" aria-label="表示中のファイルをすべて選択"></th><th>ファイル名</th><th class="type-column">種類</th><th>容量</th><th class="date-column">保存日時</th><th class="actions-cell">操作</th></tr></thead><tbody id="file-list"></tbody></table><div id="empty-state" class="empty-state"><div>▱</div><h3>次のPCへ、最初のファイルを。</h3><p>ログインしてアップロードすると、ここに表示されます。</p></div></div>
+<div id="pagination" class="pagination" hidden><button id="prev-page" class="secondary">前へ</button><span id="page-label"></span><button id="next-page" class="secondary">次へ</button></div>
+</section>
+<footer><span>◈ プライベート保存 · 接続はHTTPS</span><span>休止・通信量などの制限は <a href="setup.html#limits">無料運用ガイド</a> をご確認ください。</span></footer>
+</main></div></div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<dialog id="preview-dialog"><div class="dialog-heading"><h2 id="preview-title">プレビュー</h2><button class="subtle" data-close="preview-dialog" aria-label="プレビューを閉じる">✕</button></div><div id="preview-content"></div><p class="fine">HTML・SVG等は実行せず、テキストまたはダウンロードで扱います。</p></dialog>
+<dialog id="share-dialog"><div class="dialog-heading"><h2>期限付きリンクを作成</h2><button class="subtle" data-close="share-dialog" aria-label="共有を閉じる">✕</button></div><p id="share-name"></p><p>リンクを知っている人は、ログインせずこの1ファイルをダウンロードできます。転送先にも同じ権限が渡ります。</p><label>有効期間<select id="share-duration"><option value="300">5分</option><option value="3600" selected>1時間</option><option value="86400">24時間</option></select></label><button id="create-share" class="primary">リンクを発行</button><div id="share-result" hidden><label>共有URL<input id="share-url" readonly></label><p id="share-expires" class="fine"></p><button id="copy-share" class="secondary">リンクをコピー</button></div><p class="fine">発行済みリンクの個別失効はできません。途中で共有を止める場合は元のファイルを削除してください。共有・閲覧も通信量に数えられます。</p></dialog>
+<dialog id="confirm-dialog"><h2>ファイルを削除しますか？</h2><p id="confirm-message"></p><p class="fine">この操作は元に戻せません。共有URLからも利用できなくなります。</p><div class="auth-actions"><button id="confirm-cancel" class="secondary">キャンセル</button><button id="confirm-delete" class="danger">削除する</button></div></dialog>
+<dialog id="password-dialog"><h2>新しいパスワード</h2><form id="password-form"><label>12文字以上<input id="new-password" type="password" minlength="12" required autocomplete="new-password"></label><button type="submit" class="primary">パスワードを更新</button></form></dialog>
+</body></html>

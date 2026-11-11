@@ -252,8 +252,10 @@ def main():
  choices='<div id="code-options"><h2>Arduinoコードを選ぶ</h2><p>使いたい版を1つ選び、Arduinoに書き込んでください。</p>'+table(['コード','前進中に前方障害物を検知したとき','ダウンロード'],[['通常版','前方のみなら自動後退して回避','<a href="robot_final.ino" download>通常版をダウンロード</a>'],['自動後退しない版','前後同時検知も含めて停止し警告','<a id="front-stop-code-download" class="fn-download" href="robot_front_stop.ino" download="robot_front_stop.ino">自動後退しない版をダウンロード</a>']])+'<p>別版はファイルを robot_front_stop フォルダ内に robot_front_stop.ino として保存してください。通常版と別版を同じスケッチに入れず、選んだ版だけを書き込みます。模擬試験52項目・Unoビルド成功、実機試験は未実施です。</p><details id="front-stop-code"><summary><span class="id">追加コード</span><span>自動後退しない版の全文（robot_front_stop.ino）</span></summary><div class="body" style="padding-left:16px"><pre><code id="front-stop-code-text">'+esc(variant)+'</code></pre></div></details></div>'
  page=re.sub(r'<div id="code-options">.*?</details></div>', '',page,count=1,flags=re.S)
  page=page.replace('<section class="code-sec" id="code">','<section class="code-sec" id="code">'+choices,1)
+ if 'id="transfer-nav-link"' not in page:
+  page=page.replace('</nav>','<a id="transfer-nav-link" href="../file-transfer/">ファイル受け渡し</a></nav>',1)
  for path in ['design-guide/index.html','index.html']:
-  out=page if path.startswith('design-guide/') else page.replace('href="functions.csv"','href="design-guide/functions.csv"').replace('href="robot_front_stop.ino"','href="design-guide/robot_front_stop.ino"')
+  out=page if path.startswith('design-guide/') else page.replace('href="functions.csv"','href="design-guide/functions.csv"').replace('href="robot_front_stop.ino"','href="design-guide/robot_front_stop.ino"').replace('href="../file-transfer/"','href="file-transfer/"')
   (ROOT/path).write_text(out)
  (ROOT/'design-guide/robot_final.ino').write_text(code)
  print(f'Synchronized {count} functions, {len(figs)} diagrams and {len(reqs)} requirements')
