@@ -28,7 +28,7 @@
 
 // ---------- 設定値 ----------
 #define DISTANCE_LIMIT    20   // 前方の障害物とみなす距離（cm）
-#define SPEED            140  // 通常走行・ダンスの基本速度（0〜255、従来200）
+#define SPEED            80   // 通常走行・ダンスの基本速度（0〜255）
 #define CHECK_INTERVAL_MS   100  // センサー確認の間隔（ms）
 #define CONFLICT_MS      300  // 逆向きのコードを矛盾とみなす時間（ms）
 #define AVOID_MS         500  // 回避動作を続ける時間（ms）
@@ -71,7 +71,7 @@ bool isDancing = false;
 uint8_t danceStep = 0;
 unsigned long danceStepStartMs = 0;
 unsigned long lastDanceCheckMs = 0;
-const uint8_t DANCE_STEPS = 9;
+const uint8_t DANCE_STEPS = 8;
 
 // 音楽と警告音は delay で待たず、loop から定期的に更新する
 bool isMusicPlaying = false;
@@ -453,28 +453,27 @@ void stop_Dance() {
   go_Stop();
 }
 
+// ダンスはその場旋回と停止のみ。前進・後退・斜め走行をしない。
 DriveState dance_Action(uint8_t step) {
   switch (step) {
-    case 0: return GO_LEFT;            // 左に回転
-    case 1: return GO_RIGHT;           // 右に回転
-    case 2: return GO_FORWARD_LEFT;    // 前進しながら左へ
-    case 3: return GO_FORWARD_RIGHT;   // 前進しながら右へ
-    case 4: return GO_STOP;            // 一拍休む
-    case 5: return GO_BACK_LEFT;       // 後退しながら左へ
-    case 6: return GO_BACK_RIGHT;      // 後退しながら右へ
-    case 7: return GO_RIGHT;           // 右に回転
-    default: return GO_STOP;           // 終了時は停止
+    case 0: return GO_LEFT;    // 左旋回
+    case 1: return GO_RIGHT;   // 右旋回
+    case 2: return GO_LEFT;    // 短い左旋回
+    case 3: return GO_RIGHT;   // 短い右旋回
+    case 4: return GO_STOP;    // 一拍停止
+    case 5: return GO_LEFT;    // 長い左旋回
+    case 6: return GO_RIGHT;   // 長い右旋回
+    default: return GO_STOP;   // 一拍停止して次の周回へ
   }
 }
 
 unsigned int dance_Duration(uint8_t step) {
   switch (step) {
-    case 0: case 1: return 800;    // 左右旋回
-    case 2: case 3: return 900;    // 前進カーブ
-    case 4: return 450;            // 一拍休み
-    case 5: case 6: return 850;    // 後退カーブ
-    case 7: return 1000;           // 最後の旋回
-    default: return 400;           // ループ間の停止
+    case 0: case 1: return 900;
+    case 2: case 3: return 450;
+    case 4: return 300;
+    case 5: case 6: return 1200;
+    default: return 350;
   }
 }
 
@@ -508,7 +507,7 @@ void do_Dance_Tick() {
   if (now - danceStepStartMs < dance_Duration(danceStep)) return;
   danceStep++;
   if (danceStep >= DANCE_STEPS) {
-    danceStep = 0;               // 0に戻してOKまでダンスを繰り返す
+    danceStep = 0;               // 8ステップをOKまたは障害物停止まで繰り返す
   }
   danceStepStartMs = now;
   Drive_Num = dance_Action(danceStep);
