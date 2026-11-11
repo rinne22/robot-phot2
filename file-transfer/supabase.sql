@@ -37,13 +37,12 @@ create policy transfer_files_own on public.transfer_files for select to authenti
  using (owner_id=(select auth.uid()));
 
 -- 読み取りだけの公開RPC。全体の使用量のみ返し、他人のファイル名等は返さない。
-create or replace function public.transfer_usage() returns jsonb
+create or replace function transfer_private.usage_for_owner(p_owner uuid) returns jsonb
 language plpgsql security definer set search_path='' as $$
 declare cfg public.transfer_settings; used bigint; own_bytes bigint; db_bytes bigint; other_bytes bigint; n bigint;
 begin
- if auth.uid() is null then raise exception 'ログインが必要です。' using errcode='42501'; end if;
  select * into strict cfg from public.transfer_settings where id;
- select coalesce(sum(size_bytes),0), coalesce(sum(size_bytes) filter(where owner_id=auth.uid()),0),count(*)
+ select coalesce(sum(size_bytes),0), coalesce(sum(size_bytes) filter(where owner_id=p_owner),0),count(*)
  into used,own_bytes,n from public.transfer_files;
  -- このアプリ以外のバケットも容量として数える。専用プロジェクトで利用すること。
  select coalesce(sum((metadata->>'size')::bigint),0) into other_bytes from storage.objects where bucket_id<>'pc-transfer';
@@ -56,6 +55,14 @@ begin
  when n>=cfg.file_count_limit then 'ファイル件数の上限に達しました。不要なファイルを削除してください。'
  when used>=cfg.storage_limit then '保存容量の安全上限に達しました。不要なファイルを削除してください。' else '' end);
 end $$;
+
+create or replace function public.transfer_usage() returns jsonb
+language plpgsql security definer set search_path='' as $$
+begin
+ if auth.uid() is null then raise exception 'ログインが必要です。' using errcode='42501'; end if;
+ return transfer_private.usage_for_owner(auth.uid());
+end $$;
+
 
 -- 容量を先に予約。並行アップロードでも全員共通のロックで判定する。
 create or replace function public.transfer_reserve(p_filename text,p_size bigint,p_mime text) returns public.transfer_files
@@ -100,13 +107,16 @@ begin
  select * into f from public.transfer_files where object_path=new.name for update;
  if not found then raise exception '有効な容量予約がありません。'; end if;
  if tg_op='INSERT' and f.status<>'pending' then raise exception '上書きは許可されていません。'; end if;
- actual_size:=(new.metadata->>'size')::bigint;
- if actual_size is null or actual_size<>f.size_bytes then raise exception '予約容量と実ファイルの容量が一致しません。'; end if;
- if coalesce(new.metadata->>'mimetype','')<>'application/octet-stream' then raise exception '安全なダウンロード形式でアップロードしてください。'; end if;
- u:=public.transfer_usage();
+ u:=transfer_private.usage_for_owner(f.owner_id);
  if (u->>'used_bytes')::bigint>(u->>'limit_bytes')::bigint then raise exception '保存容量の上限を超えています。'; end if;
  if not (select uploads_enabled from public.transfer_settings where id) then raise exception '管理者がアップロードを停止しています。'; end if;
  if (u->>'db_bytes')::bigint>=(u->>'db_limit')::bigint then raise exception 'データベース容量の上限に達しました。'; end if;
+ actual_size:=(new.metadata->>'size')::bigint;
+ -- Storageは送信前の権限確認でもINSERTを試行し、直後にロールバックする。
+ -- その時点では実サイズ未確定。予約は維持し、readyにはしない。
+ if tg_op='INSERT' and actual_size is null and f.status='pending' then return new; end if;
+ if actual_size is null or actual_size<>f.size_bytes then raise exception '予約容量と実ファイルの容量が一致しません。'; end if;
+ if coalesce(new.metadata->>'mimetype','')<>'application/octet-stream' then raise exception '安全なダウンロード形式でアップロードしてください。'; end if;
  update public.transfer_files set status='ready' where id=f.id;
  return new;
 end $$;
@@ -146,6 +156,7 @@ revoke all on function public.transfer_cancel(uuid) from public,anon;
 grant execute on function public.transfer_usage() to authenticated;
 grant execute on function public.transfer_reserve(text,bigint,text) to authenticated;
 grant execute on function public.transfer_cancel(uuid) to authenticated;
+revoke all on function transfer_private.usage_for_owner(uuid) from public,anon,authenticated;
 revoke all on function transfer_private.guard_object() from public,anon,authenticated;
 revoke all on function transfer_private.remove_record() from public,anon,authenticated;
 commit;

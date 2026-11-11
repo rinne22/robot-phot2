@@ -34,9 +34,11 @@ await test('reserve creates pending owner row',async()=>{await user(A);f=await r
 await test('other user cannot see metadata',async()=>{await user(B);assert.equal((await db.query('select * from public.transfer_files')).rows.length,0);});
 await test('other user cannot upload into owner path',async()=>{await denied(()=>object(f));});
 await test('owner cannot bypass reservation',async()=>{await user(A);await denied(()=>object({object_path:A+'/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',size_bytes:10}));});
+await test('Storage permission probe accepts missing metadata but does not confirm file',async()=>{await db.exec('begin;savepoint probe');await db.query('insert into storage.objects(bucket_id,name,metadata) values($1,$2,null)',['pc-transfer',f.object_path]);assert.equal((await db.query('select status from public.transfer_files where id=$1',[f.id])).rows[0].status,'pending');await db.exec('rollback to probe;commit');});
 await test('size mismatch refused',async()=>{await denied(()=>object(f,11));});
 await test('HTML content type refused',async()=>{await denied(()=>object(f,10,'text/html'));});
-await test('upload confirms ready atomically',async()=>{await object(f);assert.equal((await db.query('select status from public.transfer_files where id=$1',[f.id])).rows[0].status,'ready');});
+await test('private usage helper cannot be invoked by authenticated callers',async()=>{await denied(()=>db.query('select transfer_private.usage_for_owner($1)',[A]));});
+await test('upload confirms ready atomically',async()=>{await admin();await db.exec("set request.jwt.claim.sub=''");await object(f);await user(A);assert.equal((await db.query('select status from public.transfer_files where id=$1',[f.id])).rows[0].status,'ready');});
 await test('direct metadata writes denied',async()=>{await denied(()=>db.exec(`update public.transfer_files set size_bytes=1`));await denied(()=>db.exec('delete from public.transfer_files'));await denied(()=>db.exec(`insert into public.transfer_files(owner_id,filename,size_bytes,mime_type) values('${A}','fake',1,'text/plain')`));});
 await test('other account cannot read or delete object',async()=>{await user(B);assert.equal((await db.query('select * from storage.objects')).rows.length,0);await db.exec('delete from storage.objects');await user(A);assert.equal((await db.query('select * from storage.objects')).rows.length,1);});
 await test('cancel cannot remove saved file',async()=>{await db.query('select public.transfer_cancel($1)',[f.id]);assert.equal((await db.query('select * from public.transfer_files')).rows.length,1);});

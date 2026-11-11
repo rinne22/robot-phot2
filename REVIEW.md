@@ -1,3 +1,28 @@
+# Supabase Free接続・実クラウド検証（2026年11月11日）
+
+所有者が指定した組織に東京リージョンのFreeプロジェクト `relay-pc-transfer` を作成。作成見積0ドル/月とFreeプランを確認した。DB・非公開Storage・RLS・容量制限SQLを適用し、サイトの公開用Publishable keyとAPI URLを設定した。service_roleやDBパスワードは公開していない。
+
+## 実接続で修正した問題
+
+Storageは実体送信前にサイズ未確定のINSERTを使って権限を検査し、その試行をロールバックする。未確定の試行では予約を保持し、実サイズ確定後だけreadyにするよう修正した。実保存時はStorageの内部権限で確定するため、認証が必要な公開RPCとは別に、APIから呼べないprivateスキーマの集計関数を使う。公開RPCのauth.uidチェックと所有者制限は維持した。
+
+プレビュー・ダウンロードは毎回固有のクエリを付けて取得し、削除前の認証済みレスポンスがキャッシュから表示されるのを防ぐ。取得済みファイルや発行済みURLの受取側キャッシュまで削除するものではない。
+
+## 結果
+
+- PostgreSQL/PGliteのSQL・RLS検証：23項目成功。Storage権限試行、内部保存時のauth.uidなし、private関数の外部呼び出し拒否を追加。
+- Hosted Supabaseの実API：10項目成功。別アカウントの認証、実バイナリ送信、独立ログインからの同一バイト取得、他人・匿名の拒否、署名共有、実際の期限切れ拒否、50MB超の拒否、他人の削除拒否、削除と使用量0への復帰を確認。
+- 実ブラウザの操作でも実Supabaseへ接続し、アップロード後に元ページを閉じ、別コンテキストでダウンロードした内容が一致した。プレビュー・共有発行・削除・ログアウトも確認。実行環境のChromiumの検査CAエラーを避けるため、HTTPSの検証を有効にしたurllib経由の転送を使用。模擬応答ではないが、Windows実機2台やChromium単独の外向きTLS確認ではない。
+- テスト専用アカウント2件と全テストファイルを削除。利用者のアカウントやファイルは作成・変更していない。
+- Security advisorの管理設定テーブルのRLSポリシーなしは、管理者以外を拒否する意図的な設定。公開SECURITY DEFINER RPCも認証・本人確認を行う意図的な構成。SQL検索パス固定とprivate集計の権限を確認した。[RLS診断](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy) / [関数権限診断](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable)
+- 漏洩パスワードチェックはPro以上の機能のため、完全無料の条件を優先して有料化は行わない。[公式仕様](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)
+
+## 残る利用者の設定
+
+この連携にはAuthのURL Configurationを変更する機能がないため、所有者にSite URLとRedirect URLsの両方へ `https://rinne22.github.io/robot-phot2/file-transfer/` を保存する手順を案内した。設定完了の確認と、利用者自身の新規登録・確認メール配送はまだ行っていない。Windows実機2台での確認はTESTING.mdを使う。
+
+---
+
 # PC間ファイル受け渡しページ Relay（2026年11月11日）
 
 `file-transfer/` にHTML/CSS/JavaScript、公開用config、Supabase SQL（DB/Private Storage/RLS/容量制限）、導入ガイド、README、PC-A/PC-Bテスト手順、ソースZIPを追加。設計ガイドのナビゲーションからアクセスできる。

@@ -2,7 +2,11 @@
 
 HTML・CSS・JavaScriptだけで動くGitHub Pages用サイトです。ファイル本体は**Supabaseのprivate Storage**、ファイル情報はPostgreSQLに保存します。アップロードが完了すればPC-Aの電源を切っても、PC-Bで同じアカウントにログインして取り出せます。ファイル本体をlocalStorageには保存しません。
 
-**現在の配布状態は接続前です。** 以下のSupabase設定を完了するまで、実際の保存・ログインは利用できません。見本のファイルや架空のアップロードは表示しません。
+**公開サイトはSupabase Freeへ接続済みです。** 東京リージョンの `relay-pc-transfer` にDB・private Storage・RLSを適用し、実際のAPIで保存・別ログインからの取得・共有・削除を確認しました。見本のファイルや架空のアップロードは表示しません。
+
+認証メールの戻り先は、管理者がAuthentication → URL Configurationで、Site URLとRedirect URLsに `https://rinne22.github.io/robot-phot2/file-transfer/` を設定してください。連携ツールではこの認証設定の変更ができないため、管理画面での操作が必要です。メール配送と実際のWindows PC2台での転送は利用者の確認が必要です。
+
+以下の作成手順は、設定を確認したい場合や別の自分用Supabase環境へ移す場合にも利用できます。
 
 ## 1. 無料の範囲と限界を先に確認
 
@@ -126,6 +130,6 @@ update public.transfer_settings set uploads_enabled=true where id=true;
 
 [TESTING.md](TESTING.md)にPC-A/PC-Bの実機テストと、他アカウント・匿名アクセス・期限付き共有・容量超過・削除の確認手順を掲載しています。
 
-この成果物のブラウザ・SQLテストは、外部Supabase接続前に実施できる検証です。**Supabaseを作成するまでは、実クラウド保存・メール配送・2台のPCでの受け渡しが検証済みという意味ではありません。** 設定完了後にテスト手順を実施してください。
+ローカルPostgreSQL/RLSテスト23項目とブラウザ模擬テストに加え、Hosted Supabaseの実APIで認証・保存・独立したログインからの同一バイト取得・他アカウント拒否・共有・削除を確認しました。メールの実配送、利用者のアカウント登録、Windows実機2台での受け渡しは別途TESTING.mdで確認してください。
 
 公式資料：[料金](https://supabase.com/pricing) / [RLS](https://supabase.com/docs/guides/storage/security/access-control) / [Storage配信](https://supabase.com/docs/guides/storage/serving/downloads) / [通信量](https://supabase.com/docs/guides/platform/manage-your-usage/egress) / [認証](https://supabase.com/docs/guides/auth/passwords)

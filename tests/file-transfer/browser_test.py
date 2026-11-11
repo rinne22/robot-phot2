@@ -14,6 +14,7 @@ try:
  with sync_playwright() as p:
   b=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
   page=b.new_page(viewport={'width':1440,'height':1000});errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+  page.route('**/config.js',lambda route:route.fulfill(body="window.TRANSFER_CONFIG={supabaseUrl:'',publishableKey:'',bucket:'pc-transfer'};",content_type='application/javascript'))
   page.goto(base,wait_until='networkidle')
   assert page.locator('#setup-notice').is_visible()
   assert page.locator('#upload-top').is_disabled() and page.locator('#login').is_disabled()

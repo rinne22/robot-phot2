@@ -205,7 +205,7 @@
   }
   async function fileBlob(file) {
     const access=await token();
-    const response=await fetch(base+'/storage/v1/object/authenticated/'+filePath(file),{headers:{apikey:config.publishableKey,Authorization:'Bearer '+access},cache:'no-store'});
+    const response=await fetch(base+'/storage/v1/object/authenticated/'+filePath(file)+'?fresh='+crypto.randomUUID(),{headers:{apikey:config.publishableKey,Authorization:'Bearer '+access},cache:'no-store'});
     if(!response.ok)await parseResponse(response);
     return response.blob();
   }
