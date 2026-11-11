@@ -28,7 +28,11 @@
 
 // ---------- 設定値 ----------
 #define DISTANCE_LIMIT    20   // 前方の障害物とみなす距離（cm）
-#define SPEED            80   // 通常走行・ダンスの基本速度（0〜255）
+#define SPEED            100  // 通常走行の基本PWM（0〜255）
+#define DANCE_SPEED      180  // ダンス中のその場旋回PWM（通常走行とは独立）
+#define DIAGONAL_OUTER_SPEED 130 // 斜め走行の外側車輪PWM
+#define DIAGONAL_INNER_SPEED  75 // 斜め走行の内側車輪PWM
+#define DIAGONAL_WINDOW_MS 900   // 上下＋左右の2信号を組み合わせる最大間隔
 #define CHECK_INTERVAL_MS   100  // センサー確認の間隔（ms）
 #define CONFLICT_MS      300  // 逆向きのコードを矛盾とみなす時間（ms）
 #define AVOID_MS         500  // 回避動作を続ける時間（ms）
@@ -159,33 +163,33 @@ void go_Back() {               // 後退
 
 void go_Left() {               // 左折（その場旋回：右前進・左後退）
   set_RightMotor(HIGH, LOW);  set_LeftMotor(LOW, HIGH);
-  set_MotorSpeed(SPEED, SPEED);
+  set_MotorSpeed(isDancing ? DANCE_SPEED : SPEED, isDancing ? DANCE_SPEED : SPEED);
 }
 
 void go_Right() {              // 右折（その場旋回：右後退・左前進）
   set_RightMotor(LOW, HIGH);  set_LeftMotor(HIGH, LOW);
-  set_MotorSpeed(SPEED, SPEED);
+  set_MotorSpeed(isDancing ? DANCE_SPEED : SPEED, isDancing ? DANCE_SPEED : SPEED);
 }
 
 // 左右の回転速度を変え、進みながら曲がる（内側は半速）
 void go_ForwardLeft() {
   set_RightMotor(HIGH, LOW); set_LeftMotor(HIGH, LOW);
-  set_MotorSpeed(SPEED, SPEED / 2);
+  set_MotorSpeed(DIAGONAL_OUTER_SPEED, DIAGONAL_INNER_SPEED);
 }
 
 void go_ForwardRight() {
   set_RightMotor(HIGH, LOW); set_LeftMotor(HIGH, LOW);
-  set_MotorSpeed(SPEED / 2, SPEED);
+  set_MotorSpeed(DIAGONAL_INNER_SPEED, DIAGONAL_OUTER_SPEED);
 }
 
 void go_BackLeft() {
   set_RightMotor(LOW, HIGH); set_LeftMotor(LOW, HIGH);
-  set_MotorSpeed(SPEED / 2, SPEED);
+  set_MotorSpeed(DIAGONAL_INNER_SPEED, DIAGONAL_OUTER_SPEED);
 }
 
 void go_BackRight() {
   set_RightMotor(LOW, HIGH); set_LeftMotor(LOW, HIGH);
-  set_MotorSpeed(SPEED, SPEED / 2);
+  set_MotorSpeed(DIAGONAL_OUTER_SPEED, DIAGONAL_INNER_SPEED);
 }
 
 void go_Stop() {               // 完全停止（PWM0・方向LOW/LOW）
@@ -534,21 +538,42 @@ DriveState get_DiagonalDrive(DriveState a, DriveState b) {
   return DEF;
 }
 
+// 現在の斜め走行に含まれる方向かを判定（リモコンの繰り返し信号対策）
+bool is_DiagonalComponent(DriveState diagonal, DriveState cmd) {
+  switch (diagonal) {
+    case GO_FORWARD_LEFT:  return cmd == GO_ADVANCE || cmd == GO_LEFT;
+    case GO_FORWARD_RIGHT: return cmd == GO_ADVANCE || cmd == GO_RIGHT;
+    case GO_BACK_LEFT:     return cmd == GO_BACK || cmd == GO_LEFT;
+    case GO_BACK_RIGHT:    return cmd == GO_BACK || cmd == GO_RIGHT;
+    default: return false;
+  }
+}
+
 void set_Drive(DriveState cmd) {
   unsigned long now = millis();
-  bool withinWindow = lastDriveCmd != GO_STOP && (now - lastDriveCmdMs <= CONFLICT_MS);
+  unsigned long elapsed = now - lastDriveCmdMs;
+  bool hasPrevious = lastDriveCmd != GO_STOP;
 
-  // 前後や左右の反対入力が0.3秒以内に続いた場合は従来どおり停止
-  if (withinWindow && is_OppositeDrive(lastDriveCmd, cmd)) {
+  // 上下や左右の正反対が0.3秒以内に続いた場合は従来どおり停止
+  if (hasPrevious && elapsed <= CONFLICT_MS && is_OppositeDrive(lastDriveCmd, cmd)) {
     Drive_Num = GO_STOP;
     lastDriveCmd = GO_STOP;
+    lastDriveCmdMs = now;
+    isCheckRequested = true;
+    return;
+  }
+
+  // 斜め走行中に構成要素のキーがもう一度来ても、すぐ直進や旋回へ戻さない
+  if (elapsed <= DIAGONAL_WINDOW_MS && is_DiagonalComponent(Drive_Num, cmd)) {
+    lastDriveCmd = cmd;
     lastDriveCmdMs = now;
     return;
   }
 
-  // 斜め入力は到着順に依存しない（物理同時押しの専用IRコードには非対応）
-  DriveState diagonal = withinWindow ? get_DiagonalDrive(lastDriveCmd, cmd) : DEF;
-  Drive_Num = (diagonal != DEF) ? diagonal : cmd;
+  // ↑←/←↑、↑→/→↑、↓←/←↓、↓→/→↓の順序を問わない
+  DriveState diagonal = (hasPrevious && elapsed <= DIAGONAL_WINDOW_MS)
+                          ? get_DiagonalDrive(lastDriveCmd, cmd) : DEF;
+  Drive_Num = diagonal != DEF ? diagonal : cmd;
   lastDriveCmd = cmd;
   lastDriveCmdMs = now;
   isCheckRequested = true;
