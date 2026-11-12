@@ -86,5 +86,9 @@ int main(){
  TEST("normal song end keeps pending next song",play_Music(9);currentNotePtr=SONG_9+sizeof(SONG_9)/sizeof(SONG_9[0])-4;play_Note(currentNotePtr);delay(noteDurationMs-100);handle_NumberButton(70);delay(100);do_Music_Tick();assert(!isMusicPlaying&&pendingSongNum==2);delay(200);do_Music_Tick();assert(isMusicPlaying&&!isDanceMusic&&currentNotePtr==SONG_2));
  TEST("automatic reverse is rejected",start_Avoid(GO_BACK);assert(!isAvoiding&&Drive_Num==GO_STOP&&pwm[9]==0&&pwm[6]==0));
  TEST("both obstacles while reversing rotate without automatic reverse",echoPulse=580;pins[0]=LOW;input(IR_BACK);assert(isAvoiding&&Drive_Num==GO_RIGHT));
+ TEST("front distance boundary 19 20 21cm",for(int cm:{19,20,21}){echoPulse=cm*58;assert(watch()==cm);assert(is_FrontBlocked()==(cm<=20));});
+ TEST("rear active low all combinations",for(int l:{LOW,HIGH})for(int r:{LOW,HIGH}){pins[0]=l;pins[2]=r;assert(is_BackIrOn()==(l==LOW||r==LOW));assert(is_BackBlocked()==(l==LOW||r==LOW));});
+ TEST("sensor scheduling boundary 99 100ms",Drive_Num=GO_ADVANCE;isCheckRequested=false;lastCheckMs=millis();delay(99);assert(!is_CheckTime());delay(1);assert(is_CheckTime());mark_Checked();assert(!is_CheckTime()&&!isCheckRequested));
+ TEST("remote front boundary integrates stop and PWM",for(int cm:{19,20,21}){clearState();echoPulse=cm*58;input(IR_ADVANCE);assert(Drive_Num==(cm<=20?GO_STOP:GO_ADVANCE));assert(pwm[9]==(cm<=20?0:100)&&pwm[6]==(cm<=20?0:100));assert(!isAvoiding);});
  std::cout<<cases<<" host simulation cases passed; hardware not tested.\n";
 }

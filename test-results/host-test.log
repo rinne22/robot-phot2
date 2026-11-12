@@ -1,0 +1,64 @@
+PASS startup
+PASS four directions
+PASS opposite boundary
+PASS opposite after boundary
+PASS all diagonal orders
+PASS diagonal outputs
+PASS numeric conflict before boundary
+PASS numeric new request at boundary
+PASS numeric request after delayed loop
+PASS duplicate number preserves deadline
+PASS music starts at 300ms
+PASS music preserves drive
+PASS music allows direction
+PASS music switches via new request
+PASS OK cancels everything
+PASS front obstacle stops instead of reversing
+PASS both obstacles during forward stop
+PASS front stop preserves music and manual reverse
+PASS front stop diagonal directions
+PASS back obstacle overrides drive
+PASS avoid 500ms
+PASS avoid detects blocked escape
+PASS avoid preserves music
+PASS avoid ignores drive
+PASS passive warning waveform
+PASS warning silent phase
+PASS warning deadline after delayed update
+PASS warning resumes same note
+PASS warning interval including time zero
+PASS dance first output blocked
+PASS dance step transitions
+PASS dance ignores direction
+PASS dance restarts
+PASS dance obstacle stops
+PASS dance duration
+PASS dance completion
+PASS unknown and repeat ignored
+PASS invalid state stops
+PASS song finishes
+PASS timeout existing policy
+PASS diagonal slow input all orders
+PASS diagonal works after old deadline
+PASS all diagonal PWM outputs
+PASS diagonal component returns to single and requests sensors
+PASS diagonal opposite last input stops
+PASS diagonal component returns to single after long pause
+PASS dance PWM independent of normal speed
+PASS dance only spins and stops over three cycles
+PASS dance replaces active music and cancels reservation
+PASS remote all eight slow input orders
+PASS remote repeat does not undo diagonal
+PASS OK resets diagonal pairing
+PASS dance includes a long full-turn stage then loops
+PASS OK interrupts the full-turn stage
+PASS dance song loops three times
+PASS warning pauses and resumes dance music
+PASS normal song end keeps pending next song
+PASS automatic reverse is rejected
+PASS both obstacles while reversing rotate without automatic reverse
+PASS front distance boundary 19 20 21cm
+PASS rear active low all combinations
+PASS sensor scheduling boundary 99 100ms
+PASS remote front boundary integrates stop and PWM
+63 host simulation cases passed; hardware not tested.

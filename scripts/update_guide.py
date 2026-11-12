@@ -40,10 +40,10 @@ def main():
  page=re.sub(r'var reqs = \[.*?\n\];', 'var reqs = '+json.dumps(reqs,ensure_ascii=False,indent=2)+';',page,count=1,flags=re.S)
  # Current validation is deliberately separate from unverified historical claims.
  results=table(['確認','環境・結果'],[
- ['PC模擬試験','実コード全体をArduino/IR模擬環境でコンパイル。59項目成功。最新コードの試験はREVIEW.mdに記録。複数入力の境界、音楽との並行処理、回避、ダンス、警告波形を含む。'],
+ ['PC模擬試験','実コード全体をArduino/IR模擬環境でコンパイル。63項目成功。最新コードの試験はREVIEW.mdに記録。複数入力の境界、音楽との並行処理、回避、ダンス、警告波形を含む。'],
  ['Unoビルド','Arduino AVR Boards 1.8.8 / IRremote 4.4.1 / arduino:avr:uno で最新コードのビルド成功。Flash 11,904 / 32,256 bytes、SRAM 642 / 2,048 bytes。スケッチのビルドエラーなし。'],
  ['Web確認','図25枚の描画、関数検索、6つの移動先、コードとダウンロードの一致を自動チェックする。実施結果はREVIEW.mdに記録。'],
- ['実機試験','未実施。モーターの向き、音質、センサー感度、OKの応答、停止距離、タイマー動作を実機で確認する。'],
+ ['実機試験','ユーザー実施：曲がり具合・一回転の角度・音楽の聞こえ方は成功との報告。その他の実機項目は未確認。'],
  ['旧版の85件/24件','対応する試験コードがリポジトリになく、最新版の成功証拠として使わない。改訂1.6は同梱の再現可能な試験を検証記録とする。']])
  design='<section class="design" id="design"><h2>開発設計書</h2><p class="cap">曲がり強調・一回転ダンス対応版／Arduino Uno・OSOYOO V2.1／正本：robot_final.ino</p>'
  design+=detail(1,'目的と設計方針','<p>リモコン走行・斜め走行・ダンス・音楽・障害物回避を実装する。入力・判断・出力の役割を分け、短い周期処理で状態を更新する。センサー測定と再確認待機はブロッキング処理として残っている。</p><p>1関数1目的、固定値の集約、重複処理の共通化を原則とする。20行以内・ネスト3段・引数3個は目安であり、現状の全関数が満たすという意味ではない。</p>')
@@ -265,18 +265,18 @@ def main():
  page=page.replace('</head>', '<style id="function-form-style">.function-form{min-width:640px;table-layout:fixed}.function-form th{background:#ddd;color:#18262b;vertical-align:middle;text-align:center}.function-form td{white-space:pre-wrap;overflow-wrap:anywhere}.function-form td,.function-form th{border:1px solid #8a949a;padding:10px}.function-form tr:first-child td{font-weight:700}</style>'+'</head>')
  page=page.replace('使用言語：C言語（Arduino言語）','使用言語：C++（Arduinoスケッチ）')
  page=page.replace('IRremote</code>（4.x系）','IRremote</code>（検証版4.4.1／4.x系）')
- page=re.sub(r'<b>\d+</b> PC模擬試験項目','<b>59</b> PC模擬試験項目',page)
+ page=re.sub(r'<b>\d+</b> PC模擬試験項目','<b>63</b> PC模擬試験項目',page)
  page=re.sub(r'<b>\d+</b> 関数の設計',f'<b>{count}</b> 関数の設計',page)
- page=page.replace('<b>45</b> 関数の設計',f'<b>{count}</b> 関数の設計').replace('<b>24</b> 結合テスト項目','<b>59</b> PC模擬試験項目')
- page=page.replace('結合テストはPC上の疑似環境で実施。実機確認項目は開発設計に記載しています。','最新設定の検証結果は開発設計とREVIEW.mdを参照。実機試験は未実施です。')
- rev=f'<section class="overview" id="revision"><h2>メイン版：自動後退なし</h2><p>前進・前左・前右で前方の障害物を検知すると停止して警告します。前後同時に検知しても前進系では停止します。障害物を理由に自動後退する機能は廃止しました。リモコンの↓による手動後退は利用できます。</p><p>前左220/60・前右40/245、後退も対応する強さ。ダンスは右・左・右一回転・左一回転と専用曲をループします。</p><p><a id="main-code-download" class="fn-download" href="robot_final.ino" download="robot_final.ino">メインコードをダウンロード</a> ／ <a href="https://github.com/rinne22/robot-phot2/blob/main/REVIEW.md">検証記録</a></p><p>全{count}関数・図25枚・要件・掲載コード・ダウンロード・Excelを同じメイン仕様に統一しています。実機の曲がり具合・音質・一回転の角度は未確認です。</p></section>'
+ page=page.replace('<b>45</b> 関数の設計',f'<b>{count}</b> 関数の設計').replace('<b>24</b> 結合テスト項目','<b>63</b> PC模擬試験項目')
+ page=page.replace('結合テストはPC上の疑似環境で実施。実機確認項目は開発設計に記載しています。','最新設定の検証結果は開発設計とREVIEW.mdを参照。曲がり具合・一回転の角度・音楽の聞こえ方はユーザーによる実機確認済みです。その他の実機項目は未確認です。')
+ rev=f'<section class="overview" id="revision"><h2>メイン版：自動後退なし</h2><p>前進・前左・前右で前方の障害物を検知すると停止して警告します。前後同時に検知しても前進系では停止します。障害物を理由に自動後退する機能は廃止しました。リモコンの↓による手動後退は利用できます。</p><p>前左220/60・前右40/245、後退も対応する強さ。ダンスは右・左・右一回転・左一回転と専用曲をループします。</p><p><a id="main-code-download" class="fn-download" href="robot_final.ino" download="robot_final.ino">メインコードをダウンロード</a> ／ <a href="https://github.com/rinne22/robot-phot2/blob/main/REVIEW.md">検証記録</a></p><p>全{count}関数・図25枚・要件・掲載コード・ダウンロード・Excelを同じメイン仕様に統一しています。曲がり具合・一回転の角度・音楽の聞こえ方は、ユーザーによる実機確認で成功しています。</p></section>'
  page=re.sub(r'<section class="overview" id="revision">.*?</section>',lambda m:rev,page,count=1,flags=re.S)
- page=page.replace('Arduino Unoでの今回の改訂版のビルド・実機試験は未実施です。PWMや障害物検出の応答は実機で確認してください。旧版1.6の検証記録は今回の変更の確認結果ではありません。','最新設定のビルド結果はREVIEW.mdを参照。実機試験は未実施です。')
- page=re.sub(r'改訂1\.6はPC模擬試験\d+項目とUnoビルドを確認。実機試験は未実施です。','最新設定のPC模擬試験59項目とUnoビルドを確認。実機試験は未実施です。',page)
+ page=page.replace('Arduino Unoでの今回の改訂版のビルド・曲がり具合・一回転の角度・音楽の聞こえ方はユーザーによる実機確認済みです。その他の実機項目は未確認です。PWMや障害物検出の応答は実機で確認してください。旧版1.6の検証記録は今回の変更の確認結果ではありません。','最新設定のビルド結果はREVIEW.mdを参照。曲がり具合・一回転の角度・音楽の聞こえ方はユーザーによる実機確認済みです。その他の実機項目は未確認です。')
+ page=re.sub(r'改訂1\.6はPC模擬試験\d+項目とUnoビルドを確認。曲がり具合・一回転の角度・音楽の聞こえ方はユーザーによる実機確認済みです。その他の実機項目は未確認です。','最新設定のPC模擬試験63項目とUnoビルドを確認。曲がり具合・一回転の角度・音楽の聞こえ方はユーザーによる実機確認済みです。その他の実機項目は未確認です。',page)
  page=re.sub(r'<section[^>]*id="dance-speed-update".*?</section>', '<section class="overview" id="dance-speed-update"><h2>かんたん斜め走行</h2><p>前左は外側PWM220・内側PWM60を維持し、前右は外側PWM245・内側PWM40へ強化しました。後退も左右それぞれ同じ強さに対応します。ボタンは1つずつ押して離してください。速押し・同時押しは不要です。</p><ul><li>「↑」の後に「←」：前進しながら左へ（逆の順番でも可）</li><li>「↑」の後に「→」：前進しながら右へ（逆の順番でも可）</li><li>「↓」の後に「←」：後退しながら左へ（逆の順番でも可）</li><li>「↓」の後に「→」：後退しながら右へ（逆の順番でも可）</li></ul><p>斜め走行中に構成する方向をもう一度押すとその単独方向へ戻り、OKで停止します。上下・左右の反対入力が300ms以内なら停止します。通常PWM100、ダンスPWM180、左カーブ外側220／内側60・右カーブ外側245／内側40。</p><p>実機に新しいスケッチを書き込んでから操作してください。旧スケッチでは操作は変わりません。ダンスは右→左→右に一回転→左に一回転を狙う旋回と、専用の軽快なオリジナル曲をループします。DANCE_SPIN_MS=2000とDANCE_LEFT_SPIN_MS=2000は目安です。回転が足りなければ長く、回り過ぎなら短く調整してください。</p></section>',page,count=1,flags=re.S)
- page=page.replace('最新設定のPC模擬試験47項目','最新設定のPC模擬試験59項目')
+ page=page.replace('最新設定のPC模擬試験47項目','最新設定のPC模擬試験63項目')
  page=re.sub(r'<section[^>]*id="requirements".*?</section>', '<section class="top" id="requirements"><h2>要件定義</h2><p class="cap">曲がり強調・一回転ダンス対応版。操作例は要求1-13、確認項目は要求7-1に掲載しています。</p><h3>要求1　リモコンで走行を制御する</h3><p><span class="tag">内容</span>矢印を1つずつ順に押して、前進・後退・旋回・斜め走行を指示する。上下と左右の組合せに時間制限は設けず、OKを最優先の停止とする。</p><p><span class="tag">理由</span>速押しや同時押しに頼らず、リモコンから目的の走行を選べるようにするため。</p></section>',page,count=1,flags=re.S)
- overview='<section class="overview" id="overview" aria-labelledby="overview-title"><h2 id="overview-title">ロボットの主な動作</h2><p class="cap">曲がり強調・一回転ダンス対応版。概要・要件定義・開発設計・関数設計・設計図を同じ操作仕様で統一しています。</p><div class="tiles"><article><h3>01　順に押して斜め走行</h3><p>矢印は1つずつ押して離します。上下と左右を順に押すだけで斜め走行。速押し・同時押しは不要で、入力間隔の時間制限もありません。</p></article><article><h3>02　障害物回避と停止</h3><p>前進・後退と斜め走行では前後を確認します。前進系で前方検知なら停止し、手動後退中の後方検知には前進回避を優先します。OKは走行・音楽・ダンス・回避をまとめて停止します。</p></article><article><h3>03　音楽とダンス</h3><p>1〜9で走行しながら曲を再生。0で右・左・右一回転・左一回転を狙う8ステップと専用曲をループします。ダンス中も前後を確認し、障害物で中止します。</p></article></div>'+table(['1つ目のボタン','2つ目のボタン','動作'],[['↑','←','前進しながら左へ'],['↑','→','前進しながら右へ'],['↓','←','後退しながら左へ'],['↓','→','後退しながら右へ']])+'<p>上下と左右は逆の順番でも同じです。斜め走行中に方向ボタンを押し直すと、その単独方向へ戻ります。例：↑、←で前左、↑をもう一度押すと直進。直前の単独入力と反対の方向が300ms以内に届くと停止します。</p><p>通常PWM100／ダンスPWM180／左カーブ外側220・内側60／右カーブ外側245・内側40。新しい操作を使うには<a href="robot_final.ino" download>最新コード</a>をArduinoに書き込んでください。</p><p class="cap">PC模擬試験59項目・Unoビルド成功。実機試験は未実施です。</p><p><a href="https://osoyoo.com/2020/05/12/v2-1-robot-car-kit-for-arduino-tutorial-introduction/">OSOYOO公式組み立てガイド ↗</a></p></section>'
+ overview='<section class="overview" id="overview" aria-labelledby="overview-title"><h2 id="overview-title">ロボットの主な動作</h2><p class="cap">曲がり強調・一回転ダンス対応版。概要・要件定義・開発設計・関数設計・設計図を同じ操作仕様で統一しています。</p><div class="tiles"><article><h3>01　順に押して斜め走行</h3><p>矢印は1つずつ押して離します。上下と左右を順に押すだけで斜め走行。速押し・同時押しは不要で、入力間隔の時間制限もありません。</p></article><article><h3>02　障害物回避と停止</h3><p>前進・後退と斜め走行では前後を確認します。前進系で前方検知なら停止し、手動後退中の後方検知には前進回避を優先します。OKは走行・音楽・ダンス・回避をまとめて停止します。</p></article><article><h3>03　音楽とダンス</h3><p>1〜9で走行しながら曲を再生。0で右・左・右一回転・左一回転を狙う8ステップと専用曲をループします。ダンス中も前後を確認し、障害物で中止します。</p></article></div>'+table(['1つ目のボタン','2つ目のボタン','動作'],[['↑','←','前進しながら左へ'],['↑','→','前進しながら右へ'],['↓','←','後退しながら左へ'],['↓','→','後退しながら右へ']])+'<p>上下と左右は逆の順番でも同じです。斜め走行中に方向ボタンを押し直すと、その単独方向へ戻ります。例：↑、←で前左、↑をもう一度押すと直進。直前の単独入力と反対の方向が300ms以内に届くと停止します。</p><p>通常PWM100／ダンスPWM180／左カーブ外側220・内側60／右カーブ外側245・内側40。新しい操作を使うには<a href="robot_final.ino" download>最新コード</a>をArduinoに書き込んでください。</p><p class="cap">PC模擬試験63項目・Unoビルド成功。曲がり具合・一回転の角度・音楽の聞こえ方はユーザーによる実機確認済みです。その他の実機項目は未確認です。</p><p><a href="https://osoyoo.com/2020/05/12/v2-1-robot-car-kit-for-arduino-tutorial-introduction/">OSOYOO公式組み立てガイド ↗</a></p></section>'
  page=re.sub(r'<section[^>]*id="overview".*?</section>',lambda m:overview,page,count=1,flags=re.S)
  # Prominent variant download in Overview and a full preview in Code.
  # Remove the obsolete variant comparison and second sketch preview.
@@ -285,8 +285,15 @@ def main():
  page=page.replace('<section class="code-sec" id="code">','<section class="code-sec" id="code">'+choices,1)
  if 'id="transfer-nav-link"' not in page:
   page=page.replace('</nav>','<a id="transfer-nav-link" href="../file-transfer/">ファイル受け渡し</a></nav>',1)
+ # Publish test downloads from a stable section on both entry pages.
+ page=re.sub(r'<section class="design" id="tests">.*?</section>', '',page,flags=re.S)
+ test_section='<section class="design" id="tests"><h2>単体テスト・結合テスト結果</h2><p>現行の自動後退しないメイン版を検証。PCスタブ上の単体34件・結合29件、計63件すべて合格。Arduino Uno向けビルドも成功しています。</p><p>実機確認：曲がり具合・一回転の角度・音楽の聞こえ方は、ユーザーから成功の報告を受けています。角度などの数値測定記録は未提出で、その他の実機項目は未確認です。</p><p><a class="fn-download" href="../test-results/単体テスト仕様兼結果書.xlsx" download>単体テスト結果書（Excel・34件）</a> <a class="fn-download" href="../test-results/結合テスト仕様兼結果書.xlsx" download>結合テスト結果書（Excel・29件）</a></p><p><a href="../test-results/">全テストの仕様・結果を閲覧</a> ／ <a href="../test-results/host-test.log" download>実行ログ</a> ／ <a href="../test-results/results.json" download>結果データ（JSON）</a></p><p>Excelには初期条件・入力・期待値・実行結果・試験コードの行番号を記録。添付の別機種向け資料を参考に、現行コードを直接コンパイルして検証しています。</p></section>'
+ page=page.replace('<section class="design" id="functions"',test_section+'<section class="design" id="functions"',1)
+ if 'id="tests-nav-link"' not in page:
+  page=page.replace('</nav>','<a id="tests-nav-link" href="#tests">テスト結果</a></nav>',1)
  for path in ['design-guide/index.html','index.html']:
   out=page if path.startswith('design-guide/') else page.replace('href="functions.csv"','href="design-guide/functions.csv"').replace('href="../file-transfer/"','href="file-transfer/"')
+  if not path.startswith('design-guide/'): out=out.replace('href="../test-results/','href="test-results/')
   (ROOT/path).write_text(out)
  (ROOT/'design-guide/robot_final.ino').write_text(code)
  (ROOT/'design-guide/robot_front_stop.ino').write_text(code)  # 旧リンクも同一のメインコードを配布
