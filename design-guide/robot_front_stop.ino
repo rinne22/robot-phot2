@@ -36,10 +36,13 @@
 #define DANCE_SPEED      180  // ダンス中のその場旋回PWM（通常走行とは独立）
 #define DANCE_SWAY_MS    650  // 最初の右・左旋回の時間
 #define DANCE_PAUSE_MS   180  // 旋回の間の停止時間
-#define DANCE_SPIN_MS   2000  // 一回転の初期目安。実機で360度になるよう調整
+#define DANCE_SPIN_MS   2000  // 右一回転の初期目安。実機で360度になるよう調整
+#define DANCE_LEFT_SPIN_MS 2000 // 左一回転の初期目安。右と別々に調整できる
 #define DANCE_LOOP_PAUSE_MS 350 // 一回転後の停止時間
 #define DIAGONAL_OUTER_SPEED 220 // 斜め走行の外側車輪PWM
-#define DIAGONAL_INNER_SPEED  60 // 斜め走行の内側車輪PWM
+#define DIAGONAL_INNER_SPEED  60 // 左カーブの内側車輪PWM
+#define RIGHT_CURVE_OUTER_SPEED 245 // 右カーブだけ外側をさらに強くする
+#define RIGHT_CURVE_INNER_SPEED  40 // 右カーブの内側をさらに低速にする
 #define CHECK_INTERVAL_MS   100  // センサー確認の間隔（ms）
 #define CONFLICT_MS      300  // 逆向きのコードを矛盾とみなす時間（ms）
 #define AVOID_MS         500  // 回避動作を続ける時間（ms）
@@ -82,10 +85,11 @@ bool isDancing = false;
 uint8_t danceStep = 0;
 unsigned long danceStepStartMs = 0;
 unsigned long lastDanceCheckMs = 0;
-const uint8_t DANCE_STEPS = 6;
+const uint8_t DANCE_STEPS = 8;
 
 // 音楽と警告音は delay で待たず、loop から定期的に更新する
 bool isMusicPlaying = false;
+bool isDanceMusic = false;       // ダンス専用曲をループ再生しているか
 const int16_t* currentNotePtr = nullptr;
 unsigned long noteStartMs = 0;
 unsigned long noteDurationMs = 0;
@@ -138,6 +142,14 @@ const int16_t SONG_8[] PROGMEM = { NE4,2, NE4,2, NF4,2, NG4,2, NG4,2, NF4,2, NE4
                                   NC4,2, NC4,2, ND4,2, NE4,2, NE4,3, ND4,1, ND4,4, END_MARK,0 };
 const int16_t SONG_9[] PROGMEM = { NC4,2, NE4,2, NG4,2, NC5,4, NG4,2, NC5,6, END_MARK,0 };
 
+// ダンス用のオリジナル短いループ。8分音符150msを基準に軽快に演奏する。
+const int16_t DANCE_SONG[] PROGMEM = {
+  NC5,1, NE5,1, NG5,1, NE5,1, NC5,1, NE5,1, NG5,2,
+  ND5,1, NF5,1, NA4,1, NF5,1, ND5,1, NF5,1, NG5,2,
+  NE5,1, NG5,1, NC5,1, NG5,1, NE5,1, ND5,1, NC5,2,
+  NG4,1, NC5,1, NE5,1, NG5,1, NE5,1, ND5,1, NC5,2, END_MARK,0
+};
+
 const int16_t* const SONG_TABLE[SONG_COUNT] PROGMEM = { SONG_1, SONG_2, SONG_3, SONG_4, SONG_5, SONG_6, SONG_7, SONG_8, SONG_9 };
 
 // =====================================================
@@ -186,7 +198,7 @@ void go_ForwardLeft() {
 
 void go_ForwardRight() {
   set_RightMotor(HIGH, LOW); set_LeftMotor(HIGH, LOW);
-  set_MotorSpeed(DIAGONAL_INNER_SPEED, DIAGONAL_OUTER_SPEED);
+  set_MotorSpeed(RIGHT_CURVE_INNER_SPEED, RIGHT_CURVE_OUTER_SPEED);
 }
 
 void go_BackLeft() {
@@ -196,7 +208,7 @@ void go_BackLeft() {
 
 void go_BackRight() {
   set_RightMotor(LOW, HIGH); set_LeftMotor(LOW, HIGH);
-  set_MotorSpeed(DIAGONAL_OUTER_SPEED, DIAGONAL_INNER_SPEED);
+  set_MotorSpeed(RIGHT_CURVE_OUTER_SPEED, RIGHT_CURVE_INNER_SPEED);
 }
 
 void go_Stop() {               // 完全停止（PWM0・方向LOW/LOW）
@@ -290,6 +302,7 @@ void play_Note(const int16_t* notePtr) {
 
 void stop_Music() {
   isMusicPlaying = false;
+  isDanceMusic = false;
   currentNotePtr = nullptr;
   pendingSongNum = 0;
   isWarningPlaying = false;
@@ -300,6 +313,7 @@ void stop_Music() {
 // 再生を開始するが、走行状態は変更しない
 void play_Music(int songNum) {
   if (songNum < 1 || songNum > SONG_COUNT) return;
+  isDanceMusic = false;
   currentNotePtr = (const int16_t*)pgm_read_ptr(&SONG_TABLE[songNum - 1]);
   isMusicPlaying = true;
   play_Note(currentNotePtr);
@@ -325,11 +339,15 @@ void do_Music_Tick() {
   if (nowMs - noteStartMs >= noteDurationMs) {
     currentNotePtr += 2;  // 周波数と長さの次の組
     if (get_SongNote(currentNotePtr) == END_MARK) {
-      isMusicPlaying = false;
-      currentNotePtr = nullptr;
-      halfPeriodUs = 0;
-      digitalWrite(BUZZ_PIN, HIGH);
-      return;
+      if (isDanceMusic && isDancing) currentNotePtr = DANCE_SONG;
+      else {
+        isMusicPlaying = false;
+        isDanceMusic = false;
+        currentNotePtr = nullptr;
+        halfPeriodUs = 0;
+        digitalWrite(BUZZ_PIN, HIGH);
+        return;  // 次の曲の予約は保持する
+      }
     }
     play_Note(currentNotePtr);
     nowMs = millis();
@@ -467,14 +485,16 @@ void stop_Dance() {
   isDancing = false;
   Drive_Num = GO_STOP;
   go_Stop();
+  if (isDanceMusic) stop_Music();
 }
 
-// 右旋回→停止→左旋回→停止→右に一回転（時間指定）→停止を繰り返す。
+// 右旋回→停止→左旋回→停止→右に一回転→停止→左に一回転→停止を繰り返す。
 DriveState dance_Action(uint8_t step) {
   switch (step) {
     case 0: return GO_RIGHT;  // 右へ振る
     case 2: return GO_LEFT;   // 左へ振る
     case 4: return GO_RIGHT;  // 右に一回転を狙う（実機で時間調整）
+    case 6: return GO_LEFT;   // 左に一回転を狙う（実機で時間調整）
     default: return GO_STOP;  // 旋回の間と一回転後に一拍停止
   }
 }
@@ -482,8 +502,9 @@ DriveState dance_Action(uint8_t step) {
 unsigned int dance_Duration(uint8_t step) {
   switch (step) {
     case 0: case 2: return DANCE_SWAY_MS;
-    case 1: case 3: return DANCE_PAUSE_MS;
+    case 1: case 3: case 5: return DANCE_PAUSE_MS;
     case 4: return DANCE_SPIN_MS;
+    case 6: return DANCE_LEFT_SPIN_MS;
     default: return DANCE_LOOP_PAUSE_MS;
   }
 }
@@ -495,7 +516,11 @@ void start_Dance() {
   danceStepStartMs = millis();
   lastDanceCheckMs = 0;       // 開始直後にセンサー判定
   lastDriveCmd = GO_STOP;
-  pendingSongNum = 0;         // 未開始の音楽予約だけ解除
+  pendingSongNum = 0;         // 未開始の音楽予約を解除
+  isDanceMusic = true;
+  isMusicPlaying = true;
+  currentNotePtr = DANCE_SONG; // 0を押すたびに専用曲も先頭から
+  play_Note(currentNotePtr);
   Drive_Num = dance_Action(danceStep);
   // 最初のモーター出力はloop内でセンサーを確認した後に行う
 }
@@ -518,7 +543,7 @@ void do_Dance_Tick() {
   if (now - danceStepStartMs < dance_Duration(danceStep)) return;
   danceStep++;
   if (danceStep >= DANCE_STEPS) {
-    danceStep = 0;               // 6ステップをOKまたは障害物停止まで繰り返す
+    danceStep = 0;               // 8ステップをOKまたは障害物停止まで繰り返す
   }
   danceStepStartMs = now;
   Drive_Num = dance_Action(danceStep);
