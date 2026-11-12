@@ -1,58 +1,151 @@
-﻿関数,形式,処理内容,共有状態（参照・更新）,呼び出し,先頭行,行数
-set_RightMotor,"void set_RightMotor(bool isDir1High, bool isDir2High)",右モーターの方向端子D12/D11へ引数を出力する。,—,digitalWrite,156,4
-set_LeftMotor,"void set_LeftMotor(bool isDir1High, bool isDir2High)",左モーターの方向端子D7/D8へ引数を出力する。,—,digitalWrite,161,4
-set_MotorSpeed,"void set_MotorSpeed(int rightSpeed, int leftSpeed)",右D9・左D6にPWMを出力する。引数は0〜255を前提とする。,—,analogWrite,166,4
-go_Advance,void go_Advance(),左右を前進方向、PWMを100/100にする。,—,"set_RightMotor, set_LeftMotor, set_MotorSpeed",171,4
-go_Back,void go_Back(),左右を後退方向、PWMを100/100にする。,—,"set_RightMotor, set_LeftMotor, set_MotorSpeed",176,4
-go_Left,void go_Left(),右前進・左後退、通常PWM100/100、ダンス中PWM180/180でその場左旋回する。,isDancing,"set_RightMotor, set_LeftMotor, set_MotorSpeed",181,4
-go_Right,void go_Right(),右後退・左前進、通常PWM100/100、ダンス中PWM180/180でその場右旋回する。,isDancing,"set_RightMotor, set_LeftMotor, set_MotorSpeed",186,4
-go_ForwardLeft,void go_ForwardLeft(),左右とも前進、右PWM220・左60で前左へカーブする。,—,"set_RightMotor, set_LeftMotor, set_MotorSpeed",192,4
-go_ForwardRight,void go_ForwardRight(),左右とも前進、右PWM40・左245で前右へカーブする。,—,"set_RightMotor, set_LeftMotor, set_MotorSpeed",197,4
-go_BackLeft,void go_BackLeft(),左右とも後退、右PWM40・左245で後左へカーブする。,—,"set_RightMotor, set_LeftMotor, set_MotorSpeed",202,4
-go_BackRight,void go_BackRight(),左右とも後退、右PWM245・左40で後右へカーブする。,—,"set_RightMotor, set_LeftMotor, set_MotorSpeed",207,4
-go_Stop,void go_Stop(),左右PWMを0、方向4端子をLOWにする。空転停止のため車輪の即時静止は保証しない。,—,"set_MotorSpeed, set_RightMotor, set_LeftMotor",212,4
-do_Drive_Tick,void do_Drive_Tick(),走行状態に対応する出力関数を呼ぶ。不正な状態はGO_STOPに修正して停止する。,Drive_Num,"go_Advance, go_Back, go_Left, go_Right, go_ForwardLeft, go_ForwardRight, go_BackLeft, go_BackRight, go_Stop",217,14
-warning,void warning(),警告の開始を記録する。再生中または前回開始から1000ms未満なら何もしない。時刻0での初回も許可する。,"isWarningIssued, isWarningPlaying, isWarningToneLow, lastWarnMs, lastWarningToggleUs, warningPhase, warningPhaseMs, warningStartMs","millis, micros, digitalWrite",236,13
-do_Warning_Tick,void do_Warning_Tick(),警告開始からの時間で4フェーズを判定する。偶数フェーズは2kHz矩形波、奇数は無音。200ms以上で終了し音楽の音符時刻を補正する。待機ループは使わない。,"isMusicPlaying, isToneLow, isWarningPlaying, isWarningToneLow, lastToneToggleUs, lastWarningToggleUs, noteStartMs, warningPhase, warningStartMs","millis, digitalWrite, micros",250,25
-play_Tone,"void play_Tone(int freq, int ms)",周波数から半周期を計算し、発音時間と波形状態を設定する。freqが0以下は休符、msが0以下は発音時間0。実際の波形はdo_Music_Tickが更新する。,"halfPeriodUs, isToneLow, isWarningPlaying, lastToneToggleUs, toneDurationMs","micros, digitalWrite",277,7
-get_SongNote,int get_SongNote(const int16_t* notePtr),PROGMEM上の音符ペアの先頭を読み、周波数HzまたはEND_MARKを返す。有効なポインタを前提とする。,—,pgm_read_word,285,3
-get_SongLength,int get_SongLength(const int16_t* notePtr),PROGMEM上の音符ペアの2要素目を読み、長さ係数を返す。有効なポインタを前提とする。,—,pgm_read_word,289,3
-play_Note,void play_Note(const int16_t* notePtr),音符の全長を係数×TEMPO_MSで設定し、末尾20msを無音とした発音を予約する。待機せず戻る。,"noteDurationMs, noteStartMs","get_SongLength, millis, play_Tone, get_SongNote",294,6
-stop_Music,void stop_Music(),曲再生・曲予約・警告音を取り消し、ポインタと半周期を解除してブザーをHIGHにする。走行状態は変更しない。,"currentNotePtr, halfPeriodUs, isDanceMusic, isMusicPlaying, isWarningPlaying, pendingSongNum",digitalWrite,301,9
-play_Music,void play_Music(int songNum),1〜9の曲番号から先頭ポインタをpgm_read_ptrで読み、ダンス曲フラグを解除し、再生状態と最初の音符を設定する。範囲外は無視し、走行を止めない。,"currentNotePtr, isDanceMusic, isMusicPlaying","pgm_read_ptr, play_Note",312,7
-is_MusicDue,bool is_MusicDue(),曲予約が存在し、予約から300ms以上経過したかを返す。,"pendingSongMs, pendingSongNum",millis,320,3
-do_Music_Tick,void do_Music_Tick(),警告を更新し、警告中は音楽の更新を中断する。それ以外は曲予約、音符終了、終端、無音、半周期の順に判定し、波形を最大1回切り替える。ダンス専用曲は終端で先頭に戻してループし、通常曲の終了時は次曲の予約を保持する。,"currentNotePtr, halfPeriodUs, isDanceMusic, isDancing, isMusicPlaying, isToneLow, isWarningPlaying, lastToneToggleUs, noteDurationMs, noteStartMs, pendingSongNum, toneDurationMs","do_Warning_Tick, is_MusicDue, play_Music, millis, get_SongNote, digitalWrite, play_Note, micros",324,47
-watch,int watch(),D10へ10μsパルスを送りD3のEchoを最大25ms待つ。幅÷58の整数cmを返す。タイムアウトは999で、故障と遠方を区別しない。,—,"digitalWrite, delayMicroseconds, pulseIn",375,10
-is_FrontBlocked,bool is_FrontBlocked(),20cm以下なら30ms待ち再測定し、2回とも20cm以下ならtrueを返す。センサー待機中は他の周期処理を進めない。,—,"watch, delay",386,7
-is_BackIrOn,bool is_BackIrOn(),後方D0/D2のどちらかがLOWならtrueを返す。,—,digitalRead,394,3
-is_BackBlocked,bool is_BackBlocked(),後方検知後20ms待ち、再検知したらtrueを返す。,—,"is_BackIrOn, delay",398,7
-start_Avoid,void start_Avoid(DriveState act),GO_ADVANCEかGO_RIGHTだけを回避として開始する。それ以外は停止し、自動後退は拒否する。駆動開始後500msを計測し警告を開始する。音楽と曲予約は保持する。,"Drive_Num, avoidStartMs, isAvoiding, lastDriveCmd","end_Avoid, do_Drive_Tick, millis, warning",409,9
-end_Avoid,void end_Avoid(),回避フラグを下げ、GO_STOPにしてモーターを停止する。,"Drive_Num, isAvoiding",go_Stop,419,5
-update_Avoid,void update_Avoid(),回避中に終了判定する。前進回避は前方障害物か500ms経過で停止、右旋回回避は500ms経過で停止する。自動後退へは切り替えない。,"Drive_Num, avoidStartMs","millis, end_Avoid, is_FrontBlocked",425,9
-is_CheckTime,bool is_CheckTime(),前進系・後退系（斜めを含む）で、新規確認要求または前回から100ms以上のときtrueを返す。,"Drive_Num, isCheckRequested, lastCheckMs",millis,435,6
-mark_Checked,void mark_Checked(),確認要求を解除し、測定開始側の時刻を記録する。,"isCheckRequested, lastCheckMs",millis,442,4
-update_ObstacleFlags,void update_ObstacleFlags(),前方・後方を順番に測り、front/backを1または0に更新する。,"back, front","is_FrontBlocked, is_BackBlocked",447,4
-decide_AvoidAction,DriveState decide_AvoidAction(),前進系で前方検知ならGO_STOP（前後同時も停止）。後退系で前後同時ならGO_RIGHT、後方のみならGO_ADVANCE、それ以外はDEF。自動後退は返さない。,"Drive_Num, back, front",—,452,7
-checkSensorsAndObstacles,void checkSensorsAndObstacles(),回避中はupdate_Avoidだけを呼んで戻る。ダンス中は戻る。通常時は測定と判断を行う。GO_STOPなら直ちに停止して直前入力を解除し警告。前進・右旋回の回避だけstart_Avoidで開始する。,"isAvoiding, isDancing, lastDriveCmd","update_Avoid, is_CheckTime, mark_Checked, update_ObstacleFlags, decide_AvoidAction, end_Avoid, warning, start_Avoid",460,13
-stop_Dance,void stop_Dance(),ダンスを解除しGO_STOPにしてモーターを停止する。ダンス専用曲も停止する。,"Drive_Num, isDanceMusic, isDancing","go_Stop, stop_Music",477,6
-dance_Action,DriveState dance_Action(uint8_t step),0と4は右旋回、2と6は左旋回、1/3/5/7と範囲外は停止。4と6は右・左の一回転を狙う時間指定旋回。,—,—,485,9
-dance_Duration,unsigned int dance_Duration(uint8_t step),各ステップの設定時間msを返す。0/2は650、1/3/5は180、4はDANCE_SPIN_MS=2000、6はDANCE_LEFT_SPIN_MS=2000、7と範囲外は350。左右の一回転時間は別々に実機調整する。,—,—,495,9
-start_Dance,void start_Dance(),回避中なら無視。それ以外は先頭ステップへ戻し、次周期の初回センサー確認を要求する。曲予約を解除してダンス専用曲を先頭から開始する。モーター出力は安全確認後まで行わない。,"Drive_Num, currentNotePtr, danceStep, danceStepStartMs, isAvoiding, isDanceMusic, isDancing, isMusicPlaying, lastDanceCheckMs, lastDriveCmd, pendingSongNum","millis, play_Note, dance_Action",505,15
-do_Dance_Tick,void do_Dance_Tick(),ダンス中は初回または100ms経過時に前後を確認し、検知時は中止する。ステップ時間の経過で次に進み、8ステップ終了で先頭へ戻り繰り返す。,"Drive_Num, danceStep, danceStepStartMs, isDancing, lastDanceCheckMs","millis, is_FrontBlocked, is_BackBlocked, stop_Dance, dance_Duration, dance_Action",521,23
-is_OppositeDrive,"bool is_OppositeDrive(DriveState a, DriveState b)",上下・左右の逆向きの組合せを、順序を問わずtrueとする。斜め状態は引数に渡さず単独指示どうしを比較する。,—,—,548,4
-get_DiagonalDrive,"DriveState get_DiagonalDrive(DriveState a, DriveState b)",上下と左右の組合せを順序に関係なく前左・前右・後左・後右へ変換し、該当なしはDEFを返す。,—,—,554,11
-is_DiagonalComponent,"bool is_DiagonalComponent(DriveState diagonal, DriveState cmd)",斜め走行に含まれる上下または左右の単独方向ならtrue、それ以外はfalseを返す。,—,—,567,9
-set_Drive,void set_Drive(DriveState cmd),直前の単独入力と300ms以内で逆向きなら停止。現在の単独走行と上下＋左右の組合せなら時間制限なく斜めにする。斜め走行中の方向入力は単独方向へ戻す（逆方向停止の条件を先に判定）。入力と時刻を記録しセンサー確認を要求する。,"Drive_Num, isCheckRequested, lastDriveCmd, lastDriveCmdMs","millis, is_OppositeDrive, get_DiagonalDrive, is_DiagonalComponent",577,23
-read_IR_Command,int read_IR_Command(),IR受信がなければNO_COMMAND。受信時はコードとリピートフラグを取得しresumeする。リピートはNO_COMMAND、それ以外はcommandを返す。,—,"decode, resume",601,7
-handle_StopButton,void handle_StopButton(),回避・ダンスを解除し、stop_Musicで曲と警告を消音する。現在と直前の走行状態をGO_STOPにする。モーターは同じ周回の出力で止める。,"Drive_Num, isAvoiding, isDancing, lastDriveCmd",stop_Music,609,7
-handle_DriveButton,void handle_DriveButton(int command),24/82/8/90を前進/後退/左/右の単独指示に変換しset_Driveへ渡す。他のコードは何もしない。,—,set_Drive,617,6
-get_SongNum,int get_SongNum(int command),NUM_CODESの受信コードに対応する曲番号1〜9を返す。該当なしは0。,—,—,624,6
-is_NumberConflict,bool is_NumberConflict(int songNum),300ms未満の予約があり、別の曲番号ならtrueを返す。300ms以上経過した予約は競合扱いにしない。,"pendingSongMs, pendingSongNum",millis,631,4
-handle_NumberButton,void handle_NumberButton(int command),数字以外は無視。300ms未満の別番号なら予約取消、同番号なら予約時刻を維持する。それ以外は最新入力を新規予約として時刻を更新する。,"pendingSongMs, pendingSongNum","get_SongNum, is_NumberConflict, millis",636,8
-do_IR_Tick,void do_IR_Tick(),1件の受信を処理する。OKを最優先し、回避中は他を無視。0でダンス開始/再開、ダンス中は残りを無視。通常時は方向と数字を処理する。,"isAvoiding, isDancing","read_IR_Command, handle_StopButton, start_Dance, handle_DriveButton, handle_NumberButton",645,10
-init_MotorPins,void init_MotorPins(),モーター6端子を出力にしてgo_Stopを呼ぶ。,—,"pinMode, go_Stop",659,5
-init_BuzzerPin,void init_BuzzerPin(),D13にHIGHを用意してから出力に切り替え、初期化時の意図しないLOWを避ける。ブートローダー期間は制御対象外。,—,"digitalWrite, pinMode",665,5
-init_SensorPins,void init_SensorPins(),Trigを出力、Echoと後方赤外線端子を入力にする。,—,pinMode,671,6
-init_IrReceiver,void init_IrReceiver(),D4でIR受信を開始し、ブザーと共有するD13の受信LED点滅を無効化する。,—,begin,678,3
-setup,void setup(),モーター、ブザー、センサー、IR受信の順に初期化する。,—,"init_MotorPins, init_BuzzerPin, init_SensorPins, init_IrReceiver",682,6
-loop,void loop(),IR入力→ダンス→障害物判断→走行出力→音楽/警告出力→100μsまたは20μs待機を繰り返す。,IS_IR,"do_IR_Tick, do_Dance_Tick, checkSensorsAndObstacles, do_Drive_Tick, do_Music_Tick, delayMicroseconds",689,10
+﻿関数,形式,機能概要,処理内容,共有状態（参照・更新）,呼び出し,先頭行,行数
+set_RightMotor,"void set_RightMotor(bool isDir1High, bool isDir2High)",右モーターの回転方向を設定する。,"1. isDir1Highを右方向端子D12へdigitalWriteで出力する。
+2. isDir2Highを右方向端子D11へ出力する。PWM値は変更しない。",—,digitalWrite,156,4
+set_LeftMotor,"void set_LeftMotor(bool isDir1High, bool isDir2High)",左モーターの回転方向を設定する。,"1. isDir1Highを左方向端子D7へdigitalWriteで出力する。
+2. isDir2Highを左方向端子D8へ出力する。PWM値は変更しない。",—,digitalWrite,161,4
+set_MotorSpeed,"void set_MotorSpeed(int rightSpeed, int leftSpeed)",左右の車輪の駆動強度を指定する。,"1. rightSpeedを右PWM端子D9へanalogWriteで出力する。
+2. leftSpeedを左PWM端子D6へ出力する。方向端子は変更せず、値の範囲は呼び出し側で0〜255に収める。",—,analogWrite,166,4
+go_Advance,void go_Advance(),車体をまっすぐ前進させる。,"1. 右・左とも方向端子をHIGH/LOWに設定する。
+2. set_MotorSpeed(SPEED, SPEED)を呼び、両輪へPWM100を出力する。",—,"set_RightMotor, set_LeftMotor, set_MotorSpeed",171,4
+go_Back,void go_Back(),リモコンの後退指示に対応する駆動を行う。,"1. 右・左とも方向端子をLOW/HIGHに設定する。
+2. 両輪へSPEED=100のPWMを出力する。この関数は手動のGO_BACK出力に使用し、障害物回避から自動選択しない。",—,"set_RightMotor, set_LeftMotor, set_MotorSpeed",176,4
+go_Left,void go_Left(),その場で左向きに旋回させる。,"1. 右輪をHIGH/LOW、左輪をLOW/HIGHに設定し、互いに逆方向へ駆動する。
+2. isDancingに応じて両輪のPWMをDANCE_SPEED=180またはSPEED=100にする。",isDancing,"set_RightMotor, set_LeftMotor, set_MotorSpeed",181,4
+go_Right,void go_Right(),その場で右向きに旋回させる。,"1. 右輪をLOW/HIGH、左輪をHIGH/LOWに設定し、互いに逆方向へ駆動する。
+2. isDancingが真なら両輪PWM180、偽なら両輪PWM100を出力する。",isDancing,"set_RightMotor, set_LeftMotor, set_MotorSpeed",186,4
+go_ForwardLeft,void go_ForwardLeft(),前進しながら左へカーブさせる。,"1. 右・左とも方向端子をHIGH/LOWにそろえる。
+2. 外側の右輪へDIAGONAL_OUTER_SPEED=220、内側の左輪へDIAGONAL_INNER_SPEED=60を出力する。",—,"set_RightMotor, set_LeftMotor, set_MotorSpeed",192,4
+go_ForwardRight,void go_ForwardRight(),前進しながら強めに右へカーブさせる。,"1. 右・左とも方向端子をHIGH/LOWにそろえる。
+2. 内側の右輪へRIGHT_CURVE_INNER_SPEED=40、外側の左輪へRIGHT_CURVE_OUTER_SPEED=245を出力する。",—,"set_RightMotor, set_LeftMotor, set_MotorSpeed",197,4
+go_BackLeft,void go_BackLeft(),後退しながら左へカーブさせる。,"1. 右・左とも方向端子をLOW/HIGHにそろえる。
+2. 右輪へDIAGONAL_INNER_SPEED=60、左輪へDIAGONAL_OUTER_SPEED=220を出力する。",—,"set_RightMotor, set_LeftMotor, set_MotorSpeed",202,4
+go_BackRight,void go_BackRight(),後退しながら強めに右へカーブさせる。,"1. 右・左とも方向端子をLOW/HIGHにそろえる。
+2. 右輪へRIGHT_CURVE_OUTER_SPEED=245、左輪へRIGHT_CURVE_INNER_SPEED=40を出力する。",—,"set_RightMotor, set_LeftMotor, set_MotorSpeed",207,4
+go_Stop,void go_Stop(),モーターへの駆動出力を停止する。,"1. set_MotorSpeed(0, 0)で左右のPWMを0にする。
+2. 右・左の方向端子をそれぞれLOW/LOWにする。空転停止のため、車輪が静止するまでの時間は実機に依存する。",—,"set_MotorSpeed, set_RightMotor, set_LeftMotor",212,4
+do_Drive_Tick,void do_Drive_Tick(),現在の走行状態をモーター出力へ反映する。,"1. Drive_Numをswitchで判定する。
+2. 前進・後退・左右旋回・4種類のカーブ・停止に対応するgo_関数を1つ呼ぶ。
+3. 定義外の状態ならDrive_NumをGO_STOPへ補正してgo_Stopを呼ぶ。",Drive_Num,"go_Advance, go_Back, go_Left, go_Right, go_ForwardLeft, go_ForwardRight, go_BackLeft, go_BackRight, go_Stop",217,14
+warning,void warning(),警告音の再生開始を受け付ける。,"1. millisで現在時刻を取得し、警告中または前回開始から1000ms未満なら処理を終える。
+2. 初回済みフラグ、開始時刻、フェーズと波形の初期状態を記録する。
+3. D13をHIGHにし、実際の発音更新をdo_Warning_Tickに引き継ぐ。初回は時刻0でも受け付ける。","isWarningIssued, isWarningPlaying, isWarningToneLow, lastWarnMs, lastWarningToggleUs, warningPhase, warningPhaseMs, warningStartMs","millis, micros, digitalWrite",236,13
+do_Warning_Tick,void do_Warning_Tick(),警告の音と無音を時間に従って切り替える。,"1. 警告中でなければ終了する。開始から200ms以上なら消音し、音楽のnoteStartMsに中断時間を加えて波形状態を戻す。
+2. 経過時間を50msで割ってフェーズを求め、奇数フェーズではD13をHIGHにする。
+3. 偶数フェーズでは250μs以上の間隔でD13のLOW/HIGHを1回切り替え、2kHzを目標とする波形を出す。","isMusicPlaying, isToneLow, isWarningPlaying, isWarningToneLow, lastToneToggleUs, lastWarningToggleUs, noteStartMs, warningPhase, warningStartMs","millis, digitalWrite, micros",250,25
+play_Tone,"void play_Tone(int freq, int ms)",1音分の発音条件を準備する。,"1. msが正ならtoneDurationMsへ保存し、0以下なら0にする。
+2. freqが正なら500000/freqをhalfPeriodUsへ保存し、0以下なら休符として0にする。
+3. 波形の時刻と位相を初期化し、警告中でなければD13をHIGHにする。ここでは発音時間を待たない。","halfPeriodUs, isToneLow, isWarningPlaying, lastToneToggleUs, toneDurationMs","micros, digitalWrite",277,7
+get_SongNote,int get_SongNote(const int16_t* notePtr),指定位置の音の高さを取得する。,"1. notePtrが指すPROGMEM上の16bit値をpgm_read_wordで読む。
+2. 読んだ値をint16_tとして解釈して返す。通常は周波数、終端ではEND_MARK=-1になる。",—,pgm_read_word,285,3
+get_SongLength,int get_SongLength(const int16_t* notePtr),指定音符の長さ係数を取得する。,"1. notePtrから1要素進め、音符ペアの長さ側の16bit値をPROGMEMから読む。
+2. int16_tとして解釈した係数を返す。ミリ秒への換算はplay_Noteで行う。",—,pgm_read_word,289,3
+play_Note,void play_Note(const int16_t* notePtr),次に鳴らす音符をスケジュールする。,"1. get_SongLengthの係数にTEMPO_MS=150を掛け、noteDurationMsへ保存する。
+2. noteStartMsへ現在時刻を記録する。
+3. 全長から末尾の20msを差し引いた発音時間を求める。全長20ms以下なら0とする。
+4. get_SongNoteで高さを読み、play_Toneへ高さと発音時間を渡す。","noteDurationMs, noteStartMs","get_SongLength, millis, play_Tone, get_SongNote",294,6
+stop_Music,void stop_Music(),音の再生と予約をまとめて取り消す。,"1. 通常再生・ダンス曲・警告のフラグを解除する。
+2. currentNotePtrをnullptr、pendingSongNumとhalfPeriodUsを0にする。
+3. D13をHIGHにして消音する。Drive_Numやモーター出力には触れない。","currentNotePtr, halfPeriodUs, isDanceMusic, isMusicPlaying, isWarningPlaying, pendingSongNum",digitalWrite,301,9
+play_Music,void play_Music(int songNum),指定番号の通常曲へ切り替える。,"1. songNumが1〜9の範囲外なら何もせず終了する。
+2. ダンス曲フラグを解除し、SONG_TABLEからpgm_read_ptrで曲の先頭を取得する。
+3. 再生フラグを有効にしてplay_Noteで最初の音符を設定する。走行状態は変更しない。","currentNotePtr, isDanceMusic, isMusicPlaying","pgm_read_ptr, play_Note",312,7
+is_MusicDue,bool is_MusicDue(),予約した曲の再生開始時期を判定する。,"1. pendingSongNumが0でなく、予約が存在するか確認する。
+2. millisとpendingSongMsの差がCONFLICT_MS=300以上か調べ、両条件の論理積を返す。","pendingSongMs, pendingSongNum",millis,320,3
+do_Music_Tick,void do_Music_Tick(),曲の進行とブザー波形を1周期分更新する。,"1. do_Warning_Tickを呼び、警告が継続中なら音楽側の更新を終える。
+2. 曲予約の期限が来ていれば予約を取り出してplay_Musicで切り替える。未再生または音符ポインタが空なら終了する。
+3. 音符の全長を過ぎたら次のペアへ進む。終端でダンス専用曲なら先頭に戻し、通常曲なら次曲予約を残して再生を終了する。
+4. 切替時はplay_Noteで新しい音符を設定する。休符または発音時間を過ぎた音符はHIGHで消音する。
+5. 半周期以上たっているときだけ波形を1回切り替える。待機ループは使用しない。","currentNotePtr, halfPeriodUs, isDanceMusic, isDancing, isMusicPlaying, isToneLow, isWarningPlaying, lastToneToggleUs, noteDurationMs, noteStartMs, pendingSongNum, toneDurationMs","do_Warning_Tick, is_MusicDue, play_Music, millis, get_SongNote, digitalWrite, play_Note, micros",324,47
+watch,int watch(),超音波から前方までの距離を測る。,"1. TrigのD10をLOWで2μs、HIGHで10μs、その後LOWにする。
+2. pulseInでD3のHIGHパルス幅を最大25000μs待って取得する。
+3. 幅が0なら999を返し、それ以外は幅を58で割った整数cmを返す。故障と遠方は区別しない。",—,"digitalWrite, delayMicroseconds, pulseIn",375,10
+is_FrontBlocked,bool is_FrontBlocked(),前方障害物の検知を再確認する。,"1. watchで距離を測り、DISTANCE_LIMIT=20cmを超えていればfalseを返す。
+2. 20cm以下ならdelay(30)で待ち、もう一度watchを実行する。
+3. 2回目も20cm以下ならtrueを返す。測定と再確認待機の間は他の周期処理も遅れる。",—,"watch, delay",386,7
+is_BackIrOn,bool is_BackIrOn(),後方センサーの現在の検知状態を読む。,"1. 左後方D0を読み、LOWなら検知ありとする。
+2. D0がLOWでない場合は右後方D2を読む。少なくとも片方がLOWならtrue、それ以外はfalseを返す。",—,digitalRead,394,3
+is_BackBlocked,bool is_BackBlocked(),後方障害物の検知を再確認する。,"1. is_BackIrOnで検知がなければfalseを返す。
+2. 検知があればdelay(20)で待ち、もう一度is_BackIrOnを呼ぶ。
+3. 再確認でも検知していればtrueを返す。",—,"is_BackIrOn, delay",398,7
+start_Avoid,void start_Avoid(DriveState act),許可された自動回避動作を開始する。,"1. actがGO_ADVANCEでもGO_RIGHTでもなければend_Avoidで停止して終了する。
+2. Drive_Numをact、lastDriveCmdをGO_STOPにし、do_Drive_Tickで駆動する。
+3. isAvoidingを有効にして、駆動直後の時刻をavoidStartMsへ記録する。
+4. warningで警告を開始する。通常曲と曲予約は保持する。","Drive_Num, avoidStartMs, isAvoiding, lastDriveCmd","end_Avoid, do_Drive_Tick, millis, warning",409,9
+end_Avoid,void end_Avoid(),自動回避を終了して停止状態へ戻す。,"1. isAvoidingをfalse、Drive_NumをGO_STOPにする。
+2. go_StopでPWMと方向端子を停止値へ変更する。","Drive_Num, isAvoiding",go_Stop,419,5
+update_Avoid,void update_Avoid(),回避動作を続けるか終了するか判断する。,"1. avoidStartMsから500ms以上たっていればend_Avoidを呼んで終了する。
+2. 前進回避のときだけis_FrontBlockedで進行先を確認する。右旋回ではこのセンサー確認を行わない。
+3. 前方検知、または測定後の500ms経過でend_Avoidを呼ぶ。それ以外は回避状態を維持する。","Drive_Num, avoidStartMs","millis, end_Avoid, is_FrontBlocked",425,9
+is_CheckTime,bool is_CheckTime(),通常走行のセンサー確認要否を判定する。,"1. Drive_Numが前進・後退とそれらの4カーブ以外ならfalseを返す。
+2. 新規確認要求があるか、lastCheckMsから100ms以上経過していればtrueを返す。","Drive_Num, isCheckRequested, lastCheckMs",millis,435,6
+mark_Checked,void mark_Checked(),センサー確認の実施時刻を記録する。,"1. isCheckRequestedをfalseにし、新しい指示に伴う即時確認要求を解除する。
+2. millisをlastCheckMsへ保存する。呼び出し位置は測定の開始前なので、記録するのは開始側の時刻になる。","isCheckRequested, lastCheckMs",millis,442,4
+update_ObstacleFlags,void update_ObstacleFlags(),前後の検知結果を共有状態へ反映する。,"1. is_FrontBlockedの結果を、検知なら1、未検知なら0としてfrontへ保存する。
+2. 続いてis_BackBlockedを呼び、同じ規則でbackを更新する。","back, front","is_FrontBlocked, is_BackBlocked",447,4
+decide_AvoidAction,DriveState decide_AvoidAction(),障害物に対して停止または回避方向を選ぶ。,"1. Drive_Numが前進系か後退系かを判定する。
+2. 前進系でfrontが真なら、backの値に関係なくGO_STOPを返す。
+3. 後退系でbackが真なら、frontも真のときGO_RIGHT、そうでなければGO_ADVANCEを返す。
+4. その他はDEFを返す。GO_BACKを自動回避として返す経路はない。","Drive_Num, back, front",—,452,7
+checkSensorsAndObstacles,void checkSensorsAndObstacles(),走行に優先する障害物対応を実行する。,"1. 回避中ならupdate_Avoidだけを呼んで戻り、ダンス中なら通常の確認を省く。
+2. is_CheckTimeがfalseなら戻る。確認が必要ならmark_Checked、update_ObstacleFlags、decide_AvoidActionの順に呼ぶ。
+3. 判断がGO_STOPならend_Avoidで即停止し、lastDriveCmdをGO_STOPへ戻してwarningを呼ぶ。
+4. DEF以外の残る回避指示はstart_Avoidへ渡す。DEFなら現在の走行を維持する。","isAvoiding, isDancing, lastDriveCmd","update_Avoid, is_CheckTime, mark_Checked, update_ObstacleFlags, decide_AvoidAction, end_Avoid, warning, start_Avoid",460,13
+stop_Dance,void stop_Dance(),ダンスと専用曲の継続を解除する。,"1. isDancingをfalse、Drive_NumをGO_STOPにし、go_Stopを呼ぶ。
+2. isDanceMusicが真の場合だけstop_Musicを呼ぶ。通常曲の再生状態はこの条件に入らなければ変更しない。","Drive_Num, isDanceMusic, isDancing","go_Stop, stop_Music",477,6
+dance_Action,DriveState dance_Action(uint8_t step),指定ステップで使う走行状態を選ぶ。,"1. stepをswitchで比較し、0/4ならGO_RIGHT、2/6ならGO_LEFTを返す。
+2. 1/3/5/7および範囲外はGO_STOPを返す。旋回時間そのものはdance_Durationで決める。",—,—,485,9
+dance_Duration,unsigned int dance_Duration(uint8_t step),指定ステップの継続時間を取得する。,"1. stepが0/2なら650ms、1/3/5なら180msを選ぶ。
+2. 4なら右一回転用DANCE_SPIN_MS=2000ms、6なら左一回転用DANCE_LEFT_SPIN_MS=2000msを選ぶ。
+3. 7と範囲外は350msを返す。左右の一回転時間は実機に合わせて別々に調整する。",—,—,495,9
+start_Dance,void start_Dance(),ダンス動作と専用曲を先頭から起動する。,"1. isAvoidingが真なら何もせず戻る。
+2. ダンスを有効にし、ステップ0とその開始時刻、初回センサー確認用の値を設定する。
+3. lastDriveCmdと曲予約を解除し、ダンス曲・音楽再生のフラグを有効にする。
+4. currentNotePtrをDANCE_SONGへ設定してplay_Noteを呼び、Drive_Numに最初の動作を設定する。モーター出力は次の安全確認後に行う。","Drive_Num, currentNotePtr, danceStep, danceStepStartMs, isAvoiding, isDanceMusic, isDancing, isMusicPlaying, lastDanceCheckMs, lastDriveCmd, pendingSongNum","millis, play_Note, dance_Action",505,15
+do_Dance_Tick,void do_Dance_Tick(),ダンスの安全確認とステップ進行を行う。,"1. isDancingがfalseなら戻る。初回または前回確認から100ms以上なら前後センサーを確認する。
+2. どちらかが検知したらstop_Danceを呼び、動きと専用曲を止める。
+3. dance_Durationで決まる時間がまだ経過していなければ戻る。
+4. 次のステップへ進め、8になったら0へ戻す。開始時刻とDrive_Numを更新する。曲のループはdo_Music_Tickが別途行う。","Drive_Num, danceStep, danceStepStartMs, isDancing, lastDanceCheckMs","millis, is_FrontBlocked, is_BackBlocked, stop_Dance, dance_Duration, dance_Action",521,23
+is_OppositeDrive,"bool is_OppositeDrive(DriveState a, DriveState b)",2つの単独方向が反対向きか調べる。,"1. a/bが前進と後退の組合せか、左と右の組合せかを比較する。
+2. どちらの入力順でも一致すればtrue、それ以外はfalseを返す。",—,—,548,4
+get_DiagonalDrive,"DriveState get_DiagonalDrive(DriveState a, DriveState b)",上下と左右の入力をカーブ状態へ変換する。,"1. a/bについて、前進と左・前進と右・後退と左・後退と右の4組を、順序を入れ替えた場合も含めて比較する。
+2. 一致した組の前左・前右・後左・後右を返し、組合せがなければDEFを返す。",—,—,554,11
+is_DiagonalComponent,"bool is_DiagonalComponent(DriveState diagonal, DriveState cmd)",単独方向が現在のカーブに含まれるか調べる。,"1. diagonalが4種類のカーブのどれに当たるかを分岐する。
+2. そのカーブを構成する上下または左右の方向とcmdが一致すればtrueを返す。カーブでない場合や不一致はfalseになる。",—,—,567,9
+set_Drive,void set_Drive(DriveState cmd),方向入力を現在の走行指示へ組み込む。,"1. 現在時刻と直前入力からの経過時間を求める。
+2. 直前の単独入力と300ms以内で逆方向なら、現在と直前の走行をGO_STOPにし、時刻と確認要求を更新して戻る。
+3. その他は現在のDrive_Numとcmdをget_DiagonalDriveへ渡す。カーブの構成方向の再入力、または組合せなしならcmdを単独採用し、それ以外は得られたカーブを採用する。
+4. lastDriveCmd、入力時刻、isCheckRequestedを更新する。カーブ合成の入力間隔に制限は設けない。","Drive_Num, isCheckRequested, lastDriveCmd, lastDriveCmdMs","millis, is_OppositeDrive, get_DiagonalDrive, is_DiagonalComponent",577,23
+read_IR_Command,int read_IR_Command(),新しいリモコンの受信コードを取り出す。,"1. decodeで受信がなければNO_COMMANDを返す。
+2. 受信データからcommandとリピートフラグを読み、resumeで次の受信を許可する。
+3. リピートならNO_COMMAND、それ以外なら取得したcommandを返す。",—,"decode, resume",601,7
+handle_StopButton,void handle_StopButton(),OKによる全体停止の状態を設定する。,"1. isAvoidingとisDancingをfalseにする。
+2. stop_Musicで通常曲・専用曲・曲予約・警告を解除して消音する。
+3. Drive_NumとlastDriveCmdをGO_STOPにする。モーター停止値は同じloopのdo_Drive_Tickで出力する。","Drive_Num, isAvoiding, isDancing, lastDriveCmd",stop_Music,609,7
+handle_DriveButton,void handle_DriveButton(int command),矢印コードを単独方向の指示へ対応させる。,"1. commandを24/82/8/90と比較し、前進/後退/左/右のDriveStateを選ぶ。
+2. 一致した場合だけset_Driveへ渡す。その他のコードでは走行状態を更新しない。",—,set_Drive,617,6
+get_SongNum,int get_SongNum(int command),数字コードから通常曲の番号を求める。,"1. NUM_CODESを先頭からSONG_COUNT=9件まで順に比較する。
+2. commandと一致した添字に1を足して返す。最後まで一致しなければ0を返す。",—,—,624,6
+is_NumberConflict,bool is_NumberConflict(int songNum),新しい曲指定が未確定の予約と競合するか調べる。,"1. pendingSongNumが0でないことと、songNumがその予約番号と異なることを確認する。
+2. さらに予約からの経過が300ms未満ならtrue、それ以外はfalseを返す。","pendingSongMs, pendingSongNum",millis,631,4
+handle_NumberButton,void handle_NumberButton(int command),数字入力に応じて曲の予約を管理する。,"1. get_SongNumで曲番号を求め、0なら何もせず戻る。
+2. 300ms未満の別番号との競合なら予約番号を0にして戻る。
+3. 同じ番号の300ms未満の再入力なら、最初の予約時刻を保ったまま戻る。
+4. その他は最新の曲番号と現在時刻を予約として保存する。","pendingSongMs, pendingSongNum","get_SongNum, is_NumberConflict, millis",636,8
+do_IR_Tick,void do_IR_Tick(),リモコン入力を優先順位に従って振り分ける。,"1. read_IR_Commandを1回呼び、NO_COMMANDなら戻る。
+2. OKならhandle_StopButtonを実行する。OK以外で回避中なら入力を無視する。
+3. 0ならstart_Danceで開始・再開する。それ以外でダンス中なら入力を無視する。
+4. 通常時はhandle_DriveButton、handle_NumberButtonの順に渡す。","isAvoiding, isDancing","read_IR_Command, handle_StopButton, start_Dance, handle_DriveButton, handle_NumberButton",645,10
+init_MotorPins,void init_MotorPins(),モーター端子を停止状態で使い始める。,"1. PWMのD9/D6と方向のD12/D11/D7/D8をOUTPUTへ設定する。
+2. go_Stopを呼び、初期出力をPWM0・方向LOWにする。",—,"pinMode, go_Stop",659,5
+init_BuzzerPin,void init_BuzzerPin(),ブザー端子の初期出力を消音にそろえる。,"1. D13へHIGHを設定してからOUTPUTへ切り替える。
+2. もう一度HIGHを出力する。setup実行前のブートローダーによる出力はこの関数で制御しない。",—,"digitalWrite, pinMode",665,5
+init_SensorPins,void init_SensorPins(),前後の検知に使う端子を準備する。,"1. 超音波のTrig D10をOUTPUT、Echo D3をINPUTにする。
+2. 後方赤外線のD0/D2をINPUTにする。ここでは距離測定や障害物判定は行わない。",—,pinMode,671,6
+init_IrReceiver,void init_IrReceiver(),赤外線リモコンの受信を有効にする。,"1. IrReceiver.beginへIR_RECEIVE_PIN=D4を渡す。
+2. DISABLE_LED_FEEDBACKを指定し、ブザーと共有するD13を受信LEDで点滅させない。",—,begin,678,3
+setup,void setup(),起動時に各機器を初期化する。,"1. init_MotorPinsでモーター端子と停止出力を設定する。
+2. init_BuzzerPin、init_SensorPins、init_IrReceiverの順に呼ぶ。",—,"init_MotorPins, init_BuzzerPin, init_SensorPins, init_IrReceiver",682,6
+loop,void loop(),入力・判断・出力を周期的に実行する。,"1. do_IR_Tickで受信を処理し、do_Dance_Tickでダンスを進める。
+2. checkSensorsAndObstaclesで停止・回避を判断し、do_Drive_Tickでモーターへ出力する。
+3. do_Music_Tickで警告と音楽を更新する。
+4. IS_IRが真なら100μs、偽なら20μs待ち、次の周期へ進む。",IS_IR,"do_IR_Tick, do_Dance_Tick, checkSensorsAndObstacles, do_Drive_Tick, do_Music_Tick, delayMicroseconds",689,10

@@ -16,7 +16,7 @@ IO={
 'go_Advance':('SPEED','左右前進、PWM100/100'), 'go_Back':('SPEED','左右後退、PWM100/100'),
 'go_Left':('SPEED、DANCE_SPEED、isDancing','右前進・左後退、通常PWM100/100・ダンスPWM180/180'), 'go_Right':('SPEED、DANCE_SPEED、isDancing','右後退・左前進、通常PWM100/100・ダンスPWM180/180'),
 'go_ForwardLeft':('DIAGONAL_OUTER_SPEED、DIAGONAL_INNER_SPEED','左右前進、右PWM220・左60'), 'go_ForwardRight':('RIGHT_CURVE_OUTER_SPEED、RIGHT_CURVE_INNER_SPEED','左右前進、右PWM40・左245'),
-'go_BackLeft':('DIAGONAL_OUTER_SPEED、DIAGONAL_INNER_SPEED','左右後退、右PWM40・左245'), 'go_BackRight':('RIGHT_CURVE_OUTER_SPEED、RIGHT_CURVE_INNER_SPEED','左右後退、右PWM245・左40'),
+'go_BackLeft':('DIAGONAL_OUTER_SPEED、DIAGONAL_INNER_SPEED','左右後退、右PWM60・左220'), 'go_BackRight':('RIGHT_CURVE_OUTER_SPEED、RIGHT_CURVE_INNER_SPEED','左右後退、右PWM245・左40'),
 'go_Stop':('—','左右PWM0・方向4端子LOW'),
 'do_Drive_Tick':('Drive_Num','左右モーターの方向・PWM。不正状態はDrive_Num=GO_STOP'),
 'warning':('millis()・micros()、isWarningPlaying、isWarningIssued、lastWarnMs','警告状態・開始時刻・フェーズ・波形状態、D13=HIGH'),
@@ -78,7 +78,7 @@ def rows(f):
  argnames='\n'.join(re.search(r'(\w+)$',a)[1] for a in args) or 'なし'
  return [
   ('引数',argtype,argnames),
-  ('戻り値',f['ret'],'なし' if f['ret']=='void' else f['desc']),
+  ('戻り値',f['ret'],f['return_desc']),
   ('入力','状態・信号' if inp!='—' else '—',inp),
   ('出力','状態・信号' if out!='—' else '—',out),
  ]
@@ -88,7 +88,7 @@ def form_html(f):
  data=rows(f)
  tr=lambda label,value:f'<tr><th scope="row">{label}</th><td colspan="3">{esc(value)}</td></tr>'
  h='<div class="tw"><table class="function-form"><colgroup><col style="width:15%"><col style="width:13%"><col style="width:19%"><col style="width:53%"></colgroup><tbody>'
- h+=tr('機能概要',f['desc'].split('。')[0])+tr('処理内容',f['desc'])+tr('関数形式',f['sig']+';')
+ h+=tr('機能概要',f['summary'])+tr('処理内容',f['desc'])+tr('関数形式',f['sig']+';')
  h+='<tr><th scope="row" rowspan="5">入出力</th><th scope="col">種類</th><th scope="col">形式</th><th scope="col">内容</th></tr>'
  for kind,typ,content in data:h+=f'<tr><th scope="row">{kind}</th><td>{esc(typ)}</td><td>{esc(content)}</td></tr>'
  h+=tr('ソースファイル','robot_final.ino')+tr('呼び出し関数',f['calls'])+tr('備考',NOTES.get(f['name'],'—'))
@@ -96,8 +96,8 @@ def form_html(f):
 
 def build_xlsx(funcs):
  w=openpyxl.Workbook();index=w.active;index.title='関数一覧'
- index.append(['関数設計書（改訂1.6）','2026年11月10日'])
- index.append(['添付の帳票に合わせた全56関数','実機試験は未実施'])
+ index.append(['関数設計書（自動後退なし・メイン版）','概要と処理手順を分離'])
+ index.append([f'全{len(funcs)}関数・現行スケッチ対応','実機試験は未実施'])
  index.append(['No.','関数名','機能概要','関数形式','ソース行'])
  index.freeze_panes='C4';index.auto_filter.ref=f'A3:E{len(funcs)+3}'
  for col,width in [('A',8),('B',32),('C',65),('D',65),('E',12)]:index.column_dimensions[col].width=width
@@ -116,7 +116,7 @@ def build_xlsx(funcs):
   s.column_dimensions['A'].width=3;s.column_dimensions['B'].width=17
   s.column_dimensions['C'].width=13;s.column_dimensions['D'].width=24;s.column_dimensions['E'].width=68
   s.merge_cells('C16:E18');s.merge_cells('C19:E19')
-  s['C2']=f['desc'].split('。')[0];s['C3']=f['desc'];s['C5']=f['sig']+';'
+  s['C2']=f['summary'];s['C3']=f['desc'];s['C5']=f['sig']+';'
   for row,(kind,typ,content) in zip([7,8,9,10],rows(f)):
    s[f'D{row}']=typ;s[f'E{row}']=content
   # The first template provides five output slots; one merged text field is clearer for logical output.
@@ -128,11 +128,14 @@ def build_xlsx(funcs):
   for cell in ['B2','B3','B5','B6','B15','B16','B19','C6','D6','E6']:
    s[cell].alignment=Alignment(horizontal='center',vertical='center',wrap_text=True)
   for r,height in {2:52,3:38,4:38,5:48,6:23,7:55,8:80,9:80,10:18,11:18,12:18,13:18,14:18,15:26,16:25,17:25,18:25,19:62}.items():s.row_dimensions[r].height=height
+  process_lines=sum(max(1,math.ceil(len(line)/42)) for line in f['desc'].splitlines())
+  process_height=max(76,process_lines*15+12)
+  s.row_dimensions[3].height=process_height/2;s.row_dimensions[4].height=process_height/2
   s['B21']='関数一覧へ';s['B21'].hyperlink="#'関数一覧'!A1";s['B21'].style='Hyperlink'
   s.print_area='B2:E19';s.page_setup.orientation='portrait';s.page_setup.paperSize=s.PAPERSIZE_A4
   s.page_setup.fitToWidth=1;s.page_setup.fitToHeight=1;s.sheet_properties.pageSetUpPr.fitToPage=True
   s.print_options.horizontalCentered=True
-  index.append([i,f['name'],f['desc'].split('。')[0],f['sig']+';',f['line']])
+  index.append([i,f['name'],f['summary'],f['sig']+';',f['line']])
   index.cell(i+3,2).hyperlink=f"#'{s.title}'!B2";index.cell(i+3,2).style='Hyperlink'
  for row in index:
   for c in row:c.alignment=Alignment(vertical='top',wrap_text=True)

@@ -5,64 +5,9 @@ import re, json, html, csv, io, base64
 from function_excel import build_xlsx, form_html
 ROOT=Path(__file__).resolve().parents[1]
 esc=html.escape
-DESCRIPTIONS={
-'set_RightMotor':'右モーターの方向端子D12/D11へ引数を出力する。',
-'set_LeftMotor':'左モーターの方向端子D7/D8へ引数を出力する。',
-'set_MotorSpeed':'右D9・左D6にPWMを出力する。引数は0〜255を前提とする。',
-'go_Advance':'左右を前進方向、PWMを100/100にする。',
-'go_Back':'左右を後退方向、PWMを100/100にする。',
-'go_Left':'右前進・左後退、通常PWM100/100、ダンス中PWM180/180でその場左旋回する。',
-'go_Right':'右後退・左前進、通常PWM100/100、ダンス中PWM180/180でその場右旋回する。',
-'go_ForwardLeft':'左右とも前進、右PWM220・左60で前左へカーブする。',
-'go_ForwardRight':'左右とも前進、右PWM40・左245で前右へカーブする。',
-'go_BackLeft':'左右とも後退、右PWM40・左245で後左へカーブする。',
-'go_BackRight':'左右とも後退、右PWM245・左40で後右へカーブする。',
-'go_Stop':'左右PWMを0、方向4端子をLOWにする。空転停止のため車輪の即時静止は保証しない。',
-'do_Drive_Tick':'走行状態に対応する出力関数を呼ぶ。不正な状態はGO_STOPに修正して停止する。',
-'warning':'警告の開始を記録する。再生中または前回開始から1000ms未満なら何もしない。時刻0での初回も許可する。',
-'do_Warning_Tick':'警告開始からの時間で4フェーズを判定する。偶数フェーズは2kHz矩形波、奇数は無音。200ms以上で終了し音楽の音符時刻を補正する。待機ループは使わない。',
-'play_Tone':'周波数から半周期を計算し、発音時間と波形状態を設定する。freqが0以下は休符、msが0以下は発音時間0。実際の波形はdo_Music_Tickが更新する。',
-'get_SongNote':'PROGMEM上の音符ペアの先頭を読み、周波数HzまたはEND_MARKを返す。有効なポインタを前提とする。',
-'get_SongLength':'PROGMEM上の音符ペアの2要素目を読み、長さ係数を返す。有効なポインタを前提とする。',
-'play_Note':'音符の全長を係数×TEMPO_MSで設定し、末尾20msを無音とした発音を予約する。待機せず戻る。',
-'stop_Music':'曲再生・曲予約・警告音を取り消し、ポインタと半周期を解除してブザーをHIGHにする。走行状態は変更しない。',
-'play_Music':'1〜9の曲番号から先頭ポインタをpgm_read_ptrで読み、ダンス曲フラグを解除し、再生状態と最初の音符を設定する。範囲外は無視し、走行を止めない。',
-'is_MusicDue':'曲予約が存在し、予約から300ms以上経過したかを返す。',
-'do_Music_Tick':'警告を更新し、警告中は音楽の更新を中断する。それ以外は曲予約、音符終了、終端、無音、半周期の順に判定し、波形を最大1回切り替える。ダンス専用曲は終端で先頭に戻してループし、通常曲の終了時は次曲の予約を保持する。',
-'watch':'D10へ10μsパルスを送りD3のEchoを最大25ms待つ。幅÷58の整数cmを返す。タイムアウトは999で、故障と遠方を区別しない。',
-'is_FrontBlocked':'20cm以下なら30ms待ち再測定し、2回とも20cm以下ならtrueを返す。センサー待機中は他の周期処理を進めない。',
-'is_BackIrOn':'後方D0/D2のどちらかがLOWならtrueを返す。',
-'is_BackBlocked':'後方検知後20ms待ち、再検知したらtrueを返す。',
-'start_Avoid':'GO_ADVANCEかGO_RIGHTだけを回避として開始する。それ以外は停止し、自動後退は拒否する。駆動開始後500msを計測し警告を開始する。音楽と曲予約は保持する。',
-'end_Avoid':'回避フラグを下げ、GO_STOPにしてモーターを停止する。',
-'update_Avoid':'回避中に終了判定する。前進回避は前方障害物か500ms経過で停止、右旋回回避は500ms経過で停止する。自動後退へは切り替えない。',
-'is_CheckTime':'前進系・後退系（斜めを含む）で、新規確認要求または前回から100ms以上のときtrueを返す。',
-'mark_Checked':'確認要求を解除し、測定開始側の時刻を記録する。',
-'update_ObstacleFlags':'前方・後方を順番に測り、front/backを1または0に更新する。',
-'decide_AvoidAction':'前進系で前方検知ならGO_STOP（前後同時も停止）。後退系で前後同時ならGO_RIGHT、後方のみならGO_ADVANCE、それ以外はDEF。自動後退は返さない。',
-'checkSensorsAndObstacles':'回避中はupdate_Avoidだけを呼んで戻る。ダンス中は戻る。通常時は測定と判断を行う。GO_STOPなら直ちに停止して直前入力を解除し警告。前進・右旋回の回避だけstart_Avoidで開始する。',
-'stop_Dance':'ダンスを解除しGO_STOPにしてモーターを停止する。ダンス専用曲も停止する。',
-'dance_Action':'0と4は右旋回、2と6は左旋回、1/3/5/7と範囲外は停止。4と6は右・左の一回転を狙う時間指定旋回。',
-'dance_Duration':'各ステップの設定時間msを返す。0/2は650、1/3/5は180、4はDANCE_SPIN_MS=2000、6はDANCE_LEFT_SPIN_MS=2000、7と範囲外は350。左右の一回転時間は別々に実機調整する。',
-'start_Dance':'回避中なら無視。それ以外は先頭ステップへ戻し、次周期の初回センサー確認を要求する。曲予約を解除してダンス専用曲を先頭から開始する。モーター出力は安全確認後まで行わない。',
-'do_Dance_Tick':'ダンス中は初回または100ms経過時に前後を確認し、検知時は中止する。ステップ時間の経過で次に進み、8ステップ終了で先頭へ戻り繰り返す。',
-'is_OppositeDrive':'上下・左右の逆向きの組合せを、順序を問わずtrueとする。斜め状態は引数に渡さず単独指示どうしを比較する。',
-'get_DiagonalDrive':'上下と左右の組合せを順序に関係なく前左・前右・後左・後右へ変換し、該当なしはDEFを返す。',
-'is_DiagonalComponent':'斜め走行に含まれる上下または左右の単独方向ならtrue、それ以外はfalseを返す。',
-'set_Drive':'直前の単独入力と300ms以内で逆向きなら停止。現在の単独走行と上下＋左右の組合せなら時間制限なく斜めにする。斜め走行中の方向入力は単独方向へ戻す（逆方向停止の条件を先に判定）。入力と時刻を記録しセンサー確認を要求する。',
-'read_IR_Command':'IR受信がなければNO_COMMAND。受信時はコードとリピートフラグを取得しresumeする。リピートはNO_COMMAND、それ以外はcommandを返す。',
-'handle_StopButton':'回避・ダンスを解除し、stop_Musicで曲と警告を消音する。現在と直前の走行状態をGO_STOPにする。モーターは同じ周回の出力で止める。',
-'handle_DriveButton':'24/82/8/90を前進/後退/左/右の単独指示に変換しset_Driveへ渡す。他のコードは何もしない。',
-'get_SongNum':'NUM_CODESの受信コードに対応する曲番号1〜9を返す。該当なしは0。',
-'is_NumberConflict':'300ms未満の予約があり、別の曲番号ならtrueを返す。300ms以上経過した予約は競合扱いにしない。',
-'handle_NumberButton':'数字以外は無視。300ms未満の別番号なら予約取消、同番号なら予約時刻を維持する。それ以外は最新入力を新規予約として時刻を更新する。',
-'do_IR_Tick':'1件の受信を処理する。OKを最優先し、回避中は他を無視。0でダンス開始/再開、ダンス中は残りを無視。通常時は方向と数字を処理する。',
-'init_MotorPins':'モーター6端子を出力にしてgo_Stopを呼ぶ。',
-'init_BuzzerPin':'D13にHIGHを用意してから出力に切り替え、初期化時の意図しないLOWを避ける。ブートローダー期間は制御対象外。',
-'init_SensorPins':'Trigを出力、Echoと後方赤外線端子を入力にする。',
-'init_IrReceiver':'D4でIR受信を開始し、ブザーと共有するD13の受信LED点滅を無効化する。',
-'setup':'モーター、ブザー、センサー、IR受信の順に初期化する。',
-'loop':'IR入力→ダンス→障害物判断→走行出力→音楽/警告出力→100μsまたは20μs待機を繰り返す。'}
+from function_docs import DOCS, RETURNS
+DESCRIPTIONS={name:description for name,(summary,description) in DOCS.items()}
+SUMMARIES={name:summary for name,(summary,description) in DOCS.items()}
 
 def table(headers, rows):
  return '<div class="tw"><table><thead><tr>'+''.join('<th scope="col">'+x+'</th>' for x in headers)+'</tr></thead><tbody>'+''.join('<tr>'+''.join('<td>'+str(x)+'</td>' for x in row)+'</tr>' for row in rows)+'</tbody></table></div>'
@@ -85,9 +30,11 @@ def main():
   body=re.sub(r'//[^\n]*','',f['body'])
   f['calls']=', '.join(dict.fromkeys(x for x in re.findall(r'\b(\w+)\s*\(',body) if x not in {'if','for','while','switch','sizeof','return'})) or '—'
   f['states']=', '.join(sorted(states & set(re.findall(r'\b\w+\b',body)))) or '—'
+  f['summary']=SUMMARIES[f['name']]
   f['desc']=DESCRIPTIONS[f['name']]
- csv_io=io.StringIO();w=csv.writer(csv_io,lineterminator="\n");w.writerow(['関数','形式','処理内容','共有状態（参照・更新）','呼び出し','先頭行','行数'])
- for f in funcs:w.writerow([f['name'],f['sig'],f['desc'],f['states'],f['calls'],f['line'],f['lines']])
+  f['return_desc']='なし' if f['ret']=='void' else RETURNS[f['name']]
+ csv_io=io.StringIO();w=csv.writer(csv_io,lineterminator="\n");w.writerow(['関数','形式','機能概要','処理内容','共有状態（参照・更新）','呼び出し','先頭行','行数'])
+ for f in funcs:w.writerow([f['name'],f['sig'],f['summary'],f['desc'],f['states'],f['calls'],f['line'],f['lines']])
  (ROOT/'design-guide/functions.csv').write_text('\ufeff'+csv_io.getvalue())
  reqs=json.loads((ROOT/'scripts/requirements.json').read_text())
  page=re.sub(r'var reqs = \[.*?\n\];', 'var reqs = '+json.dumps(reqs,ensure_ascii=False,indent=2)+';',page,count=1,flags=re.S)
@@ -115,7 +62,7 @@ def main():
  xlsx_b64=base64.b64encode(xlsx).decode()
  cards=f'<section class="design" id="functions" aria-labelledby="functions-title"><h2 id="functions-title">関数設計書</h2><p>曲がり強調・一回転ダンス対応版。実コードに対応する全{count}関数を掲載し、ダウンロード用Excelにも同じ内容を反映しています。</p><p><a class="fn-download" download="関数設計書.xlsx" href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{xlsx_b64}">関数設計書をダウンロード（Excel）</a></p><div class="fn-controls" hidden><label for="function-search">関数を検索</label><input id="function-search" type="search" placeholder="例：go_Stop、障害物、PWM" autocomplete="off"><span id="function-count" role="status">{count}件</span></div><p id="function-empty" hidden>該当する関数がありません。</p><p>斜め走行の処理：<a href="#fn-do_IR_Tick">入力受付</a> → <a href="#fn-set_Drive">走行状態の更新</a> → <a href="#fn-get_DiagonalDrive">上下と左右の組合せ</a> → <a href="#fn-do_Drive_Tick">モーター出力</a>。時間制限なしで順に押し、斜めからは方向ボタンで単独方向へ戻ります。OKと逆方向停止は優先して判定します。</p><div class="function-group"><h3>全関数（ソース順）</h3>'
  for f in funcs:
-  cards+=f'<details class="function-card" id="fn-{f["name"]}"><summary><code>{f["name"]}()</code><span>{esc(f["desc"].split("。")[0])}</span></summary><div class="body dbody">'+form_html(f)+'</div></details>'
+  cards+=f'<details class="function-card" id="fn-{f["name"]}"><summary><code>{f["name"]}()</code><span>{esc(f["summary"])}</span></summary><div class="body dbody">'+form_html(f)+'</div></details>'
  cards+='</div></section>'
  start=page.index('<section class="design" id="functions"');end=page.index('\n<script>',start)
  page=page[:start]+cards+page[end:]
