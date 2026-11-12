@@ -32,7 +32,7 @@ int main(){
  TEST("opposite boundary",set_Drive(GO_ADVANCE);delay(300);set_Drive(GO_BACK);assert(Drive_Num==GO_STOP));
  TEST("opposite after boundary",set_Drive(GO_ADVANCE);delay(301);set_Drive(GO_BACK);assert(Drive_Num==GO_BACK));
  TEST("all diagonal orders",for(auto a:{GO_ADVANCE,GO_BACK})for(auto b:{GO_LEFT,GO_RIGHT}){assert(get_DiagonalDrive(a,b)!=DEF);assert(get_DiagonalDrive(a,b)==get_DiagonalDrive(b,a));});
- TEST("diagonal outputs",set_Drive(GO_ADVANCE);delay(100);set_Drive(GO_LEFT);do_Drive_Tick();assert(Drive_Num==GO_FORWARD_LEFT&&pwm[9]==130&&pwm[6]==75));
+ TEST("diagonal outputs",set_Drive(GO_ADVANCE);delay(100);set_Drive(GO_LEFT);do_Drive_Tick();assert(Drive_Num==GO_FORWARD_LEFT&&pwm[9]==220&&pwm[6]==60));
  TEST("numeric conflict before boundary",handle_NumberButton(69);delay(299);handle_NumberButton(70);assert(pendingSongNum==0));
  TEST("numeric new request at boundary",handle_NumberButton(69);delay(300);handle_NumberButton(70);assert(pendingSongNum==2&&pendingSongMs==millis()));
  TEST("numeric request after delayed loop",handle_NumberButton(69);delay(400);handle_NumberButton(70);delay(300);do_Music_Tick();assert(isMusicPlaying&&currentNotePtr==SONG_2));
@@ -62,19 +62,19 @@ int main(){
  TEST("warning resumes same note",play_Music(1);delay(50);auto start=noteStartMs;auto ptr=currentNotePtr;warning();delay(200);do_Music_Tick();assert(!isWarningPlaying&&isMusicPlaying&&currentNotePtr==ptr&&noteStartMs==start+200));
  TEST("warning interval including time zero",clockUs=0;warning();delay(200);do_Warning_Tick();delay(1);warning();assert(!isWarningPlaying);delay(799);warning();assert(isWarningPlaying));
  TEST("dance first output blocked",echoPulse=580;input(IR_DANCE);assert(!isDancing&&Drive_Num==GO_STOP&&pwm[9]==0));
- TEST("dance step transitions",input(IR_DANCE);assert(isDancing&&Drive_Num==GO_LEFT);delay(900);do_Dance_Tick();assert(Drive_Num==GO_RIGHT));
- TEST("dance ignores direction",input(IR_DANCE);input(IR_ADVANCE);assert(isDancing&&Drive_Num==GO_LEFT));
- TEST("dance restarts",input(IR_DANCE);danceStep=3;input(IR_DANCE);assert(danceStep==0&&Drive_Num==GO_LEFT));
+ TEST("dance step transitions",input(IR_DANCE);assert(isDancing&&Drive_Num==GO_RIGHT);delay(DANCE_SWAY_MS);do_Dance_Tick();assert(Drive_Num==GO_STOP));
+ TEST("dance ignores direction",input(IR_DANCE);input(IR_ADVANCE);assert(isDancing&&Drive_Num==GO_RIGHT));
+ TEST("dance restarts",input(IR_DANCE);danceStep=3;input(IR_DANCE);assert(danceStep==0&&Drive_Num==GO_RIGHT));
  TEST("dance obstacle stops",input(IR_DANCE);pins[2]=LOW;delay(100);do_Dance_Tick();assert(!isDancing&&pwm[9]==0));
- TEST("dance duration",unsigned total=0;for(int i=0;i<DANCE_STEPS;i++)total+=dance_Duration(i);assert(total==5750));
- TEST("dance completion",start_Dance();for(int i=0;i<DANCE_STEPS;i++){delay(dance_Duration(i));do_Dance_Tick();}assert(isDancing&&danceStep==0&&Drive_Num==GO_LEFT));
+ TEST("dance duration",unsigned total=0;for(int i=0;i<DANCE_STEPS;i++)total+=dance_Duration(i);assert(total==4010));
+ TEST("dance completion",start_Dance();for(int i=0;i<DANCE_STEPS;i++){delay(dance_Duration(i));do_Dance_Tick();}assert(isDancing&&danceStep==0&&Drive_Num==GO_RIGHT));
  TEST("unknown and repeat ignored",input(IR_ADVANCE);input(255);IrReceiver.send(IR_BACK,IRDATA_FLAGS_IS_REPEAT);loop();assert(Drive_Num==GO_ADVANCE));
  TEST("invalid state stops",Drive_Num=static_cast<DriveState>(99);do_Drive_Tick();assert(Drive_Num==GO_STOP&&pwm[9]==0));
  TEST("song finishes",play_Music(9);for(int i=0;i<20&&isMusicPlaying;i++){delay(1000);do_Music_Tick();}assert(!isMusicPlaying&&pins[13]==HIGH));
  TEST("timeout existing policy",echoPulse=0;assert(watch()==999));
  TEST("diagonal slow input all orders",for(auto a:{GO_ADVANCE,GO_BACK})for(auto b:{GO_LEFT,GO_RIGHT})for(bool reverse:{false,true}){clearState();set_Drive(reverse?b:a);delay(10000);set_Drive(reverse?a:b);assert(Drive_Num==get_DiagonalDrive(a,b));});
  TEST("diagonal works after old deadline",set_Drive(GO_ADVANCE);delay(901);set_Drive(GO_LEFT);assert(Drive_Num==GO_FORWARD_LEFT));
- TEST("all diagonal PWM outputs",for(auto state:{GO_FORWARD_LEFT,GO_FORWARD_RIGHT,GO_BACK_LEFT,GO_BACK_RIGHT}){Drive_Num=state;do_Drive_Tick();bool outerRight=state==GO_FORWARD_LEFT||state==GO_BACK_RIGHT;assert(pwm[9]==(outerRight?130:75)&&pwm[6]==(outerRight?75:130));assert(pins[12]==(state==GO_FORWARD_LEFT||state==GO_FORWARD_RIGHT?HIGH:LOW));});
+ TEST("all diagonal PWM outputs",for(auto state:{GO_FORWARD_LEFT,GO_FORWARD_RIGHT,GO_BACK_LEFT,GO_BACK_RIGHT}){Drive_Num=state;do_Drive_Tick();bool outerRight=state==GO_FORWARD_LEFT||state==GO_BACK_RIGHT;assert(pwm[9]==(outerRight?220:60)&&pwm[6]==(outerRight?60:220));assert(pins[12]==(state==GO_FORWARD_LEFT||state==GO_FORWARD_RIGHT?HIGH:LOW));});
  TEST("diagonal component returns to single and requests sensors",set_Drive(GO_ADVANCE);delay(100);set_Drive(GO_LEFT);isCheckRequested=false;delay(900);set_Drive(GO_ADVANCE);assert(Drive_Num==GO_ADVANCE&&isCheckRequested));
  TEST("diagonal opposite last input stops",set_Drive(GO_ADVANCE);delay(100);set_Drive(GO_LEFT);delay(300);set_Drive(GO_RIGHT);assert(Drive_Num==GO_STOP));
  TEST("diagonal component returns to single after long pause",set_Drive(GO_ADVANCE);delay(100);set_Drive(GO_LEFT);delay(901);set_Drive(GO_ADVANCE);assert(Drive_Num==GO_ADVANCE));
@@ -84,5 +84,7 @@ int main(){
  TEST("remote all eight slow input orders",for(auto a:{IR_ADVANCE,IR_BACK})for(auto b:{IR_LEFT,IR_RIGHT})for(bool reverse:{false,true}){clearState();input(reverse?b:a);delay(3000);input(reverse?a:b);DriveState expected=get_DiagonalDrive(a==IR_ADVANCE?GO_ADVANCE:GO_BACK,b==IR_LEFT?GO_LEFT:GO_RIGHT);assert(Drive_Num==expected);input(IR_STOP);assert(Drive_Num==GO_STOP&&pwm[9]==0&&pwm[6]==0);});
  TEST("remote repeat does not undo diagonal",input(IR_ADVANCE);delay(2000);input(IR_LEFT);IrReceiver.send(IR_LEFT,IRDATA_FLAGS_IS_REPEAT);loop();assert(Drive_Num==GO_FORWARD_LEFT));
  TEST("OK resets diagonal pairing",input(IR_ADVANCE);input(IR_STOP);delay(2000);input(IR_LEFT);assert(Drive_Num==GO_LEFT));
+ TEST("dance includes a long full-turn stage then loops",input(IR_DANCE);delay(DANCE_SWAY_MS);do_Dance_Tick();delay(DANCE_PAUSE_MS);do_Dance_Tick();assert(Drive_Num==GO_LEFT);delay(DANCE_SWAY_MS);do_Dance_Tick();delay(DANCE_PAUSE_MS);do_Dance_Tick();do_Drive_Tick();assert(danceStep==4&&Drive_Num==GO_RIGHT&&pwm[9]==180&&pwm[6]==180);delay(DANCE_SPIN_MS-100);do_Dance_Tick();assert(danceStep==4);delay(100);do_Dance_Tick();assert(danceStep==5&&Drive_Num==GO_STOP);delay(DANCE_LOOP_PAUSE_MS);do_Dance_Tick();assert(isDancing&&danceStep==0&&Drive_Num==GO_RIGHT));
+ TEST("OK interrupts the full-turn stage",input(IR_DANCE);danceStep=4;Drive_Num=GO_RIGHT;do_Drive_Tick();input(IR_STOP);assert(!isDancing&&Drive_Num==GO_STOP&&pwm[9]==0&&pwm[6]==0));
  std::cout<<cases<<" host simulation cases passed; hardware not tested.\n";
 }

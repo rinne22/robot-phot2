@@ -4,7 +4,7 @@
 // Arduino IDEでは robot_front_stop フォルダの robot_front_stop.ino として保存してください。
 // リモコン操作ロボット（走行・音楽・超音波センサー・後方赤外線センサー・ブザー）
 // 処理の流れ： 入力(do_IR_Tick) → 判断(checkSensorsAndObstacles) → 出力(do_Drive_Tick)
-// Arduino Uno / IRremote 4.x / 最新設定統一版 (2026-11-11)
+// Arduino Uno / IRremote 4.x / 曲がり強調・一回転ダンス版
 //
 // 【配線の注意】
 //  ・D0（左後方センサー）をつないだままだとUSB書き込みに失敗することがあります。
@@ -34,8 +34,12 @@
 #define DISTANCE_LIMIT    20   // 前方の障害物とみなす距離（cm）
 #define SPEED            100  // 通常走行の基本PWM（0〜255）
 #define DANCE_SPEED      180  // ダンス中のその場旋回PWM（通常走行とは独立）
-#define DIAGONAL_OUTER_SPEED 130 // 斜め走行の外側車輪PWM
-#define DIAGONAL_INNER_SPEED  75 // 斜め走行の内側車輪PWM
+#define DANCE_SWAY_MS    650  // 最初の右・左旋回の時間
+#define DANCE_PAUSE_MS   180  // 旋回の間の停止時間
+#define DANCE_SPIN_MS   2000  // 一回転の初期目安。実機で360度になるよう調整
+#define DANCE_LOOP_PAUSE_MS 350 // 一回転後の停止時間
+#define DIAGONAL_OUTER_SPEED 220 // 斜め走行の外側車輪PWM
+#define DIAGONAL_INNER_SPEED  60 // 斜め走行の内側車輪PWM
 #define CHECK_INTERVAL_MS   100  // センサー確認の間隔（ms）
 #define CONFLICT_MS      300  // 逆向きのコードを矛盾とみなす時間（ms）
 #define AVOID_MS         500  // 回避動作を続ける時間（ms）
@@ -78,7 +82,7 @@ bool isDancing = false;
 uint8_t danceStep = 0;
 unsigned long danceStepStartMs = 0;
 unsigned long lastDanceCheckMs = 0;
-const uint8_t DANCE_STEPS = 8;
+const uint8_t DANCE_STEPS = 6;
 
 // 音楽と警告音は delay で待たず、loop から定期的に更新する
 bool isMusicPlaying = false;
@@ -174,7 +178,7 @@ void go_Right() {              // 右折（その場旋回：右後退・左前�
   set_MotorSpeed(isDancing ? DANCE_SPEED : SPEED, isDancing ? DANCE_SPEED : SPEED);
 }
 
-// 左右の回転速度を変え、進みながら曲がる（外側130・内側75）
+// 左右の回転速度を変え、進みながら曲がる（外側220・内側60）
 void go_ForwardLeft() {
   set_RightMotor(HIGH, LOW); set_LeftMotor(HIGH, LOW);
   set_MotorSpeed(DIAGONAL_OUTER_SPEED, DIAGONAL_INNER_SPEED);
@@ -465,27 +469,22 @@ void stop_Dance() {
   go_Stop();
 }
 
-// ダンスはその場旋回と停止のみ。前進・後退・斜め走行をしない。
+// 右旋回→停止→左旋回→停止→右に一回転（時間指定）→停止を繰り返す。
 DriveState dance_Action(uint8_t step) {
   switch (step) {
-    case 0: return GO_LEFT;    // 左旋回
-    case 1: return GO_RIGHT;   // 右旋回
-    case 2: return GO_LEFT;    // 短い左旋回
-    case 3: return GO_RIGHT;   // 短い右旋回
-    case 4: return GO_STOP;    // 一拍停止
-    case 5: return GO_LEFT;    // 長い左旋回
-    case 6: return GO_RIGHT;   // 長い右旋回
-    default: return GO_STOP;   // 一拍停止して次の周回へ
+    case 0: return GO_RIGHT;  // 右へ振る
+    case 2: return GO_LEFT;   // 左へ振る
+    case 4: return GO_RIGHT;  // 右に一回転を狙う（実機で時間調整）
+    default: return GO_STOP;  // 旋回の間と一回転後に一拍停止
   }
 }
 
 unsigned int dance_Duration(uint8_t step) {
   switch (step) {
-    case 0: case 1: return 900;
-    case 2: case 3: return 450;
-    case 4: return 300;
-    case 5: case 6: return 1200;
-    default: return 350;
+    case 0: case 2: return DANCE_SWAY_MS;
+    case 1: case 3: return DANCE_PAUSE_MS;
+    case 4: return DANCE_SPIN_MS;
+    default: return DANCE_LOOP_PAUSE_MS;
   }
 }
 
@@ -519,7 +518,7 @@ void do_Dance_Tick() {
   if (now - danceStepStartMs < dance_Duration(danceStep)) return;
   danceStep++;
   if (danceStep >= DANCE_STEPS) {
-    danceStep = 0;               // 8ステップをOKまたは障害物停止まで繰り返す
+    danceStep = 0;               // 6ステップをOKまたは障害物停止まで繰り返す
   }
   danceStepStartMs = now;
   Drive_Num = dance_Action(danceStep);
