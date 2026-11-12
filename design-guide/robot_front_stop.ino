@@ -1,7 +1,5 @@
-// 前方障害物で自動後退しない別版（2026-11-11）
-// 前進・前左・前右で前方を検知したら停止し警告。再発進は次のリモコン入力。
-// 手動の後退、後方障害物時の従来回避、斜め走行、音楽、ダンスは利用できます。
-// Arduino IDEでは robot_front_stop フォルダの robot_front_stop.ino として保存してください。
+// メイン仕様：前方障害物を検知しても自動後退せず停止・警告する。
+// 手動の後退、後方障害物時の前進回避、カーブ、ダンスと専用曲は利用できる。
 // リモコン操作ロボット（走行・音楽・超音波センサー・後方赤外線センサー・ブザー）
 // 処理の流れ： 入力(do_IR_Tick) → 判断(checkSensorsAndObstacles) → 出力(do_Drive_Tick)
 // Arduino Uno / IRremote 4.x / 曲がり強調・一回転ダンス版
@@ -408,7 +406,8 @@ bool is_BackBlocked() {          // 後方の障害物（2回続けて検知し�
 // =====================================================
 // 判断：センサーの優先度判断（優先度2：ユーザー指示より優先）
 // =====================================================
-void start_Avoid(DriveState act) {     // 回避動作を始める
+void start_Avoid(DriveState act) {     // 前進または右旋回の回避だけを許可
+  if (act != GO_ADVANCE && act != GO_RIGHT) { end_Avoid(); return; }
   Drive_Num = act;             // 状態を自動的に上書き
   lastDriveCmd = GO_STOP;
   do_Drive_Tick();             // 先にモーターを動かし
@@ -426,12 +425,8 @@ void end_Avoid() {             // 回避動作を終えて停止
 void update_Avoid() {          // 回避動作中：1回だけ終了条件を判定する
   if (millis() - avoidStartMs >= AVOID_MS) { end_Avoid(); return; }
 
-  // 行ったり来たりを防ぐため、進行先が塞がっていれば切り替えず停止
-  bool blocked = false;
-  if (Drive_Num == GO_BACK || Drive_Num == GO_BACK_LEFT || Drive_Num == GO_BACK_RIGHT)
-    blocked = is_BackBlocked();
-  else if (Drive_Num == GO_ADVANCE || Drive_Num == GO_FORWARD_LEFT || Drive_Num == GO_FORWARD_RIGHT)
-    blocked = is_FrontBlocked();
+  // 回避は前進か右旋回のみ。前進回避の進行先が塞がったら停止。
+  bool blocked = Drive_Num == GO_ADVANCE && is_FrontBlocked();
 
   // センサー測定にも時間がかかるため、測定直後に500msを再確認する
   if (blocked || millis() - avoidStartMs >= AVOID_MS) end_Avoid();
@@ -454,13 +449,11 @@ void update_ObstacleFlags() {  // front と back を更新する
   back  = is_BackBlocked()  ? 1 : 0;
 }
 
-DriveState decide_AvoidAction() {   // 回避動作を決める（なければ DEF）
-  // 別版：前進系で前方を検知したら、後退せず停止する（前後同時も停止）。
-  if (front && (Drive_Num == GO_ADVANCE || Drive_Num == GO_FORWARD_LEFT || Drive_Num == GO_FORWARD_RIGHT))
-    return GO_STOP;
-  if (front && back)                    return GO_RIGHT;     // 前後両方：回転
-  if (back && (Drive_Num == GO_BACK || Drive_Num == GO_BACK_LEFT || Drive_Num == GO_BACK_RIGHT))
-    return GO_ADVANCE;       // 後退系の方向で後方障害物：前進
+DriveState decide_AvoidAction() {   // 自動後退を選ばない停止・回避判断
+  bool forward = Drive_Num == GO_ADVANCE || Drive_Num == GO_FORWARD_LEFT || Drive_Num == GO_FORWARD_RIGHT;
+  bool backward = Drive_Num == GO_BACK || Drive_Num == GO_BACK_LEFT || Drive_Num == GO_BACK_RIGHT;
+  if (forward && front) return GO_STOP; // 前後同時も、前進系では停止
+  if (backward && back) return front ? GO_RIGHT : GO_ADVANCE;
   return DEF;
 }
 

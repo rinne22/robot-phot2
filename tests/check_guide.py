@@ -16,6 +16,8 @@ class Check(HTMLParser):
    else:self.errors.append('unbalanced section')
 code=(root/'robot_final.ino').read_text()
 assert code==(root/'design-guide/robot_final.ino').read_text()
+assert code==(root/'design-guide/robot_front_stop.ino').read_text()
+assert 'return GO_BACK;' not in code[code.index('DriveState decide_AvoidAction'):code.index('void checkSensorsAndObstacles')]
 for path in [root/'index.html',root/'design-guide/index.html']:
  s=path.read_text();p=Check();p.feed(s)
  assert len(p.ids)==len(set(p.ids)), 'duplicate IDs'
@@ -30,7 +32,7 @@ for path in [root/'index.html',root/'design-guide/index.html']:
  for bad in ['PWM200', 'PWM80', '9ステップ', '3450ms', '38項目', '56関数', '900msを超えない300ms', '6ステップ', '5750ms', '外側130', '内側75']:
   assert bad not in html.unescape(s),bad
  assert '時間制限なし' in s and '6190ms' in s and 'is_DiagonalComponent' in s
- for bad in ['全45関数','音楽再生時に停止','斜め移動は仕様に含めない','再生中に別の数字を押しても、曲は切り替わらない']:
+ for bad in ['全45関数','音楽再生時に停止','斜め移動は仕様に含めない','再生中に別の数字を押しても、曲は切り替わらない','GO_BACK を返す','前方のみなら自動後退して回避','通常版をダウンロード','別版']:
   assert bad not in s,bad
  for script in re.findall(r'<script[^>]*>(.*?)</script>',s,re.S):
   with tempfile.NamedTemporaryFile(suffix='.js',mode='w') as f:

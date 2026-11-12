@@ -3,7 +3,6 @@
 from pathlib import Path
 import re, json, html, csv, io, base64
 from function_excel import build_xlsx, form_html
-from stop_on_front import build_variant
 ROOT=Path(__file__).resolve().parents[1]
 esc=html.escape
 DESCRIPTIONS={
@@ -34,14 +33,14 @@ DESCRIPTIONS={
 'is_FrontBlocked':'20cm以下なら30ms待ち再測定し、2回とも20cm以下ならtrueを返す。センサー待機中は他の周期処理を進めない。',
 'is_BackIrOn':'後方D0/D2のどちらかがLOWならtrueを返す。',
 'is_BackBlocked':'後方検知後20ms待ち、再検知したらtrueを返す。',
-'start_Avoid':'回避状態に上書きしてモーターを出力し、その直後から500msを計測する。警告を開始する。音楽の再生状態と曲予約は保持する。',
+'start_Avoid':'GO_ADVANCEかGO_RIGHTだけを回避として開始する。それ以外は停止し、自動後退は拒否する。駆動開始後500msを計測し警告を開始する。音楽と曲予約は保持する。',
 'end_Avoid':'回避フラグを下げ、GO_STOPにしてモーターを停止する。',
-'update_Avoid':'回避中に1回だけ終了判定する。測定前後の500ms経過、または逃げる方向の障害物で停止する。旋回回避は時間だけで終了する。',
+'update_Avoid':'回避中に終了判定する。前進回避は前方障害物か500ms経過で停止、右旋回回避は500ms経過で停止する。自動後退へは切り替えない。',
 'is_CheckTime':'前進系・後退系（斜めを含む）で、新規確認要求または前回から100ms以上のときtrueを返す。',
 'mark_Checked':'確認要求を解除し、測定開始側の時刻を記録する。',
 'update_ObstacleFlags':'前方・後方を順番に測り、front/backを1または0に更新する。',
-'decide_AvoidAction':'前後両方ならGO_RIGHT、前進系で前方のみならGO_BACK、後退系で後方のみならGO_ADVANCE、それ以外はDEFを返す。通常走行判定から呼ぶ。',
-'checkSensorsAndObstacles':'回避中はupdate_Avoidだけを呼んで戻る。ダンス中は戻る。通常時は測定要否を確認し、測定・回避判断・必要時の回避開始を行う。',
+'decide_AvoidAction':'前進系で前方検知ならGO_STOP（前後同時も停止）。後退系で前後同時ならGO_RIGHT、後方のみならGO_ADVANCE、それ以外はDEF。自動後退は返さない。',
+'checkSensorsAndObstacles':'回避中はupdate_Avoidだけを呼んで戻る。ダンス中は戻る。通常時は測定と判断を行う。GO_STOPなら直ちに停止して直前入力を解除し警告。前進・右旋回の回避だけstart_Avoidで開始する。',
 'stop_Dance':'ダンスを解除しGO_STOPにしてモーターを停止する。ダンス専用曲も停止する。',
 'dance_Action':'0と4は右旋回、2と6は左旋回、1/3/5/7と範囲外は停止。4と6は右・左の一回転を狙う時間指定旋回。',
 'dance_Duration':'各ステップの設定時間msを返す。0/2は650、1/3/5は180、4はDANCE_SPIN_MS=2000、6はDANCE_LEFT_SPIN_MS=2000、7と範囲外は350。左右の一回転時間は別々に実機調整する。',
@@ -71,7 +70,6 @@ def detail(n,title,body):
  return f'<details><summary><span class="id">{n}</span><span>{title}</span></summary><div class="body dbody">{body}</div></details>'
 
 def main():
- build_variant(ROOT)
  code=(ROOT/'robot_final.ino').read_text()
  page=(ROOT/'design-guide/index.html').read_text()
  funcs=[]
@@ -95,8 +93,8 @@ def main():
  page=re.sub(r'var reqs = \[.*?\n\];', 'var reqs = '+json.dumps(reqs,ensure_ascii=False,indent=2)+';',page,count=1,flags=re.S)
  # Current validation is deliberately separate from unverified historical claims.
  results=table(['確認','環境・結果'],[
- ['PC模擬試験','実コード全体をArduino/IR模擬環境でコンパイル。55項目成功。最新コードの試験はREVIEW.mdに記録。複数入力の境界、音楽との並行処理、回避、ダンス、警告波形を含む。'],
- ['Unoビルド','Arduino AVR Boards 1.8.8 / IRremote 4.4.1 / arduino:avr:uno で最新コードのビルド成功。Flash 11,838 / 32,256 bytes、SRAM 642 / 2,048 bytes。スケッチのビルドエラーなし。'],
+ ['PC模擬試験','実コード全体をArduino/IR模擬環境でコンパイル。59項目成功。最新コードの試験はREVIEW.mdに記録。複数入力の境界、音楽との並行処理、回避、ダンス、警告波形を含む。'],
+ ['Unoビルド','Arduino AVR Boards 1.8.8 / IRremote 4.4.1 / arduino:avr:uno で最新コードのビルド成功。Flash 11,904 / 32,256 bytes、SRAM 642 / 2,048 bytes。スケッチのビルドエラーなし。'],
  ['Web確認','図25枚の描画、関数検索、6つの移動先、コードとダウンロードの一致を自動チェックする。実施結果はREVIEW.mdに記録。'],
  ['実機試験','未実施。モーターの向き、音質、センサー感度、OKの応答、停止距離、タイマー動作を実機で確認する。'],
  ['旧版の85件/24件','対応する試験コードがリポジトリになく、最新版の成功証拠として使わない。改訂1.6は同梱の再現可能な試験を検証記録とする。']])
@@ -105,8 +103,8 @@ def main():
  design+= '<p>操作仕様：ボタンを1つずつ押して離す。停止後の最初の方向は単独走行、単独走行中の上下＋左右は時間制限なく斜めに合成する。途中でOK・障害物回避・ダンスが入った場合は、その時点の走行状態から判断し直す。</p>'+table(['入力例（停止状態から）','状態の変化','右PWM / 左PWM'],[['↑の後に←／←の後に↑','GO_FORWARD_LEFT（前左）','前進220 / 前進60'],['↑の後に→／→の後に↑','GO_FORWARD_RIGHT（前右）','前進40 / 前進245'],['↓の後に←／←の後に↓','GO_BACK_LEFT（後左）','後退60 / 後退220'],['↓の後に→／→の後に↓','GO_BACK_RIGHT（後右）','後退245 / 後退40'],['前左走行中に↑をもう一度','GO_ADVANCE（直進へ復帰）','前進100 / 前進100'],['どの動作中でもOK','GO_STOP（走行・音・ダンス・回避を解除）','0 / 0']])
  design+=detail(2,'命名と関数規模',f'<p>定数は大文字、単語間は_。変数はlowerCamelCase。関数は動詞_対象、boolはisを原則とする。Arduino標準のsetup/loop、既存のDrive_Num・IS_IR・watch・warningとdance_Action/dance_Durationは例外として列挙する。既存のAdvance/Forwardは今回の動作修正では改名しない。</p><p>全{count}関数、スケッチ{len(code.splitlines())}行。最大は{max(funcs,key=lambda f:f["lines"])["name"]}の{max(f["lines"] for f in funcs)}行。行数は先頭行から閉じ括弧まで。関数別の形式と行数は下の関数設計書に掲載する。</p>')
  design+=detail(3,'ハードウェア構成',table(['部品','ピン','備考'],[['IR受信','D4','IRremote 4.x、D13受信LED無効'],['右モーター','PWM D9／方向D12・D11','PWM0〜255'],['左モーター','PWM D6／方向D7・D8','PWM0〜255'],['ブザー','D13','パッシブ。矩形波で音楽/警告、無音はHIGH。駆動回路に合う配線を確認'],['前方超音波','Trig D10／Echo D3','最大25ms/測定'],['後方赤外線','左D0／右D2','LOWで検知。書き込み時はD0配線を外す。Serialと共用しない']]))
- design+=detail(4,'状態と処理の順番','<p>loop() → do_IR_Tick → do_Dance_Tick → checkSensorsAndObstacles → do_Drive_Tick → do_Music_Tick → 100/20μs待機。checkSensorsAndObstacles内で、回避中はupdate_Avoidだけを実行し、ダンス中は通常の判定を省く。</p>'+table(['状態','用途'],[['Drive_Num / lastDriveCmd / lastDriveCmdMs','現在の走行・直前の単独入力・入力時刻'],['isAvoiding / avoidStartMs','回避状態と駆動開始直後の時刻'],['front / back / isCheckRequested / lastCheckMs','通常走行の障害物と測定要求/時刻'],['isDancing / danceStep / danceStepStartMs / lastDanceCheckMs','8ステップを繰り返すダンスと測定時刻'],['pendingSongNum / pendingSongMs','曲予約と300ms窓の開始'],['isMusicPlaying / isDanceMusic / currentNotePtr / noteStartMs / noteDurationMs','通常曲は1回、ダンス専用曲は先頭へ戻って繰り返す非ブロッキング再生'],['isWarningPlaying / warningStartMs / isWarningIssued / lastWarnMs','警告再生と再開始制限']])+ '<p>基本は入力が状態を更新し出力が駆動する。ただしOKのstop_Musicは即消音、start_Avoidは回避駆動と警告開始、end_Avoid/stop_Danceは直接停止する。これらを明示的な例外とする。</p>')
- design+=detail(5,'境界条件と優先順位','<p>OK停止が最優先。次に障害物判断、その後にユーザー走行。音楽は走行と独立し、音の出力は警告が優先する。回避中はOKのみ、ダンス中はOKと0のみを受け付ける。</p>'+table(['条件','動作'],[['逆方向入力の間隔 ≤ 300ms','直前の単独入力と逆方向なら停止'],['上下＋左右を順に押す','時間制限なし、順番を問わず斜め走行。例：↑、その後←'],['斜め走行中に方向ボタン','構成キーの再入力でその単独方向に戻る。その他の方向も単独指示とする'],['曲予約から < 300ms','別番号で取消、同番号は最初の時刻を維持'],['曲予約から ≥ 300ms後の数字入力','新規予約で置換し、新たに300ms待つ'],['通常の曲開始','予約から300ms以上、かつ警告中でない周期で開始/切替'],['回避開始から ≥ 500ms','停止。センサー測定後も時間を再確認。処理遅延による超過あり'],['警告','2kHz音50ms/無音50msを2回。開始から200ms以上で終了。前回開始から1000ms以上あける'],['ダンス','右650ms→停止180ms→左650ms→停止180ms→右一回転の目安2000ms→停止180ms→左一回転の目安2000ms→停止350msを繰り返す。1周6190msが設定値。右はDANCE_SPIN_MS、左はDANCE_LEFT_SPIN_MSを実機調整する。ダンス専用のオリジナル曲もループ再生し、OKか障害物検知で動きと曲を止める。通常PWM100、ダンスPWM180、左カーブ外側220／内側60・右カーブ外側245／内側40。実測は処理遅延分延びる']]))
+ design+=detail(4,'状態と処理の順番','<p>loop() → do_IR_Tick → do_Dance_Tick → checkSensorsAndObstacles → do_Drive_Tick → do_Music_Tick → 100/20μs待機。checkSensorsAndObstacles内で、回避中はupdate_Avoidだけを実行し、ダンス中は通常の判定を省く。</p>'+table(['状態','用途'],[['Drive_Num / lastDriveCmd / lastDriveCmdMs','現在の走行・直前の単独入力・入力時刻'],['isAvoiding / avoidStartMs','回避状態と駆動開始直後の時刻'],['front / back / isCheckRequested / lastCheckMs','通常走行の障害物と測定要求/時刻'],['isDancing / danceStep / danceStepStartMs / lastDanceCheckMs','8ステップを繰り返すダンスと測定時刻'],['pendingSongNum / pendingSongMs','曲予約と300ms窓の開始'],['isMusicPlaying / isDanceMusic / currentNotePtr / noteStartMs / noteDurationMs','通常曲は1回、ダンス専用曲は先頭へ戻って繰り返す非ブロッキング再生'],['isWarningPlaying / warningStartMs / isWarningIssued / lastWarnMs','警告再生と再開始制限']])+ '<p>基本は入力が状態を更新し出力が駆動する。ただしOKのstop_Musicは即消音、start_Avoidは回避駆動と警告開始、end_Avoid/stop_Danceは直接停止する。前方検知時のcheckSensorsAndObstaclesもend_Avoidで直ちに停止し、直前入力を解除して警告する。これらを明示的な例外とする。</p>')
+ design+=detail(5,'境界条件と優先順位','<p>OK停止が最優先。次に障害物判断、その後にユーザー走行。音楽は走行と独立し、音の出力は警告が優先する。回避中はOKのみ、ダンス中はOKと0のみを受け付ける。</p>'+table(['条件','動作'],[['逆方向入力の間隔 ≤ 300ms','直前の単独入力と逆方向なら停止'],['上下＋左右を順に押す','時間制限なし、順番を問わず斜め走行。例：↑、その後←'],['斜め走行中に方向ボタン','構成キーの再入力でその単独方向に戻る。その他の方向も単独指示とする'],['曲予約から < 300ms','別番号で取消、同番号は最初の時刻を維持'],['曲予約から ≥ 300ms後の数字入力','新規予約で置換し、新たに300ms待つ'],['通常の曲開始','予約から300ms以上、かつ警告中でない周期で開始/切替'],['前進系で前方検知','その場で停止・警告。前後同時も停止。自動後退なし'],['後退系の前進・右旋回回避から ≥ 500ms','停止。センサー測定後も時間を再確認。処理遅延による超過あり'],['警告','2kHz音50ms/無音50msを2回。開始から200ms以上で終了。前回開始から1000ms以上あける'],['ダンス','右650ms→停止180ms→左650ms→停止180ms→右一回転の目安2000ms→停止180ms→左一回転の目安2000ms→停止350msを繰り返す。1周6190msが設定値。右はDANCE_SPIN_MS、左はDANCE_LEFT_SPIN_MSを実機調整する。ダンス専用のオリジナル曲もループ再生し、OKか障害物検知で動きと曲を止める。通常PWM100、ダンスPWM180、左カーブ外側220／内側60・右カーブ外側245／内側40。実測は処理遅延分延びる']]))
  design+=detail(6,'検証記録（最新設定）',results+'<p><a href="https://github.com/rinne22/robot-phot2/blob/main/REVIEW.md">レビュー結果と再現手順</a></p><pre class="cmd">python3 tests/run_tests.py\npython3 tests/check_guide.py</pre>')
  design+=detail(7,'限界と実機で確認すること','<ul><li>超音波タイムアウトは999cm扱い。センサー故障と障害物なしを区別しない。</li><li>通常のその場旋回中は障害物判定をしない。側方センサーもなく、旋回の安全を保証しない。</li><li>センサー測定や30ms/20ms待機はIR応答と音の波形更新を遅らせる。停止出力300ms以内は目標であり実測値ではない。</li><li>停止は空転停止。車輪の静止時間・停止距離・20cm閾値の妥当性は未測定。</li><li>D13は起動時にブートローダーが駆動する場合がある。音程・音量・波形品質とI/O駆動能力を実機で確認する。</li></ul>')
  design+='</section>'
@@ -127,6 +125,51 @@ def main():
  old=page[start:end];figs=re.findall(r'(<h4[^>]*>図(\d+).*?</h4>)<p class="cap">(.*?)</p><div class="diagram"><pre class="mermaid">(.*?)</pre></div>',old,re.S)
  assert len(figs)==25
  fixes={
+ 2:('前方障害物を検知したら、前進の出力より先に停止・警告します。自動後退しません。','''sequenceDiagram
+ actor U as ユーザー
+ participant IN as do_IR_Tick
+ participant JD as checkSensorsAndObstacles
+ participant SN as 前後センサー
+ participant M as モーター
+ participant B as ブザー
+ U->>IN: ↑を押す
+ IN->>IN: GO_ADVANCEを記録
+ IN->>JD: 新しい指示の直後に判断
+ JD->>SN: 前方と後方を確認
+ SN-->>JD: 前方障害物あり
+ JD->>JD: GO_STOP・直前入力を解除
+ JD->>M: PWM0・方向LOWで停止
+ JD->>B: warningで警告
+ Note over JD,M: 前後同時でも前進系なら停止。自動後退なし。
+ U->>IN: 次のリモコン入力
+ Note over IN,M: 障害物が残る状態で再び↑なら再び停止'''),
+ 13:('回避は前進か右旋回だけです。500ms経過で停止し、前進回避の進行先に障害物がある場合も停止します。','''flowchart TD
+ S([update_Avoid]) --> A{開始から500ms以上?}
+ A -->|はい| X[end_Avoidで停止]
+ A -->|いいえ| B{現在はGO_ADVANCE?}
+ B -->|はい| F[前方障害物を確認]
+ B -->|いいえ| Q[右旋回・センサー確認なし]
+ F --> C{障害物あり又は測定後500ms以上?}
+ Q --> C
+ C -->|はい| X
+ C -->|いいえ| Z([回避を継続して戻る])
+ X --> Z'''),
+ 15:('前進系の前方検知は最優先で停止。手動後退中の後方検知だけ前進または右旋回で回避します。','''flowchart TD
+ S([decide_AvoidAction]) --> A{前進系かつ前方検知?}
+ A -->|はい| ST[GO_STOPを返す]
+ A -->|いいえ| B{後退系かつ後方検知?}
+ B -->|いいえ| N[DEFを返す]
+ B -->|はい| C{前方も検知?}
+ C -->|はい| R[GO_RIGHTを返す]
+ C -->|いいえ| F[GO_ADVANCEを返す]'''),
+ 16:('自動回避で許す方向は前進と右旋回だけです。自動後退の要求は拒否して停止します。','''flowchart TD
+ S([start_Avoid]) --> A{GO_ADVANCEまたはGO_RIGHT?}
+ A -->|いいえ| E[end_Avoidで停止]
+ A -->|はい| B[状態とモーターを更新]
+ B --> C[回避フラグ・開始時刻を記録]
+ C --> D[warningで警告]
+ T([end_Avoid]) --> E
+ E --> F[回避解除・GO_STOP・go_Stop]'''),
  4:('走行中の曲再生も、入力・出力は毎周loop()から呼びます。OKは入力処理で走行状態と音楽を解除します。','''sequenceDiagram
  actor U as ユーザー
  participant L as loop
@@ -158,9 +201,11 @@ def main():
  C -->|いいえ| Z
  C -->|はい| D["mark_Checked / update_ObstacleFlags"]
  D --> E["decide_AvoidAction"]
- E --> F{"DEF以外？"}
- F -->|はい| G["start_Avoid"] --> Z
- F -->|いいえ| Z'''),
+ E --> F{"GO_STOP？"}
+ F -->|はい| ST["end_Avoid・直前入力解除・警告"] --> Z
+ F -->|いいえ| H{"DEF以外？"}
+ H -->|はい| G["start_Avoid"] --> Z
+ H -->|いいえ| Z'''),
  23:('開始時刻から200msの警告を管理します。発音中は2kHzの矩形波を出し、50ms単位で音と無音を切り替えます。処理が遅れてもフェーズを余分に延ばしません。','''flowchart TD
  S([warning]) --> A{"警告中 または前回開始から1000ms未満？"}
  A -->|はい| Z([終了])
@@ -273,31 +318,30 @@ def main():
  page=page.replace('</head>', '<style id="function-form-style">.function-form{min-width:640px;table-layout:fixed}.function-form th{background:#ddd;color:#18262b;vertical-align:middle;text-align:center}.function-form td{white-space:pre-wrap;overflow-wrap:anywhere}.function-form td,.function-form th{border:1px solid #8a949a;padding:10px}.function-form tr:first-child td{font-weight:700}</style>'+'</head>')
  page=page.replace('使用言語：C言語（Arduino言語）','使用言語：C++（Arduinoスケッチ）')
  page=page.replace('IRremote</code>（4.x系）','IRremote</code>（検証版4.4.1／4.x系）')
- page=re.sub(r'<b>\d+</b> PC模擬試験項目','<b>55</b> PC模擬試験項目',page)
+ page=re.sub(r'<b>\d+</b> PC模擬試験項目','<b>59</b> PC模擬試験項目',page)
  page=re.sub(r'<b>\d+</b> 関数の設計',f'<b>{count}</b> 関数の設計',page)
- page=page.replace('<b>45</b> 関数の設計',f'<b>{count}</b> 関数の設計').replace('<b>24</b> 結合テスト項目','<b>55</b> PC模擬試験項目')
+ page=page.replace('<b>45</b> 関数の設計',f'<b>{count}</b> 関数の設計').replace('<b>24</b> 結合テスト項目','<b>59</b> PC模擬試験項目')
  page=page.replace('結合テストはPC上の疑似環境で実施。実機確認項目は開発設計に記載しています。','最新設定の検証結果は開発設計とREVIEW.mdを参照。実機試験は未実施です。')
- rev=f'<section class="overview" id="revision"><h2>曲がり強調・一回転ダンス版</h2><p>通常PWM100、ダンスPWM180、左カーブ外側220／内側60・右カーブ外側245／内側40、斜め入力は時間制限なし、逆方向入力300ms、8ステップ反復ダンスを基準に、要件・開発設計・全{count}関数・図25枚・掲載コード・ダウンロード・Excelを統一しました。</p><p><a href="robot_final.ino" download>通常版コードをダウンロード</a> ／ <a href="robot_front_stop.ino" download>前方障害物で後退せず停止する別版</a> ／ <a href="https://github.com/rinne22/robot-phot2/blob/main/REVIEW.md">検証記録</a></p><p>別版は前進・前左・前右で前方障害物を検知したら停止して警告します。手動の後退や他の機能は利用できます。設計書と掲載コードは通常版が対象です。</p><p>検証の対象版と結果はREVIEW.mdを参照。実機の音質・停止応答・停止距離は未確認です。</p></section>'
+ rev=f'<section class="overview" id="revision"><h2>メイン版：自動後退なし</h2><p>前進・前左・前右で前方の障害物を検知すると停止して警告します。前後同時に検知しても前進系では停止します。障害物を理由に自動後退する機能は廃止しました。リモコンの↓による手動後退は利用できます。</p><p>前左220/60・前右40/245、後退も対応する強さ。ダンスは右・左・右一回転・左一回転と専用曲をループします。</p><p><a id="main-code-download" class="fn-download" href="robot_final.ino" download="robot_final.ino">メインコードをダウンロード</a> ／ <a href="https://github.com/rinne22/robot-phot2/blob/main/REVIEW.md">検証記録</a></p><p>全{count}関数・図25枚・要件・掲載コード・ダウンロード・Excelを同じメイン仕様に統一しています。実機の曲がり具合・音質・一回転の角度は未確認です。</p></section>'
  page=re.sub(r'<section class="overview" id="revision">.*?</section>',lambda m:rev,page,count=1,flags=re.S)
  page=page.replace('Arduino Unoでの今回の改訂版のビルド・実機試験は未実施です。PWMや障害物検出の応答は実機で確認してください。旧版1.6の検証記録は今回の変更の確認結果ではありません。','最新設定のビルド結果はREVIEW.mdを参照。実機試験は未実施です。')
- page=re.sub(r'改訂1\.6はPC模擬試験\d+項目とUnoビルドを確認。実機試験は未実施です。','最新設定のPC模擬試験55項目とUnoビルドを確認。実機試験は未実施です。',page)
+ page=re.sub(r'改訂1\.6はPC模擬試験\d+項目とUnoビルドを確認。実機試験は未実施です。','最新設定のPC模擬試験59項目とUnoビルドを確認。実機試験は未実施です。',page)
  page=re.sub(r'<section[^>]*id="dance-speed-update".*?</section>', '<section class="overview" id="dance-speed-update"><h2>かんたん斜め走行</h2><p>前左は外側PWM220・内側PWM60を維持し、前右は外側PWM245・内側PWM40へ強化しました。後退も左右それぞれ同じ強さに対応します。ボタンは1つずつ押して離してください。速押し・同時押しは不要です。</p><ul><li>「↑」の後に「←」：前進しながら左へ（逆の順番でも可）</li><li>「↑」の後に「→」：前進しながら右へ（逆の順番でも可）</li><li>「↓」の後に「←」：後退しながら左へ（逆の順番でも可）</li><li>「↓」の後に「→」：後退しながら右へ（逆の順番でも可）</li></ul><p>斜め走行中に構成する方向をもう一度押すとその単独方向へ戻り、OKで停止します。上下・左右の反対入力が300ms以内なら停止します。通常PWM100、ダンスPWM180、左カーブ外側220／内側60・右カーブ外側245／内側40。</p><p>実機に新しいスケッチを書き込んでから操作してください。旧スケッチでは操作は変わりません。ダンスは右→左→右に一回転→左に一回転を狙う旋回と、専用の軽快なオリジナル曲をループします。DANCE_SPIN_MS=2000とDANCE_LEFT_SPIN_MS=2000は目安です。回転が足りなければ長く、回り過ぎなら短く調整してください。</p></section>',page,count=1,flags=re.S)
- page=page.replace('最新設定のPC模擬試験47項目','最新設定のPC模擬試験55項目')
+ page=page.replace('最新設定のPC模擬試験47項目','最新設定のPC模擬試験59項目')
  page=re.sub(r'<section[^>]*id="requirements".*?</section>', '<section class="top" id="requirements"><h2>要件定義</h2><p class="cap">曲がり強調・一回転ダンス対応版。操作例は要求1-13、確認項目は要求7-1に掲載しています。</p><h3>要求1　リモコンで走行を制御する</h3><p><span class="tag">内容</span>矢印を1つずつ順に押して、前進・後退・旋回・斜め走行を指示する。上下と左右の組合せに時間制限は設けず、OKを最優先の停止とする。</p><p><span class="tag">理由</span>速押しや同時押しに頼らず、リモコンから目的の走行を選べるようにするため。</p></section>',page,count=1,flags=re.S)
- overview='<section class="overview" id="overview" aria-labelledby="overview-title"><h2 id="overview-title">ロボットの主な動作</h2><p class="cap">曲がり強調・一回転ダンス対応版。概要・要件定義・開発設計・関数設計・設計図を同じ操作仕様で統一しています。</p><div class="tiles"><article><h3>01　順に押して斜め走行</h3><p>矢印は1つずつ押して離します。上下と左右を順に押すだけで斜め走行。速押し・同時押しは不要で、入力間隔の時間制限もありません。</p></article><article><h3>02　障害物回避と停止</h3><p>前進・後退と斜め走行では前後センサーを確認し、障害物があれば回避を優先します。OKは走行・音楽・ダンス・回避をまとめて停止します。</p></article><article><h3>03　音楽とダンス</h3><p>1〜9で走行しながら曲を再生。0で右・左・右一回転・左一回転を狙う8ステップと専用曲をループします。ダンス中も前後を確認し、障害物で中止します。</p></article></div>'+table(['1つ目のボタン','2つ目のボタン','動作'],[['↑','←','前進しながら左へ'],['↑','→','前進しながら右へ'],['↓','←','後退しながら左へ'],['↓','→','後退しながら右へ']])+'<p>上下と左右は逆の順番でも同じです。斜め走行中に方向ボタンを押し直すと、その単独方向へ戻ります。例：↑、←で前左、↑をもう一度押すと直進。直前の単独入力と反対の方向が300ms以内に届くと停止します。</p><p>通常PWM100／ダンスPWM180／左カーブ外側220・内側60／右カーブ外側245・内側40。新しい操作を使うには<a href="robot_final.ino" download>最新コード</a>をArduinoに書き込んでください。</p><p class="cap">PC模擬試験55項目・Unoビルド成功。実機試験は未実施です。</p><p><a href="https://osoyoo.com/2020/05/12/v2-1-robot-car-kit-for-arduino-tutorial-introduction/">OSOYOO公式組み立てガイド ↗</a></p></section>'
+ overview='<section class="overview" id="overview" aria-labelledby="overview-title"><h2 id="overview-title">ロボットの主な動作</h2><p class="cap">曲がり強調・一回転ダンス対応版。概要・要件定義・開発設計・関数設計・設計図を同じ操作仕様で統一しています。</p><div class="tiles"><article><h3>01　順に押して斜め走行</h3><p>矢印は1つずつ押して離します。上下と左右を順に押すだけで斜め走行。速押し・同時押しは不要で、入力間隔の時間制限もありません。</p></article><article><h3>02　障害物回避と停止</h3><p>前進・後退と斜め走行では前後を確認します。前進系で前方検知なら停止し、手動後退中の後方検知には前進回避を優先します。OKは走行・音楽・ダンス・回避をまとめて停止します。</p></article><article><h3>03　音楽とダンス</h3><p>1〜9で走行しながら曲を再生。0で右・左・右一回転・左一回転を狙う8ステップと専用曲をループします。ダンス中も前後を確認し、障害物で中止します。</p></article></div>'+table(['1つ目のボタン','2つ目のボタン','動作'],[['↑','←','前進しながら左へ'],['↑','→','前進しながら右へ'],['↓','←','後退しながら左へ'],['↓','→','後退しながら右へ']])+'<p>上下と左右は逆の順番でも同じです。斜め走行中に方向ボタンを押し直すと、その単独方向へ戻ります。例：↑、←で前左、↑をもう一度押すと直進。直前の単独入力と反対の方向が300ms以内に届くと停止します。</p><p>通常PWM100／ダンスPWM180／左カーブ外側220・内側60／右カーブ外側245・内側40。新しい操作を使うには<a href="robot_final.ino" download>最新コード</a>をArduinoに書き込んでください。</p><p class="cap">PC模擬試験59項目・Unoビルド成功。実機試験は未実施です。</p><p><a href="https://osoyoo.com/2020/05/12/v2-1-robot-car-kit-for-arduino-tutorial-introduction/">OSOYOO公式組み立てガイド ↗</a></p></section>'
  page=re.sub(r'<section[^>]*id="overview".*?</section>',lambda m:overview,page,count=1,flags=re.S)
  # Prominent variant download in Overview and a full preview in Code.
- callout='<div id="front-stop-download"><h3>追加コード：障害物を検知しても自動後退しない版</h3><p>前進・前左・前右で前方の障害物を検知すると、その場で停止して警告します。手動の後退、斜め走行、音楽、ダンスは使えます。</p><p><a class="fn-download" href="robot_front_stop.ino" download="robot_front_stop.ino">自動後退しない版をダウンロード</a>　<a href="#code">2つのコードを比較・表示</a></p></div>'
- page=re.sub(r'(<section[^>]*id="overview".*?)(</section>)',lambda m:m[1]+callout+m[2],page,count=1,flags=re.S)
- variant=(ROOT/'design-guide/robot_front_stop.ino').read_text()
- choices='<div id="code-options"><h2>Arduinoコードを選ぶ</h2><p>使いたい版を1つ選び、Arduinoに書き込んでください。</p>'+table(['コード','前進中に前方障害物を検知したとき','ダウンロード'],[['通常版','前方のみなら自動後退して回避','<a href="robot_final.ino" download>通常版をダウンロード</a>'],['自動後退しない版','前後同時検知も含めて停止し警告','<a id="front-stop-code-download" class="fn-download" href="robot_front_stop.ino" download="robot_front_stop.ino">自動後退しない版をダウンロード</a>']])+'<p>別版はファイルを robot_front_stop フォルダ内に robot_front_stop.ino として保存してください。通常版と別版を同じスケッチに入れず、選んだ版だけを書き込みます。別版の模擬試験57項目・Unoビルド成功、実機試験は未実施です。</p><details id="front-stop-code"><summary><span class="id">追加コード</span><span>自動後退しない版の全文（robot_front_stop.ino）</span></summary><div class="body" style="padding-left:16px"><pre><code id="front-stop-code-text">'+esc(variant)+'</code></pre></div></details></div>'
- page=re.sub(r'<div id="code-options">.*?</details></div>', '',page,count=1,flags=re.S)
+ # Remove the obsolete variant comparison and second sketch preview.
+ page=re.sub(r'<div id="code-options">.*?(?:</details></div>|</p></div>)', '',page,count=1,flags=re.S)
+ choices='<div id="code-options"><h2>メインのArduinoコード</h2><p>配布するコードは自動後退なしのメイン版に統一しました。前方障害物では停止・警告し、手動後退と後方障害物時の従来回避は利用できます。</p><p><a id="canonical-code-download" class="fn-download" href="robot_final.ino" download="robot_final.ino">robot_final.ino をダウンロード</a></p><p>Arduino IDEでは robot_final フォルダ内に robot_final.ino として保存し、書き込んでください。以前の自動後退版は使わず、このコードへ置き換えてください。</p><p>掲載全文・設計書・関数表・Excelもこのメインコードが対象です。</p></div>'
  page=page.replace('<section class="code-sec" id="code">','<section class="code-sec" id="code">'+choices,1)
  if 'id="transfer-nav-link"' not in page:
   page=page.replace('</nav>','<a id="transfer-nav-link" href="../file-transfer/">ファイル受け渡し</a></nav>',1)
  for path in ['design-guide/index.html','index.html']:
-  out=page if path.startswith('design-guide/') else page.replace('href="functions.csv"','href="design-guide/functions.csv"').replace('href="robot_front_stop.ino"','href="design-guide/robot_front_stop.ino"').replace('href="../file-transfer/"','href="file-transfer/"')
+  out=page if path.startswith('design-guide/') else page.replace('href="functions.csv"','href="design-guide/functions.csv"').replace('href="../file-transfer/"','href="file-transfer/"')
   (ROOT/path).write_text(out)
  (ROOT/'design-guide/robot_final.ino').write_text(code)
+ (ROOT/'design-guide/robot_front_stop.ino').write_text(code)  # 旧リンクも同一のメインコードを配布
  print(f'Synchronized {count} functions, {len(figs)} diagrams and {len(reqs)} requirements')
 if __name__=='__main__':main()
