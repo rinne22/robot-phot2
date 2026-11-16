@@ -125,7 +125,7 @@ pre{max-width:100%;overflow:auto}
 <p class="intro">赤外線リモコンで走行を指示し、センサーで障害物を検知するロボットカー。要件からArduinoコードまでをまとめた開発資料です。</p>
 <div class="metrics"><a href="#functions"><b>57</b> 関数の設計</a><a href="#design"><b>63</b> PC模擬試験項目</a><a href="#figures"><b>図解</b> 動作と処理の流れ</a></div>
 </header>
-<nav class="tocnav" aria-label="ページ内の移動"><a href="#overview">概要</a><a href="#requirements">要件定義</a><a href="#design">開発設計</a><a href="#functions">関数設計</a><a href="#figures">設計図</a><a href="#code">Arduinoコード</a><a href="#memo">メモ</a><a id="transfer-nav-link" href="file-transfer/">ファイル受け渡し</a><a id="tests-nav-link" href="#tests">テスト結果</a></nav>
+<nav class="tocnav" aria-label="ページ内の移動"><a href="#overview">概要</a><a href="#requirements">要件定義</a><a href="#design">開発設計</a><a href="#functions">関数設計</a><a href="#figures">設計図</a><a href="#code">Arduinoコード</a><a href="#memo">メモ</a><a id="transfer-nav-link" href="file-transfer/">ファイル受け渡し</a><a id="tests-nav-link" href="#tests">テスト結果</a><a href="#drivebutton-unit-test">走行ボタン単体テスト</a></nav>
 <section class="overview" id="memo" aria-labelledby="memo-title">
 <h2 id="memo-title">作業メモ</h2>
 <p id="memo-hint">入力するとこのブラウザ内に自動保存されます。「保存する」でも確実に保存できます。別のPC・スマホへ移す場合はバックアップを使用してください（自動同期ではありません）。</p>
@@ -2169,5 +2169,55 @@ if(mq&&mq.addEventListener)mq.addEventListener('change',render);
 if(typeof MutationObserver!=='undefined')new MutationObserver(render).observe(root,{attributes:true,attributeFilter:['data-theme']});
 });</script>
 <!--claude-mermaid-runtime-end-->
+
+<!-- handle-drivebutton-unit-test-20261116 -->
+<section id="drivebutton-unit-test" class="overview" style="max-width:760px;margin:24px auto;padding:20px;border:1px solid var(--line);border-radius:10px;background:var(--surface)">
+<h2>単体テスト：handle_DriveButton()</h2>
+<p>矢印ボタンの入力に応じて <code>set_Drive()</code> が正しい引数で1回呼ばれること、未定義コマンドでは呼ばれないことをスタブで確認します。以下はブラウザ上での模擬テストです。実機テスト結果ではありません。</p>
+<table style="width:100%;border-collapse:collapse"><thead><tr><th>入力</th><th>期待される呼び出し</th></tr></thead><tbody><tr><td>24（↑）</td><td>GO_ADVANCE</td></tr><tr><td>82（↓）</td><td>GO_BACK</td></tr><tr><td>8（←）</td><td>GO_LEFT</td></tr><tr><td>90（→）</td><td>GO_RIGHT</td></tr><tr><td>999（未定義）</td><td>呼び出しなし</td></tr></tbody></table>
+<p><button type="button" id="drivebutton-run-test">5件の模擬テストを実行</button></p>
+<pre id="drivebutton-test-output" style="white-space:pre-wrap;background:var(--code);padding:12px;border-radius:6px" aria-live="polite">未実行</pre>
+<details><summary>テスト対象関数（C言語）</summary><pre><code>void handle_DriveButton(int command) {
+  if      (command == IR_ADVANCE) set_Drive(GO_ADVANCE);
+  else if (command == IR_BACK)    set_Drive(GO_BACK);
+  else if (command == IR_LEFT)    set_Drive(GO_LEFT);
+  else if (command == IR_RIGHT)   set_Drive(GO_RIGHT);
+}</code></pre></details>
+<details><summary>スタブ・mainのテスト例（C言語）</summary><pre><code>#include &lt;stdio.h&gt;
+#define IR_ADVANCE 24
+#define IR_BACK 82
+#define IR_LEFT 8
+#define IR_RIGHT 90
+enum DriveState { GO_ADVANCE, GO_LEFT, GO_RIGHT, GO_BACK, GO_STOP };
+int stub_call_count = 0;
+int stub_last_arg = -1;
+void set_Drive(enum DriveState state) {
+  stub_call_count++;
+  stub_last_arg = state;
+}
+void handle_DriveButton(int command) {
+  if (command == IR_ADVANCE) set_Drive(GO_ADVANCE);
+  else if (command == IR_BACK) set_Drive(GO_BACK);
+  else if (command == IR_LEFT) set_Drive(GO_LEFT);
+  else if (command == IR_RIGHT) set_Drive(GO_RIGHT);
+}
+int main(void) {
+  const int inputs[] = {24,82,8,90,999};
+  const int expected[] = {GO_ADVANCE,GO_BACK,GO_LEFT,GO_RIGHT,-1};
+  int passed=0;
+  for(int i=0;i&lt;5;i++) {
+    stub_call_count=0; stub_last_arg=-1;
+    handle_DriveButton(inputs[i]);
+    int ok=(stub_call_count==(i==4?0:1) &amp;&amp; stub_last_arg==expected[i]);
+    printf("Test %d: %s\\n",i+1,ok?"PASS":"FAIL");
+    passed+=ok;
+  }
+  printf("RESULT: %d/5 PASS\\n",passed);
+  return passed==5?0:1;
+}</code></pre></details>
+<p class="note">実行ボタンはCコードをコンパイルせず、同じ分岐をJavaScriptで検証します。Cコードの実行にはPCのCコンパイラが必要です。</p>
+</section>
+<script>(function(){var b=document.getElementById('drivebutton-run-test');if(!b)return;b.addEventListener('click',function(){var cases=[[24,'GO_ADVANCE'],[82,'GO_BACK'],[8,'GO_LEFT'],[90,'GO_RIGHT'],[999,null]],passed=0;var lines=cases.map(function(c,i){var calls=[];var x=c[0];if(x===24)calls.push('GO_ADVANCE');else if(x===82)calls.push('GO_BACK');else if(x===8)calls.push('GO_LEFT');else if(x===90)calls.push('GO_RIGHT');var ok=calls.length===(c[1]===null?0:1)&&(c[1]===null||calls[0]===c[1]);if(ok)passed++;return 'Test '+(i+1)+' ['+x+']: '+(ok?'PASS':'FAIL')+' (calls='+calls.length+', arg='+(calls[0]||'なし')+')';});lines.push('RESULT: '+passed+'/5 PASS');document.getElementById('drivebutton-test-output').textContent=lines.join('\n');});})();</script>
+<!-- /handle-drivebutton-unit-test-20261116 -->
 </body>
 </html>
