@@ -1,0 +1,15 @@
+PASS 1
+PASS 2
+PASS 3
+PASS 4
+PASS 5
+PASS 6
+PASS 8
+PASS 9
+PASS 10
+PASS 11
+PASS 12
+PASS 13
+PASS 14
+SKIP 7 (same inputs as pattern 2)
+TOTAL: 13 passed, 0 failed, 1 skipped

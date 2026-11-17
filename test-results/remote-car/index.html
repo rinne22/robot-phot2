@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ADセンサー版 main() の単体テスト</title>
+<style>
+body { background:#0b1220; color:#edf3ff; font:16px/1.7 system-ui,sans-serif; margin:2rem auto; max-width:54rem; padding:0 1rem; }
+a { color:#8bd6ff; } .table { overflow:auto; } table { border-collapse:collapse; width:100%; min-width:29rem; }
+th, td { border:1px solid #445371; padding:.4rem .6rem; text-align:left; } th { background:#17263e; }
+code { font-family:monospace; }
+</style>
+</head>
+<body>
+<main>
+<p><a href="../">テスト結果へ戻る</a></p>
+<h1>ADセンサー版 <code>main()</code> の単体テスト</h1>
+<p>添付の試験表に対応するADセンサー版CコードのPCスタブ試験です。Arduino Uno版の単体34件・結合29件とは別の試験です。</p>
+<p><strong>13件合格、0件不合格、1件省略。</strong> パターン7はパターン2と同じ入力です。</p>
+<h2>修正内容</h2>
+<p>スイッチ待ちの関数名・定数名・構文を整理し、運転フラグを等価比較に修正しました。しきい値の判定を500以上に変更し、片側だけが500以上なら旋回し、両側が同じ判定なら直進します。パターン4は左折、パターン9は右折です。</p>
+<p><a href="remote_car.xlsx" download>単体テスト結果（Excel）</a> ／ <a href="main.c" download>修正版 main.c</a> ／ <a href="test_main.c" download>PCテストコード</a> ／ <a href="pc-test.log">実行ログ</a></p>
+<div class="table"><table>
+<thead><tr><th scope="col">パターン</th><th scope="col">運転フラグ</th><th scope="col">ch0</th><th scope="col">ch1</th><th scope="col">動作</th><th scope="col">判定</th></tr></thead>
+<tbody><tr><td>1</td><td>0</td><td>499</td><td>500</td><td>停止</td><td>合格</td></tr><tr><td>2</td><td>1</td><td>0</td><td>0</td><td>直進</td><td>合格</td></tr><tr><td>3</td><td>1</td><td>499</td><td>0</td><td>直進</td><td>合格</td></tr><tr><td>4</td><td>1</td><td>500</td><td>0</td><td>左折</td><td>合格</td></tr><tr><td>5</td><td>1</td><td>501</td><td>0</td><td>左折</td><td>合格</td></tr><tr><td>6</td><td>1</td><td>65535</td><td>0</td><td>左折</td><td>合格</td></tr><tr><td>7</td><td>1</td><td>0</td><td>0</td><td>直進</td><td>省略</td></tr><tr><td>8</td><td>1</td><td>0</td><td>499</td><td>直進</td><td>合格</td></tr><tr><td>9</td><td>1</td><td>0</td><td>500</td><td>右折</td><td>合格</td></tr><tr><td>10</td><td>1</td><td>0</td><td>501</td><td>右折</td><td>合格</td></tr><tr><td>11</td><td>1</td><td>0</td><td>65535</td><td>右折</td><td>合格</td></tr><tr><td>12</td><td>1</td><td>499</td><td>499</td><td>直進</td><td>合格</td></tr><tr><td>13</td><td>1</td><td>500</td><td>500</td><td>直進</td><td>合格</td></tr><tr><td>14</td><td>1</td><td>501</td><td>501</td><td>直進</td><td>合格</td></tr></tbody>
+</table></div>
+</main>
+</body>
+</html>
