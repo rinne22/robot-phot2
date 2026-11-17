@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#15334c"><title>ロボットカー｜資料ダウンロード</title>
+<style>
+:root{color-scheme:light;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;color:#15334c;background:#f2f5f8}*{box-sizing:border-box}body{margin:0}main{max-width:880px;margin:auto;padding:30px 20px 48px}header{padding:8px 0 22px}.back{color:#27626a;font-size:14px}h1{font-size:clamp(25px,6vw,36px);line-height:1.35;margin:18px 0 12px}p{line-height:1.8;margin:8px 0;color:#526475}.eyebrow{font-size:12px;letter-spacing:.12em;font-weight:700;color:#007d87}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.card{background:white;border:1px solid #d8e2e9;border-radius:16px;padding:23px;display:flex;flex-direction:column;gap:10px;min-width:0}.hero{grid-column:1/-1;background:#15334c;color:white}.hero p{color:#d6e4ed}.tag{font-size:12px;font-weight:700;color:#007d87}.hero .tag{color:#94e1df}h2{font-size:21px;line-height:1.5;margin:0}.desc{font-size:15px;flex:1}.size{font-size:13px;color:#607385}.hero .size{color:#c3d4df}.download{display:block;text-align:center;text-decoration:none;border-radius:9px;min-height:50px;padding:14px 12px;background:#007d87;color:white;font-size:16px;font-weight:700;touch-action:manipulation}.hero .download{background:white;color:#15334c}.download[aria-disabled=true]{opacity:.55;cursor:wait}.download:focus-visible,.retry:focus-visible{outline:3px solid #de8b31;outline-offset:3px}.state{font-size:12px;min-height:19px;line-height:1.5}.error{color:#ad253a}.retry{font:inherit;color:#ad253a;border:1px solid #ad253a;background:white;border-radius:8px;padding:10px;cursor:pointer}.help{padding:23px 0 0;font-size:14px}.help h2{font-size:18px}.help p{margin:8px 0}footer{margin-top:24px;border-top:1px solid #d8e2e9;padding-top:18px;font-size:12px;line-height:1.8;color:#627688}noscript{display:block;background:#fff3d9;padding:18px;border-radius:10px}@media(max-width:600px){main{padding:22px 16px 36px}.grid{grid-template-columns:1fr}.card{padding:20px}.hero{grid-column:auto}}
+</style></head><body><main>
+<header><a class="back" href="../design-guide/">← ロボットカー設計ガイド</a><div class="eyebrow" style="margin-top:24px">ROBOT CAR / DOWNLOADS</div><h1>発表とテストの資料</h1><p>最新版をここから保存できます。ボタンが「ダウンロード」になったらタップしてください。Google Driveへのログインは不要です。</p></header>
+<noscript>ダウンロードにはJavaScriptが必要です。SafariまたはChromeでこのページを開いてください。</noscript>
+<div class="grid" id="files" aria-label="資料一覧"></div>
+<section class="help"><h2>スマホで保存するには</h2><p>① 欲しい資料の「ダウンロード」をタップします。<br>② 保存の確認が表示されたら「ダウンロード」または「保存」を選びます。<br>③ iPhoneは「ファイル」、Androidは「ダウンロード」フォルダを確認してください。</p><p>プレビューが表示された場合は、共有メニューから「ファイルに保存」を選んでください。ChatGPT内で保存画面が開かない場合は、このページをSafariまたはChromeで開いてください。</p></section>
+<footer>単体テスト：14関数・507パターン。結合テスト：42シナリオ・65確認点・256信号照合。PC模擬環境での結果です。実機測定・カバレッジ測定とは区別しています。<br>Excelはウィンドウ固定・結合セルなし。発表資料は元フローチャートを使用した15枚。原稿は説明10分＋デモ5分の目安です。</footer>
+</main><script>
+const files=[
+  {
+    "filename": "robot-car-materials.zip",
+    "title": "全部まとめてダウンロード",
+    "description": "5点の最新版を1つのZIPにまとめました。",
+    "url": "assets/robot-car-materials.zip.b64",
+    "size": 587773,
+    "sha256": "c09bd6bf7fe1fd5a4cee08045f672b24576661ba8411f6b9eb60a87a2d8bbace",
+    "mime": "application/zip"
+  },
+  {
+    "filename": "unit-test.xlsx",
+    "title": "単体テスト Excel",
+    "description": "507パターンの結果一覧。固定・結合セルなし。",
+    "url": "assets/unit-test.xlsx.b64",
+    "size": 42972,
+    "sha256": "98e23bc9cd06dcecaf80a33b5210c6bedb2d6a1110fb767a8fa33cbb4ada1e7e",
+    "mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  },
+  {
+    "filename": "unit-test-code.zip",
+    "title": "単体テストのコード一式",
+    "description": "試験main・スタブ・再実行手順・本体コードを収録。",
+    "url": "assets/unit-test-code.zip.b64",
+    "size": 53951,
+    "sha256": "49c01eaff150d6c19eb24cd671641f85820a4f7c404330c10e57d99f6b92c3d4",
+    "mime": "application/zip"
+  },
+  {
+    "filename": "integration-test.xlsx",
+    "title": "結合テスト Excel",
+    "description": "42シナリオ・65確認点の結果と信号別の詳細。",
+    "url": "assets/integration-test.xlsx.b64",
+    "size": 26509,
+    "sha256": "be13085bc6ff009378ffb58d8e990528d845589a59d4cbc8a18c6e392cc4ab83",
+    "mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  },
+  {
+    "filename": "presentation.pptx",
+    "title": "最新の発表資料",
+    "description": "元のフローチャートを使用した15枚のPowerPoint。",
+    "url": "assets/presentation.pptx.b64",
+    "size": 447039,
+    "sha256": "810b0b65a8b7c2ace58612ae8fa10f3bc0c4651c21510810862beec4c7645604",
+    "mime": "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+  },
+  {
+    "filename": "speaker-script.docx",
+    "title": "発表用の原稿",
+    "description": "15枚に対応する読み上げ文と実機デモ原稿。",
+    "url": "assets/speaker-script.docx.b64",
+    "size": 43548,
+    "sha256": "6fc5415bb72978a71287470bda1dc8f0e48f094651279881478e358eb2b9a364",
+    "mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  }
+];
+const tags=['ZIP / 5点セット','XLSX / 単体テスト','ZIP / 試験コード','XLSX / 結合テスト','PPTX / 15枚','DOCX / 発表原稿'];
+const root=document.getElementById('files');
+const cards=files.map((f,i)=>{
+ const card=document.createElement('section');card.className='card'+(i===0?' hero':'');
+ const tag=document.createElement('span');tag.className='tag';tag.textContent=tags[i];
+ const title=document.createElement('h2');title.textContent=f.title;
+ const desc=document.createElement('p');desc.className='desc';desc.textContent=f.description;
+ const size=document.createElement('div');size.className='size';size.textContent=f.filename+' · '+(f.size/1024).toFixed(0)+' KB';
+ const link=document.createElement('a');link.className='download';link.setAttribute('aria-disabled','true');link.textContent='ファイルを準備中…';link.download=f.filename;
+ const state=document.createElement('div');state.className='state';state.setAttribute('role','status');state.setAttribute('aria-live','polite');state.textContent='読み込み中';
+ link.addEventListener('click',e=>{if(link.getAttribute('aria-disabled')==='true'){e.preventDefault();return}state.textContent='保存画面が出ない場合は、下の「スマホで保存するには」を確認してください。'});
+ card.append(tag,title,desc,size,link,state);root.append(card);return {card,link,state};
+});
+async function prepare(f,i){const {card,link,state}=cards[i];state.classList.remove('error');state.textContent='読み込み中';
+ try{const response=await fetch(f.url);if(!response.ok)throw new Error('HTTP '+response.status);const raw=(await response.text()).trim();const decoded=atob(raw);const bytes=new Uint8Array(decoded.length);for(let j=0;j<decoded.length;j++)bytes[j]=decoded.charCodeAt(j);
+ if(bytes.length!==f.size)throw new Error('サイズ不一致');
+ if(globalThis.crypto?.subtle){const sum=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))).map(x=>x.toString(16).padStart(2,'0')).join('');if(sum!==f.sha256)throw new Error('ファイル照合エラー');}
+ const blob=new Blob([bytes],{type:f.mime});link.href=URL.createObjectURL(blob);link.setAttribute('aria-disabled','false');link.textContent=i===0?'全部まとめてダウンロード':'ダウンロード';state.textContent='保存できます';
+ }catch(error){state.textContent='読み込めませんでした。通信を確認して再試行してください。';state.classList.add('error');const retry=document.createElement('button');retry.className='retry';retry.textContent='再読み込み';retry.onclick=()=>{retry.remove();prepare(f,i)};card.append(retry);console.error('Download preparation failed:',f.filename,error.message);}}
+files.forEach(prepare);
+</script></body></html>
