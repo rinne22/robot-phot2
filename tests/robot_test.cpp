@@ -90,5 +90,11 @@ int main(){
  TEST("rear active low all combinations",for(int l:{LOW,HIGH})for(int r:{LOW,HIGH}){pins[0]=l;pins[2]=r;assert(is_BackIrOn()==(l==LOW||r==LOW));assert(is_BackBlocked()==(l==LOW||r==LOW));});
  TEST("sensor scheduling boundary 99 100ms",Drive_Num=GO_ADVANCE;isCheckRequested=false;lastCheckMs=millis();delay(99);assert(!is_CheckTime());delay(1);assert(is_CheckTime());mark_Checked();assert(!is_CheckTime()&&!isCheckRequested));
  TEST("remote front boundary integrates stop and PWM",for(int cm:{19,20,21}){clearState();echoPulse=cm*58;input(IR_ADVANCE);assert(Drive_Num==(cm<=20?GO_STOP:GO_ADVANCE));assert(pwm[9]==(cm<=20?0:100)&&pwm[6]==(cm<=20?0:100));assert(!isAvoiding);});
+ TEST("remote opposite 299ms",input(IR_ADVANCE);clockUs=(lastDriveCmdMs+299)*1000;input(IR_BACK);assert(Drive_Num==GO_STOP&&pwm[9]==0&&pwm[6]==0));
+ TEST("remote opposite 300ms",input(IR_ADVANCE);clockUs=(lastDriveCmdMs+300)*1000;input(IR_BACK);assert(Drive_Num==GO_STOP&&pwm[9]==0&&pwm[6]==0));
+ TEST("remote opposite 301ms",input(IR_ADVANCE);clockUs=(lastDriveCmdMs+301)*1000;input(IR_BACK);assert(Drive_Num==GO_BACK&&pwm[9]==100&&pwm[6]==100));
+ TEST("remote avoid measurement crosses deadline",pins[0]=LOW;input(IR_BACK);clockUs=(avoidStartMs+490)*1000;loop();assert(isAvoiding);clockUs=(avoidStartMs+499)*1000;loop();assert(!isAvoiding&&Drive_Num==GO_STOP&&pwm[9]==0&&pwm[6]==0));
+ TEST("remote rotate deadline",pins[0]=LOW;echoPulse=580;input(IR_BACK);clockUs=(avoidStartMs+499)*1000;loop();assert(isAvoiding&&Drive_Num==GO_RIGHT);clockUs=(avoidStartMs+500)*1000;loop();assert(!isAvoiding&&pwm[9]==0&&pwm[6]==0));
+ TEST("remote music deadline",input(IR_ADVANCE);input(69);clockUs=(pendingSongMs+290)*1000;loop();assert(!isMusicPlaying&&pendingSongNum==1);clockUs=(pendingSongMs+300)*1000;loop();assert(isMusicPlaying&&pendingSongNum==0&&Drive_Num==GO_ADVANCE&&pwm[9]==100&&pwm[6]==100));
  std::cout<<cases<<" host simulation cases passed; hardware not tested.\n";
 }

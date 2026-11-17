@@ -1,5 +1,5 @@
 {
-  "executed_at": "2026-11-12T12:17:16.916666+00:00",
+  "executed_at": "2026-11-17",
   "target": "robot_final.ino（自動後退なしメイン版）",
   "sha256": "91c135ba27e05ac1d219e30de2be86295b2282a8091712468cc1eecce48a968f",
   "environment": "Linux-6.18.57-x86_64-with-glibc2.41",
@@ -699,6 +699,72 @@
       "actual": "全assert条件成立（スタブ内の状態・PWM・ピン・時刻を検証）",
       "result": "PASS",
       "evidence": "tests/robot_test.cpp:92"
+    },
+    {
+      "id": "IT-064",
+      "kind": "結合",
+      "name": "remote opposite 299ms",
+      "setup": "clearState()",
+      "input": " TEST(\"remote opposite 299ms\",input(IR_ADVANCE);clockUs=(lastDriveCmdMs+299)*1000;input(IR_BACK);assert(Drive_Num==GO_STOP&&pwm[9]==0&&pwm[6]==0));",
+      "expected": "ソース内assert条件",
+      "actual": "全assert成立",
+      "result": "PASS",
+      "evidence": "tests/robot_test.cpp:93"
+    },
+    {
+      "id": "IT-065",
+      "kind": "結合",
+      "name": "remote opposite 300ms",
+      "setup": "clearState()",
+      "input": " TEST(\"remote opposite 300ms\",input(IR_ADVANCE);clockUs=(lastDriveCmdMs+300)*1000;input(IR_BACK);assert(Drive_Num==GO_STOP&&pwm[9]==0&&pwm[6]==0));",
+      "expected": "ソース内assert条件",
+      "actual": "全assert成立",
+      "result": "PASS",
+      "evidence": "tests/robot_test.cpp:94"
+    },
+    {
+      "id": "IT-066",
+      "kind": "結合",
+      "name": "remote opposite 301ms",
+      "setup": "clearState()",
+      "input": " TEST(\"remote opposite 301ms\",input(IR_ADVANCE);clockUs=(lastDriveCmdMs+301)*1000;input(IR_BACK);assert(Drive_Num==GO_BACK&&pwm[9]==100&&pwm[6]==100));",
+      "expected": "ソース内assert条件",
+      "actual": "全assert成立",
+      "result": "PASS",
+      "evidence": "tests/robot_test.cpp:95"
+    },
+    {
+      "id": "IT-067",
+      "kind": "結合",
+      "name": "remote avoid measurement crosses deadline",
+      "setup": "clearState()",
+      "input": " TEST(\"remote avoid measurement crosses deadline\",pins[0]=LOW;input(IR_BACK);clockUs=(avoidStartMs+490)*1000;loop();assert(isAvoiding);clockUs=(avoidStartMs+499)*1000;loop();assert(!isAvoiding&&Drive_Num==GO_STOP&&pwm[9]==0&&pwm[6]==0));",
+      "expected": "ソース内assert条件",
+      "actual": "全assert成立",
+      "result": "PASS",
+      "evidence": "tests/robot_test.cpp:96"
+    },
+    {
+      "id": "IT-068",
+      "kind": "結合",
+      "name": "remote rotate deadline",
+      "setup": "clearState()",
+      "input": " TEST(\"remote rotate deadline\",pins[0]=LOW;echoPulse=580;input(IR_BACK);clockUs=(avoidStartMs+499)*1000;loop();assert(isAvoiding&&Drive_Num==GO_RIGHT);clockUs=(avoidStartMs+500)*1000;loop();assert(!isAvoiding&&pwm[9]==0&&pwm[6]==0));",
+      "expected": "ソース内assert条件",
+      "actual": "全assert成立",
+      "result": "PASS",
+      "evidence": "tests/robot_test.cpp:97"
+    },
+    {
+      "id": "IT-069",
+      "kind": "結合",
+      "name": "remote music deadline",
+      "setup": "clearState()",
+      "input": " TEST(\"remote music deadline\",input(IR_ADVANCE);input(69);clockUs=(pendingSongMs+290)*1000;loop();assert(!isMusicPlaying&&pendingSongNum==1);clockUs=(pendingSongMs+300)*1000;loop();assert(isMusicPlaying&&pendingSongNum==0&&Drive_Num==GO_ADVANCE&&pwm[9]==100&&pwm[6]==100));",
+      "expected": "ソース内assert条件",
+      "actual": "全assert成立",
+      "result": "PASS",
+      "evidence": "tests/robot_test.cpp:98"
     }
   ]
 }

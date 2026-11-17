@@ -61,4 +61,10 @@ PASS front distance boundary 19 20 21cm
 PASS rear active low all combinations
 PASS sensor scheduling boundary 99 100ms
 PASS remote front boundary integrates stop and PWM
-63 host simulation cases passed; hardware not tested.
+PASS remote opposite 299ms
+PASS remote opposite 300ms
+PASS remote opposite 301ms
+PASS remote avoid measurement crosses deadline
+PASS remote rotate deadline
+PASS remote music deadline
+69 host simulation cases passed; hardware not tested.
