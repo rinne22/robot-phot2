@@ -126,6 +126,8 @@ pre{max-width:100%;overflow:auto}
 <div class="metrics"><a href="#functions"><b>57</b> 関数の設計</a><a href="#design"><b>63</b> PC模擬試験項目</a><a href="#figures"><b>図解</b> 動作と処理の流れ</a></div>
 </header>
 <nav class="tocnav" aria-label="ページ内の移動"><a href="#overview">概要</a><a href="#requirements">要件定義</a><a href="#design">開発設計</a><a href="#functions">関数設計</a><a href="#figures">設計図</a><a href="#code">Arduinoコード</a><a href="#memo">メモ</a><a id="transfer-nav-link" href="../file-transfer/">ファイル受け渡し</a><a id="tests-nav-link" href="#tests">テスト結果</a><a id="downloads-nav-link" href="../downloads/">資料ダウンロード</a></nav>
+<section class="overview" id="rear-avoidance-update" aria-labelledby="rear-avoidance-title"><div class="top"><h2 id="rear-avoidance-title">後方検知・前進回避版を追加（自動右旋回なし）</h2><p>後退中に後方だけ検知したら前進回避、前後とも検知したら停止します。この追加版は左後方OUTをD0からA0へ配線変更し、右はD2を使用します。PC模擬試験85項目＋検知HIGH設定3項目が合格、実機は未確認です。</p><p><a href="../rear-avoidance/">修正版のダウンロード・配線・診断手順を見る →</a></p><p class="note">以下のメイン版の設計書・コードは従来仕様です。追加版の配線と回避動作はリンク先を参照してください。</p></div></section>
+
 <section class="overview" id="memo" aria-labelledby="memo-title">
 <h2 id="memo-title">作業メモ</h2>
 <p id="memo-hint">入力するとこのブラウザ内に自動保存されます。「保存する」でも確実に保存できます。別のPC・スマホへ移す場合はバックアップを使用してください（自動同期ではありません）。</p>
